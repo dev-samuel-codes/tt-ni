@@ -10,7 +10,7 @@ export function FeatureReasonSection() {
 
   return (
     <section id="features" className="feature-section">
-      <h2>+-ni가 특별한 이유</h2>
+      <h2>++-ni가 특별한 이유</h2>
       <div className="reason-grid">
         {items.map(([title, detail, Icon]) => (
           <article className="reason-card" key={title}>
