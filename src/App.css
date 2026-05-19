@@ -622,7 +622,7 @@
   grid-template-columns: 142px minmax(0, 1fr);
   overflow: hidden;
   position: relative;
-  animation: mockup-rise-in 720ms cubic-bezier(0.2, 0.82, 0.2, 1) both;
+  animation: mockup-rise-in 1250ms cubic-bezier(0.2, 0.82, 0.2, 1) both;
 }
 
 .mock-sidebar {
@@ -823,7 +823,7 @@
   width: 150px;
   min-height: 215px;
   padding: 22px 20px;
-  animation: mockup-rise-in 760ms cubic-bezier(0.2, 0.82, 0.2, 1) 120ms both;
+  animation: mockup-rise-in 1350ms cubic-bezier(0.2, 0.82, 0.2, 1) 220ms both;
 }
 
 .floating-score span {
