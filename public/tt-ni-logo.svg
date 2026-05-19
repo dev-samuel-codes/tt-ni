@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1010" height="430" viewBox="255 320 1010 430" role="img" aria-labelledby="title desc">
   <title id="title">tt-ni logo</title>
-  <desc id="desc">A mint green bandage symbol followed by black plus, hyphen, and ni lettering on a white background.</desc>
+  <desc id="desc">A mint green bandage symbol followed by black plus, hyphen, and ni lettering on a transparent background.</desc>
   <defs>
     <linearGradient id="verticalBandage" x1="466" x2="466" y1="357" y2="697" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#53bda9"/>
@@ -112,8 +112,6 @@
       }
     </style>
   </defs>
-
-  <rect width="1448" height="1086" fill="#fff"/>
 
   <g filter="url(#softShadow)">
     <g class="logo-band vertical-band">
