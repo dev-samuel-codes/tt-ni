@@ -545,22 +545,24 @@
 
 .hero-benefits {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(156px, 1fr));
   gap: 18px;
+  align-items: stretch;
   margin-top: 74px;
 }
 
 .mini-feature {
-  min-height: 70px;
+  min-height: 126px;
   border: 1px solid rgba(213, 232, 226, 0.9);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.85);
   box-shadow: 0 16px 38px rgba(27, 96, 88, 0.08);
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
-  align-items: center;
+  justify-items: center;
+  align-content: center;
   gap: 12px;
-  padding: 13px 14px;
+  padding: 18px 14px;
+  text-align: center;
 }
 
 .mini-feature > span,
@@ -584,13 +586,19 @@
 
 .mini-feature strong {
   font-size: 14px;
+  line-height: 1.32;
+  letter-spacing: 0;
+  white-space: nowrap;
+  word-break: keep-all;
 }
 
 .mini-feature small {
   margin-top: 4px;
   color: #60716d;
   font-size: 12px;
+  line-height: 1.35;
   font-weight: 700;
+  word-break: keep-all;
 }
 
 .hero-visual {
