@@ -77,6 +77,58 @@ export function createManualIngredient(): ParsedIngredient {
   }
 }
 
+export async function updateSupplementProduct(
+  productId: string,
+  patch: Partial<Pick<SupplementProduct, 'productName' | 'brandName' | 'dailyServings' | 'intakeTime'>>,
+): Promise<string> {
+  const { error } = await supabase
+    .from('supplement_products')
+    .update({
+      ...(patch.productName !== undefined && { product_name: patch.productName }),
+      ...(patch.brandName !== undefined && { brand_name: patch.brandName }),
+    })
+    .eq('id', productId)
+  if (error) throw new Error('제품 정보 수정에 실패했습니다: ' + error.message)
+
+  if (patch.dailyServings !== undefined || patch.intakeTime !== undefined) {
+    const { error: usError } = await supabase
+      .from('user_supplements')
+      .update({
+        ...(patch.dailyServings !== undefined && { daily_servings: patch.dailyServings }),
+        ...(patch.intakeTime !== undefined && { intake_time: patch.intakeTime }),
+      })
+      .eq('product_id', productId)
+    if (usError) throw new Error('복용 정보 수정에 실패했습니다: ' + usError.message)
+  }
+
+  return '제품 정보를 수정했습니다.'
+}
+
+export async function updateSupplementIngredient(
+  ingredientId: string,
+  patch: Partial<Pick<ParsedIngredient, 'standardName' | 'amount' | 'unit'>>,
+): Promise<string> {
+  const { error } = await supabase
+    .from('supplement_ingredients')
+    .update({
+      ...(patch.standardName !== undefined && { standard_name: patch.standardName }),
+      ...(patch.amount !== undefined && { amount: patch.amount, amount_per_daily_serving: patch.amount }),
+      ...(patch.unit !== undefined && { unit: patch.unit }),
+    })
+    .eq('id', ingredientId)
+  if (error) throw new Error('성분 수정에 실패했습니다: ' + error.message)
+  return '성분 정보를 수정했습니다.'
+}
+
+export async function deleteSupplementProduct(productId: string): Promise<string> {
+  const { error } = await supabase
+    .from('supplement_products')
+    .delete()
+    .eq('id', productId)
+  if (error) throw new Error('제품 삭제에 실패했습니다: ' + error.message)
+  return '제품을 삭제했습니다.'
+}
+
 export async function saveSupplementProduct(supplement: SupplementProduct, labelImagePath: string): Promise<{ productId: string; message: string }> {
   let productId = ''
   try {

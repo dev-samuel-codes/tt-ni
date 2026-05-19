@@ -8,7 +8,7 @@ import { findNutrientByName, nutrients } from '../../features/nutrition/nutritio
 import { statusLabel } from '../../features/analysis/analysisEngine'
 import { createId, getStatusTone, splitList } from '../../lib/utils'
 import { saveProfileBundle } from '../../features/profile/profileService'
-import { createManualIngredient, parseLabelImage, saveSupplementProduct } from '../../features/supplements/supplementService'
+import { createManualIngredient, parseLabelImage, saveSupplementProduct, updateSupplementProduct, updateSupplementIngredient, deleteSupplementProduct } from '../../features/supplements/supplementService'
 import { supabase } from '../../lib/supabaseClient'
 import { MetricCard } from './Shared'
 
@@ -162,12 +162,12 @@ export function Dashboard({
             {supplements.map((s) => {
               async function handleDelete() {
                 if (!window.confirm('정말 삭제하시겠습니까?')) return
-                const { error } = await supabase.from('supplement_products').delete().eq('id', s.id)
-                if (error) {
-                  alert('삭제 중 오류가 발생했습니다: ' + error.message)
-                  return
+                try {
+                  await deleteSupplementProduct(s.id)
+                  onSupplements(supplements.filter((item) => item.id !== s.id))
+                } catch (error) {
+                  alert(error instanceof Error ? error.message : '삭제 중 오류가 발생했습니다.')
                 }
-                onSupplements(supplements.filter((item) => item.id !== s.id))
               }
               return (
                 <article className="product-row" key={s.id}>
@@ -392,6 +392,14 @@ export function SupplementWorkspace({
   const [parsing, setParsing] = useState(false)
   const [draftIngredients, setDraftIngredients] = useState<ParsedIngredient[]>([])
 
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editProductName, setEditProductName] = useState('')
+  const [editBrandName, setEditBrandName] = useState('')
+  const [editDailyServings, setEditDailyServings] = useState(1)
+  const [editIntakeTime, setEditIntakeTime] = useState('')
+  const [editIngredients, setEditIngredients] = useState<ParsedIngredient[]>([])
+  const [editMessage, setEditMessage] = useState('')
+
   const canConfirm =
     productName.trim().length > 0 && Number.isFinite(dailyServings) && dailyServings > 0 &&
     draftIngredients.length > 0 &&
@@ -400,6 +408,77 @@ export function SupplementWorkspace({
       ingredient.amount !== null && Number.isFinite(ingredient.amount) && ingredient.amount >= 0 &&
       ingredient.unit !== 'unknown',
     )
+
+  function startEdit(supplement: SupplementProduct) {
+    setEditingId(supplement.id)
+    setEditProductName(supplement.productName)
+    setEditBrandName(supplement.brandName)
+    setEditDailyServings(supplement.dailyServings)
+    setEditIntakeTime(supplement.intakeTime)
+    setEditIngredients(supplement.ingredients.map((ing) => ({ ...ing })))
+    setEditMessage('')
+  }
+
+  function cancelEdit() {
+    setEditingId(null)
+    setEditMessage('')
+  }
+
+  function updateEditIngredient(id: string, patch: Partial<ParsedIngredient>) {
+    setEditIngredients((items) =>
+      items.map((item) => {
+        if (item.id !== id) return item
+        const standardName = patch.standardName ?? item.standardName
+        const nutrient = findNutrientByName(standardName)
+        return {
+          ...item, ...patch,
+          nutrientId: nutrient?.id ?? '',
+          standardName: nutrient?.standardName ?? standardName,
+          reviewRequired: !nutrient || (patch.confidence ?? item.confidence) < 0.8 || (patch.unit ?? item.unit) === 'unknown',
+        }
+      }),
+    )
+  }
+
+  async function saveEdit() {
+    if (!editingId) return
+    setEditMessage('')
+    try {
+      await updateSupplementProduct(editingId, {
+        productName: editProductName,
+        brandName: editBrandName,
+        dailyServings: editDailyServings,
+        intakeTime: editIntakeTime,
+      })
+      for (const ing of editIngredients) {
+        await updateSupplementIngredient(ing.id, {
+          standardName: ing.standardName,
+          amount: ing.amount ?? 0,
+          unit: ing.unit,
+        })
+      }
+      const updated = supplements.map((s) =>
+        s.id === editingId
+          ? { ...s, productName: editProductName, brandName: editBrandName, dailyServings: editDailyServings, intakeTime: editIntakeTime, ingredients: editIngredients }
+          : s,
+      )
+      onSupplements(updated)
+      setEditMessage('수정이 완료되었습니다.')
+      setEditingId(null)
+    } catch (error) {
+      setEditMessage(error instanceof Error ? error.message : '수정에 실패했습니다.')
+    }
+  }
+
+  async function handleDeleteSupplement(productId: string, name: string) {
+    if (!window.confirm(`'${name}'을(를) 정말 삭제하시겠습니까?`)) return
+    try {
+      await deleteSupplementProduct(productId)
+      onSupplements(supplements.filter((s) => s.id !== productId))
+    } catch (error) {
+      alert(error instanceof Error ? error.message : '삭제에 실패했습니다.')
+    }
+  }
 
   async function parseLabel(file?: File) {
     setParsing(true)
@@ -503,6 +582,69 @@ export function SupplementWorkspace({
 
   return (
     <div className="panel-grid">
+      {supplements.length > 0 && (
+        <section className="panel">
+          <div className="section-heading">
+            <div><h2>등록된 영양제</h2><p>{supplements.length}개 등록됨</p></div>
+          </div>
+          <div className="product-list">
+            {supplements.map((s) => (
+              <article className="product-row" key={s.id} style={{ flexDirection: 'column', alignItems: 'stretch', gap: '12px' }}>
+                {editingId === s.id ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div className="form-grid">
+                      <label>제품명<input value={editProductName} onChange={(e) => setEditProductName(e.target.value)} /></label>
+                      <label>브랜드<input value={editBrandName} onChange={(e) => setEditBrandName(e.target.value)} /></label>
+                      <label>1일 복용 횟수<input type="number" min="0.25" step="0.25" value={editDailyServings} onChange={(e) => setEditDailyServings(Number(e.target.value))} /></label>
+                      <label>복용 시간<input value={editIntakeTime} onChange={(e) => setEditIntakeTime(e.target.value)} /></label>
+                    </div>
+                    <div className="table-wrap">
+                      <table>
+                        <thead><tr><th>성분명</th><th>함량</th><th>단위</th><th></th></tr></thead>
+                        <tbody>
+                          {editIngredients.map((ing) => (
+                            <tr key={ing.id}>
+                              <td><input value={ing.standardName} onChange={(e) => updateEditIngredient(ing.id, { standardName: e.target.value })} /></td>
+                              <td><input type="number" value={ing.amount ?? ''} onChange={(e) => updateEditIngredient(ing.id, { amount: Number(e.target.value) })} /></td>
+                              <td>
+                                <select value={ing.unit} onChange={(e) => updateEditIngredient(ing.id, { unit: e.target.value as Unit })}>
+                                  {['mg', 'mcg', 'IU', 'g', 'CFU', 'unknown'].map((u) => (<option key={u} value={u}>{u}</option>))}
+                                </select>
+                              </td>
+                              <td><button type="button" className="icon-button" aria-label="성분 삭제" onClick={() => setEditIngredients(editIngredients.filter((item) => item.id !== ing.id))}><Trash2 size={16} /></button></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" className="button primary" onClick={saveEdit}><Check size={16} />저장</button>
+                      <button type="button" className="button ghost" onClick={cancelEdit}>취소</button>
+                    </div>
+                    {editMessage && <div className="notice"><Check size={16} /><span>{editMessage}</span></div>}
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <strong>{s.productName}</strong>
+                      <span style={{ marginLeft: '8px', color: '#8a9a95', fontSize: '13px' }}>{s.ingredients.length}개 성분 · {s.brandName || '일반'} · {s.dailyServings}회/일 · {s.intakeTime}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button type="button" className="icon-button" aria-label={`${s.productName} 수정`} onClick={() => startEdit(s)}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                      </button>
+                      <button type="button" className="icon-button" aria-label={`${s.productName} 삭제`} onClick={() => handleDeleteSupplement(s.id, s.productName)}>
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="panel">
         <div className="section-heading">
           <div><h2>영양제 등록</h2><p>세 가지 방식 중 하나를 선택해 영양제를 등록하세요.</p></div>
