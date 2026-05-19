@@ -4,6 +4,61 @@ import { Camera, ChevronRight, ShieldCheck, User, Sparkles, Check } from 'lucide
 
 const summaryTargetPercent = 92
 
+function AnimatedPercent({ value }: { value: number }) {
+  const percentRef = useRef<HTMLElement | null>(null)
+  const [displayValue, setDisplayValue] = useState(() => {
+    if (typeof window === 'undefined') return 0
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    return prefersReducedMotion || !('IntersectionObserver' in window) ? value : 0
+  })
+
+  useEffect(() => {
+    const percentElement = percentRef.current
+    if (!percentElement) return
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (prefersReducedMotion || !('IntersectionObserver' in window)) return
+
+    let frameId = 0
+    let startTimeout = 0
+    const duration = value > 1000 ? 1500 : 1100
+    const startAnimation = () => {
+      cancelAnimationFrame(frameId)
+      window.clearTimeout(startTimeout)
+      setDisplayValue(0)
+      startTimeout = window.setTimeout(() => {
+        const startedAt = performance.now()
+        const animate = (now: number) => {
+          const progress = Math.min((now - startedAt) / duration, 1)
+          const easedProgress = 1 - Math.pow(1 - progress, 3)
+          setDisplayValue(Math.round(value * easedProgress))
+          if (progress < 1) frameId = requestAnimationFrame(animate)
+        }
+        frameId = requestAnimationFrame(animate)
+      }, 80)
+    }
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) {
+        cancelAnimationFrame(frameId)
+        window.clearTimeout(startTimeout)
+        setDisplayValue(0)
+        return
+      }
+      startAnimation()
+    }, { threshold: 0.8 })
+
+    observer.observe(percentElement)
+    return () => {
+      observer.disconnect()
+      cancelAnimationFrame(frameId)
+      window.clearTimeout(startTimeout)
+    }
+  }, [value])
+
+  return <b ref={percentRef}>{displayValue}%</b>
+}
+
 export function PreviewSection({ report, onOpenResults }: { report: AnalysisReport; onOpenResults: () => void }) {
   const excessItems = report.totals.filter((total) => total.status === 'excess' || total.status === 'caution').slice(0, 2)
   const deficientItems = report.totals.filter((total) => total.status === 'deficient').slice(0, 3)
@@ -83,7 +138,7 @@ export function PreviewSection({ report, onOpenResults }: { report: AnalysisRepo
             { standardName: '비타민 A', percentOfTarget: 230 },
             { standardName: '나이아신', percentOfTarget: 180 },
           ]).map((item) => (
-            <p key={item.standardName}><span>{item.standardName}</span><b>{item.percentOfTarget ?? 180}%</b></p>
+            <p key={item.standardName}><span>{item.standardName}</span><AnimatedPercent value={item.percentOfTarget ?? 180} /></p>
           ))}
         </article>
         <article className="risk-preview cool">
@@ -93,7 +148,7 @@ export function PreviewSection({ report, onOpenResults }: { report: AnalysisRepo
             { standardName: '마그네슘', percentOfTarget: 70 },
             { standardName: '오메가-3 (EPA+DHA)', percentOfTarget: 55 },
           ]).map((item) => (
-            <p key={item.standardName}><span>{item.standardName}</span><b>{item.percentOfTarget ?? 65}%</b></p>
+            <p key={item.standardName}><span>{item.standardName}</span><AnimatedPercent value={item.percentOfTarget ?? 65} /></p>
           ))}
         </article>
         <article className="guide-preview">
