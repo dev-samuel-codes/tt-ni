@@ -1,0 +1,50 @@
+{
+  "name": "tt-ni",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "auth:configure": "node scripts/configure-auth-providers.mjs",
+    "auth:check": "node scripts/auth-provider-check.mjs",
+    "audit:supabase": "node scripts/supabase-audit.mjs",
+    "deploy:functions": "node scripts/deploy-functions.mjs",
+    "predeploy:check": "node scripts/predeploy-check.mjs",
+    "predeploy:check:release": "TT_NI_FAIL_ON_WARNINGS=1 node scripts/predeploy-check.mjs",
+    "postdeploy:check": "node scripts/postdeploy-check.mjs",
+    "verify": "npm run lint && npm test -- --run && npm run build && npm run predeploy:check && npm run audit:supabase",
+    "verify:release": "npm run lint && npm test -- --run && npm run build && npm run predeploy:check:release && npm run audit:supabase",
+    "verify:remote": "npm run verify && npm run smoke:remote",
+    "verify:remote:strict": "npm run verify && TT_NI_EXPECT_ANALYSIS_INTERACTIONS=1 npm run smoke:remote",
+    "smoke:remote": "node scripts/remote-smoke.mjs",
+    "smoke:remote:strict": "TT_NI_EXPECT_ANALYSIS_INTERACTIONS=1 node scripts/remote-smoke.mjs",
+    "test": "vitest run",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.105.4",
+    "lucide-react": "^1.16.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^24.12.3",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "eslint": "^10.3.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.6.0",
+    "jsdom": "^29.1.1",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "^8.59.2",
+    "vite": "^8.0.12",
+    "vitest": "^4.1.6"
+  }
+}
