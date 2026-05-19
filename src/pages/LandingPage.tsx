@@ -4,36 +4,37 @@ import { PreviewSection, CtaBand, TrustStrip, MarketingFooter } from '../compone
 import type { AnalysisReport } from '../types'
 
 export function LandingPage({
+  sessionEmail,
   confirmedCount,
   needsReview,
   previewReport,
   onLogin,
-  onStart,
-  onUpload,
   onOpenResults,
+  onDashboard,
 }: {
+  sessionEmail: string | null
   confirmedCount: number
   needsReview: number
   previewReport: AnalysisReport
   onLogin: () => void
-  onStart: () => void
-  onUpload: () => void
   onOpenResults: () => void
+  onDashboard: () => void
 }) {
   return (
     <>
-      <LandingHeader onLogin={onLogin} onStart={onStart} />
+      <LandingHeader sessionEmail={sessionEmail} onLogin={onLogin} onDashboard={onDashboard} />
       <HeroSection
+        sessionEmail={sessionEmail}
         confirmedCount={confirmedCount}
         needsReview={needsReview}
         riskCount={previewReport.statusSummary.caution + previewReport.statusSummary.excess}
-        onUpload={onUpload}
-        onDemo={() => document.getElementById('preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+        onLogin={onLogin}
+        onDashboard={onDashboard}
       />
       <FeatureReasonSection />
       <HowItWorksSection />
       <PreviewSection report={previewReport} onOpenResults={onOpenResults} />
-      <CtaBand onStart={onStart} />
+      <CtaBand sessionEmail={sessionEmail} onLogin={onLogin} onDashboard={onDashboard} />
       <TrustStrip />
       <MarketingFooter />
     </>

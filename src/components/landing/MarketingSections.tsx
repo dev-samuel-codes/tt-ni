@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { AnalysisReport } from '../../types'
-import { Camera, ChevronRight, ShieldCheck, User, Sparkles, Check } from 'lucide-react'
+import { ChevronRight, ShieldCheck, User, Sparkles, Check } from 'lucide-react'
 
 const summaryTargetPercent = 92
 
@@ -166,7 +166,7 @@ export function PreviewSection({ report, onOpenResults }: { report: AnalysisRepo
   )
 }
 
-export function CtaBand({ onStart }: { onStart: () => void }) {
+export function CtaBand({ sessionEmail, onLogin, onDashboard }: { sessionEmail: string | null; onLogin: () => void; onDashboard: () => void }) {
   return (
     <section id="cta" className="cta-band">
       <div className="product-visual" aria-hidden="true">
@@ -177,9 +177,9 @@ export function CtaBand({ onStart }: { onStart: () => void }) {
       <div>
         <h2>지금 바로, 나에게 딱 맞는<br />영양제 복용 관리를 시작하세요</h2>
         <p>사진 한 장으로 더 스마트한 건강 습관을 만들어보세요.</p>
-        <button type="button" className="button light large" onClick={onStart}>
-          <Camera size={19} />
-          분석 시작하기
+        <button type="button" className="button light large" onClick={sessionEmail ? onDashboard : onLogin}>
+          <ChevronRight size={19} />
+          {sessionEmail ? '대시보드로 이동' : '시작하기'}
         </button>
       </div>
     </section>
@@ -220,7 +220,11 @@ export function MarketingFooter() {
         <a href="#preview">개인정보처리방침</a>
         <a href="/workspace">문의하기</a>
       </nav>
-      <span>© 2024 +-ni. All rights reserved.</span>
+      <span>© 2026 +-ni. All rights reserved.</span>
+      <p style={{ marginTop: '8px', fontSize: '12px', color: '#8a9a95', maxWidth: '600px', lineHeight: '1.5' }}>
+        본 서비스의 분석 결과는 2025 한국인 영양소 섭취기준(KDRIs) 참고 정보이며, 의학적 진단이나 처방을 대체하지 않습니다.
+        개인차가 있으므로 의심 증상 발생 시 전문의와 상담하세요.
+      </p>
     </footer>
   )
 }

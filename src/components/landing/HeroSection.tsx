@@ -1,7 +1,7 @@
 import { Camera, ChevronRight, ShieldCheck, User, HeartPulse } from 'lucide-react'
 import { BrandMark, MiniFeature } from '../workspace/Shared'
 
-export function LandingHeader({ onLogin, onStart }: { onLogin: () => void; onStart: () => void }) {
+export function LandingHeader({ sessionEmail, onLogin, onDashboard }: { sessionEmail: string | null; onLogin: () => void; onDashboard: () => void }) {
   return (
     <header className="landing-header">
       <a className="logo-lockup" href="#top" aria-label="tt-ni 홈">
@@ -14,8 +14,11 @@ export function LandingHeader({ onLogin, onStart }: { onLogin: () => void; onSta
         <a href="#cta">추천</a>
       </nav>
       <div className="landing-actions">
-        <button type="button" className="login-link" onClick={onLogin}>로그인</button>
-        <button type="button" className="button primary mint" onClick={onStart}>분석 시작하기</button>
+        {sessionEmail ? (
+          <button type="button" className="button primary mint" onClick={onDashboard}>대시보드로 가기</button>
+        ) : (
+          <button type="button" className="button primary mint" onClick={onLogin}>로그인 / 회원가입</button>
+        )}
       </div>
     </header>
   )
@@ -95,17 +98,19 @@ export function HeroMockup({
 }
 
 export function HeroSection({
+  sessionEmail,
   confirmedCount,
   needsReview,
   riskCount,
-  onUpload,
-  onDemo,
+  onLogin,
+  onDashboard,
 }: {
+  sessionEmail: string | null
   confirmedCount: number
   needsReview: number
   riskCount: number
-  onUpload: () => void
-  onDemo: () => void
+  onLogin: () => void
+  onDashboard: () => void
 }) {
   return (
     <section id="top" className="hero-section">
@@ -118,13 +123,9 @@ export function HeroSection({
         </h1>
         <p>사진 한 장으로 성분을 AI가 인식하고, 중복 섭취와 부족·과다 영양소를 분석해 더 건강한 복용 관리를 도와드려요.</p>
         <div className="hero-buttons">
-          <button type="button" className="button primary large" onClick={onUpload}>
-            <Camera size={19} />
-            사진 업로드
-          </button>
-          <button type="button" className="button ghost large" onClick={onDemo}>
-            <ChevronRight size={18} />
-            데모 보기
+          <button type="button" className="button primary large" onClick={sessionEmail ? onDashboard : onLogin}>
+            시작하기
+            <ChevronRight size={19} />
           </button>
         </div>
         <div className="hero-benefits" aria-label="핵심 기능">

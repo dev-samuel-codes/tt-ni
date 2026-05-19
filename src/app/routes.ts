@@ -4,6 +4,11 @@ export const routes = {
   home: '/',
   login: '/login',
   workspace: '/workspace',
+  supplements: '/workspace/supplements',
+  analysis: '/workspace/analysis',
+  schedule: '/workspace/schedule',
+  chat: '/workspace/chat',
+  profile: '/workspace/profile',
 } as const
 
 export type AppRoute = typeof routes[keyof typeof routes]

@@ -105,6 +105,46 @@ export const nutrients: Nutrient[] = [
     defaultUnit: 'mg',
     riskLevel: 'medium',
   },
+  {
+    id: 'choline',
+    standardName: '콜린',
+    category: '비타민',
+    aliases: ['choline', '콜린'],
+    defaultUnit: 'mg',
+    riskLevel: 'medium',
+  },
+  {
+    id: 'ginseng',
+    standardName: '홍삼',
+    category: '허브/추출물',
+    aliases: ['ginseng', 'red ginseng', '홍삼', '인삼', '진세노사이드', 'ginsenoside'],
+    defaultUnit: 'mg',
+    riskLevel: 'high',
+  },
+  {
+    id: 'grapefruit',
+    standardName: '자몽 추출물',
+    category: '허브/추출물',
+    aliases: ['grapefruit', '자몽', '자몽추출물'],
+    defaultUnit: 'mg',
+    riskLevel: 'high',
+  },
+  {
+    id: 'coq10',
+    standardName: '코엔자임 Q10',
+    category: '항산화제',
+    aliases: ['coq10', '코엔자임', '코엔자임큐텐', 'ubiquinone', '유비퀴논'],
+    defaultUnit: 'mg',
+    riskLevel: 'low',
+  },
+  {
+    id: 'probiotics',
+    standardName: '유산균',
+    category: '유익균',
+    aliases: ['probiotics', '프로바이오틱스', '유산균', 'lactobacillus'],
+    defaultUnit: 'CFU',
+    riskLevel: 'low',
+  },
 ]
 
 export const referenceValues: ReferenceValue[] = [
@@ -174,7 +214,64 @@ export const interactionRules: InteractionRule[] = [
     message: '신장 질환이 있으면 마그네슘 보충제 복용 전 전문가 상담이 필요합니다.',
     sourceNote: 'MVP rule: renal condition mineral caution',
   },
+  {
+    id: 'diabetes-ginseng',
+    nutrientId: 'ginseng',
+    medicationKeyword: 'insulin',
+    severity: 'high',
+    message: '인슐린/당뇨약 복용 중 홍삼(진세노사이드) 고용량 섭취는 중증 저혈당 쇼크 위험이 있습니다.',
+    sourceNote: 'Report: Ginsenoside insulin sensitivity amplification',
+  },
+  {
+    id: 'statin-grapefruit',
+    nutrientId: 'grapefruit',
+    medicationKeyword: 'statin',
+    severity: 'high',
+    message: '스타틴 계열 고지혈증 약 복용 중 자몽 추출물 섭취는 절대 금기입니다 (횡문근융해증 위험).',
+    sourceNote: 'Report: CYP3A4 inhibition by furanocoumarin',
+  },
+  {
+    id: 'metformin-b12',
+    nutrientId: 'vitamin_b12',
+    medicationKeyword: 'metformin',
+    severity: 'caution',
+    message: '메트포르민 장기 복용은 비타민 B12 고갈을 유발할 수 있으므로 보충이 권장됩니다.',
+    sourceNote: 'Report: Metformin induces B12 depletion',
+  },
+  {
+    id: 'statin-coq10',
+    nutrientId: 'coq10',
+    medicationKeyword: 'statin',
+    severity: 'caution',
+    message: '스타틴 계열 약물은 체내 코엔자임 Q10을 고갈시키므로 병용 섭취가 권장됩니다.',
+    sourceNote: 'Report: Statin induces CoQ10 depletion',
+  },
+  {
+    id: 'antibiotics-probiotics',
+    nutrientId: 'probiotics',
+    medicationKeyword: 'antibiotic',
+    severity: 'high',
+    message: '항생제 복용 시 유산균이 사멸하므로 최소 2시간 이상의 간격을 두고 섭취하세요.',
+    sourceNote: 'Report: Antibiotics destroy probiotics',
+  },
+  {
+    id: 'osteoporosis-calcium',
+    nutrientId: 'calcium',
+    medicationKeyword: 'bisphosphonate',
+    severity: 'high',
+    message: '골다공증 약(비스포스포네이트)은 미네랄과 킬레이트를 형성하므로 최소 2~4시간 간격을 두세요.',
+    sourceNote: 'Report: Bisphosphonate chelation with minerals',
+  },
+  {
+    id: 'calcium-iron-antagonism',
+    nutrientId: 'iron',
+    conditionCode: '',
+    severity: 'caution',
+    message: '칼슘과 철분은 동시 복용 시 흡수 경쟁이 발생하므로 2~4시간 간격을 두는 것이 좋습니다.',
+    sourceNote: 'Report: DMT1 transporter competition',
+  }
 ]
+
 
 export function findNutrientByName(name: string): Nutrient | undefined {
   const normalized = name.trim().toLowerCase()

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
-  Activity, AlertTriangle, ArrowLeft, Camera, Check, ChevronRight,
-  ClipboardList, FileImage, Pill, Plus, ShieldCheck, Sparkles, Trash2, User
+  Activity, AlertTriangle, Camera, Check, ChevronRight,
+  FileImage, Pill, Plus, ShieldCheck, Sparkles, Trash2
 } from 'lucide-react'
 import type { AnalysisReport, Medication, ParsedIngredient, Profile, SupplementProduct, Unit } from '../../types'
 import { findNutrientByName, nutrients } from '../../features/nutrition/nutritionData'
@@ -9,212 +9,169 @@ import { statusLabel } from '../../features/analysis/analysisEngine'
 import { createId, getStatusTone, splitList } from '../../lib/utils'
 import { saveProfileBundle } from '../../features/profile/profileService'
 import { createManualIngredient, parseLabelImage, saveSupplementProduct } from '../../features/supplements/supplementService'
-import { AuthPanel } from '../auth/AuthPanel'
-import { MetricCard, LegalNotice } from './Shared'
+import { MetricCard } from './Shared'
 
 const knownNutrientIds = new Set(nutrients.map((nutrient) => nutrient.id))
-type WorkspaceTab = 'overview' | 'profile' | 'supplements' | 'analysis'
 
-export function WorkspacePage({
-  sessionEmail, onSessionEmail, onBackHome, activeTab, onTabChange,
-  confirmedCount, needsReview, previewReport, profile, medications, supplements,
-  report, analysisSyncMessage, onProfile, onMedications, onSupplements, onAnalyze,
-}: {
-  sessionEmail: string | null
-  onSessionEmail: (email: string | null) => void
-  onBackHome: () => void
-  activeTab: WorkspaceTab
-  onTabChange: (tab: WorkspaceTab) => void
-  confirmedCount: number
-  needsReview: number
-  previewReport: AnalysisReport
-  profile: Profile
-  medications: Medication[]
-  supplements: SupplementProduct[]
-  report: AnalysisReport | null
-  analysisSyncMessage: string
-  onProfile: (profile: Profile) => void
-  onMedications: (medications: Medication[]) => void
-  onSupplements: (supplements: SupplementProduct[]) => void
-  onAnalyze: () => void
-}) {
-  const tabs = [
-    ['overview', '대시보드', Activity],
-    ['profile', '내 정보', User],
-    ['supplements', '성분 분석', Pill],
-    ['analysis', '복용 관리', ClipboardList],
-  ] as const
 
-  return (
-    <section className="workspace-page" aria-label="tt-ni 작업공간">
-      <header className="workspace-page-header">
-        <button type="button" className="login-back-button" onClick={onBackHome}>
-          <ArrowLeft size={18} />
-          홈으로
-        </button>
-        <a className="logo-lockup" href="/" onClick={(event) => {
-          event.preventDefault()
-          onBackHome()
-        }} aria-label="tt-ni 홈">
-          <img src="/tt-ni-logo.svg" alt="+-ni" />
-        </a>
-      </header>
-
-      <section id="analysis-workspace" className="workspace-dock workspace-page-dock open" aria-label="분석 작업공간">
-        <div className="workspace-dock-header">
-          <div>
-            <span>tt-ni 작업공간</span>
-            <h2>사진 업로드부터 분석 결과까지 바로 이어서 진행하세요.</h2>
-          </div>
-          <AuthPanel sessionEmail={sessionEmail} onSessionEmail={onSessionEmail} />
-        </div>
-
-        <nav className="dock-tabs" aria-label="분석 기능">
-          {tabs.map(([id, label, Icon]) => (
-            <button
-              className={activeTab === id ? 'dock-tab active' : 'dock-tab'}
-              key={id}
-              type="button"
-              onClick={() => onTabChange(id)}
-            >
-              <Icon size={17} />
-              <span>{label}</span>
-            </button>
-          ))}
-        </nav>
-
-        <section className="status-grid" aria-label="요약 상태">
-          <MetricCard label="확정 영양제" value={`${confirmedCount}개`} tone="success" icon={<Pill size={20} />} />
-          <MetricCard label="확인 필요 성분" value={`${needsReview}개`} tone={needsReview ? 'warning' : 'success'} icon={<AlertTriangle size={20} />} />
-          <MetricCard label="과다/초과" value={`${previewReport.statusSummary.caution + previewReport.statusSummary.excess}개`} tone="danger" icon={<Activity size={20} />} />
-          <MetricCard label="약물/질환 주의" value={`${previewReport.interactionWarnings.length}개`} tone="warning" icon={<ShieldCheck size={20} />} />
-        </section>
-
-        {activeTab === 'overview' && (
-          <Dashboard
-            report={previewReport}
-            supplements={supplements}
-            onStart={() => onTabChange('supplements')}
-            onAnalyze={onAnalyze}
-          />
-        )}
-        {activeTab === 'profile' && (
-          <ProfileAndMedication profile={profile} medications={medications} onProfile={onProfile} onMedications={onMedications} />
-        )}
-        {activeTab === 'supplements' && (
-          <SupplementWorkspace supplements={supplements} onSupplements={onSupplements} onAnalyze={onAnalyze} />
-        )}
-        {activeTab === 'analysis' && <AnalysisResult report={report} syncMessage={analysisSyncMessage} onAnalyze={onAnalyze} />}
-
-        <LegalNotice />
-      </section>
-    </section>
-  )
-}
-
-function EmptyState({ title, detail, action }: { title: string; detail: string; action: () => void }) {
-  return (
-    <div className="empty-state">
-      <Sparkles size={26} />
-      <h3>{title}</h3>
-      <p>{detail}</p>
-      <button type="button" className="button primary" onClick={action}>
-        영양제 등록
-      </button>
-    </div>
-  )
-}
 
 export function Dashboard({
-  report, supplements, onStart, onAnalyze,
+  report, supplements, onStart, onAnalyze, confirmedCount, needsReview,
+  onSchedule, onChat,
 }: {
   report: AnalysisReport
   supplements: SupplementProduct[]
   onStart: () => void
   onAnalyze: () => void
+  confirmedCount: number
+  needsReview: number
+  onSchedule?: () => void
+  onChat?: () => void
 }) {
   const hasData = report.totals.length > 0
+  // TODO: 사용자님 작업 영역 - 실제 사용자 이름을 프로필에서 가져오세요
+  const userName = '사용자'
+  const today = new Date()
+  const dateStr = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일 ${'일월화수목금토'[today.getDay()]}요일`
+
+  // TODO: 사용자님 작업 영역 - 실제 스케줄 엔진에서 오늘의 타임라인을 가져오세요
+  const mockTodaySchedule = hasData ? [
+    { time: '아침 공복', items: ['유산균', '비타민 B군'] },
+    { time: '아침 식후', items: ['오메가3', '비타민 D'] },
+    { time: '저녁 식후', items: ['칼슘', '마그네슘'] },
+  ] : []
+
+  // TODO: 사용자님 작업 영역 - 실제 시너지 데이터를 analysisEngine에서 가져오세요
+  const mockSynergies = [
+    { combo: 'CoQ10 + 오메가3', benefit: '심혈관 건강 시너지 효과' },
+    { combo: '비타민 C + 철분', benefit: '철분 흡수율 극대화' },
+    { combo: '비타민 E + 오메가3', benefit: '지질 과산화 억제' },
+  ]
+
+  if (!hasData) {
+    return (
+      <>
+        <div style={{ marginBottom: '32px' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#173c3c', margin: '0 0 6px' }}>안녕하세요, {userName}님 👋</h2>
+          <p style={{ color: '#697771', fontSize: '15px', margin: 0 }}>{dateStr}</p>
+        </div>
+        <section className="panel" style={{ textAlign: 'center', padding: '48px 24px' }}>
+          <Sparkles size={48} color="#18ae90" style={{ marginBottom: '20px' }} />
+          <h3 style={{ fontSize: '22px', fontWeight: 850, color: '#173c3c', marginBottom: '12px' }}>시작할 준비가 되셨나요?</h3>
+          <p style={{ color: '#52605b', fontSize: '15px', lineHeight: 1.7, maxWidth: '460px', margin: '0 auto 28px' }}>
+            3단계만 거치면 나만의 맞춤형 영양 분석을 받을 수 있어요.
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '32px', flexWrap: 'wrap', marginBottom: '32px' }}>
+            {[
+              { step: '1', label: '프로필 작성', desc: '성별·연령·건강 상태' },
+              { step: '2', label: '영양제 등록', desc: '사진·검색·수동 입력' },
+              { step: '3', label: '분석 시작', desc: '과다·부족·상호작용' },
+            ].map((s) => (
+              <div key={s.step} style={{ textAlign: 'center', minWidth: '120px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#18ae90', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '18px', marginBottom: '10px' }}>{s.step}</div>
+                <strong style={{ display: 'block', fontSize: '14px', color: '#173c3c' }}>{s.label}</strong>
+                <small style={{ color: '#8a9a95', fontSize: '12px' }}>{s.desc}</small>
+              </div>
+            ))}
+          </div>
+          <button type="button" className="button primary" onClick={onStart}>영양제 등록하기</button>
+        </section>
+      </>
+    )
+  }
 
   return (
-    <div className="panel-grid two">
-      <section className="panel wide">
-        <div className="section-heading">
-          <div>
-            <h2>영양 성분 현황</h2>
-            <p>{hasData ? '성분별 섭취 상태를 한눈에 확인하세요.' : '영양제를 등록하고 분석을 실행해보세요.'}</p>
-          </div>
-          {hasData && (
-            <button type="button" className="button primary" onClick={onAnalyze}>
-              분석 실행
-              <ChevronRight size={16} />
-            </button>
-          )}
-        </div>
-        <div className="risk-board">
-          {!hasData ? (
-            <EmptyState title="아직 확정된 성분이 없습니다." detail="성분표 사진을 올리거나 수동으로 성분을 입력해 주세요." action={onStart} />
-          ) : (
-            <>
-              {report.totals
-                .filter((total) => total.status !== 'normal')
-                .slice(0, 4)
-                .map((total) => (
-                  <article className={`risk-row ${getStatusTone(total.status)}`} key={total.nutrientId}>
-                    <div>
-                      <strong>{total.standardName}</strong>
-                      <span>{Math.round(total.totalAmount * 100) / 100}{total.unit}</span>
-                    </div>
-                    <span className="status-pill">{statusLabel(total.status)}</span>
-                    <p>{total.message}</p>
-                  </article>
-                ))}
-              {report.totals.filter((total) => total.status !== 'normal').length === 0 && (
-                <div className="empty-state" style={{ padding: '24px' }}>
-                  <Check size={26} />
-                  <h3>모든 성분이 적정 수준입니다</h3>
-                  <p>현재 등록된 영양제 기준으로 과다·부족 신호가 없습니다.</p>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-        {hasData && (
-          <div style={{ marginTop: '16px', textAlign: 'right' }}>
-            <button type="button" className="button ghost" onClick={() => onAnalyze()}>
-              전체 분석 보기
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        )}
+    <>
+      <div style={{ marginBottom: '24px' }}>
+        <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#173c3c', margin: '0 0 6px' }}>안녕하세요, {userName}님 👋</h2>
+        <p style={{ color: '#697771', fontSize: '15px', margin: 0 }}>{dateStr}</p>
+      </div>
+
+      <section className="status-grid" aria-label="요약 상태" style={{ marginBottom: '24px' }}>
+        <MetricCard label="확정 영양제" value={`${confirmedCount}개`} tone="success" icon={<Pill size={20} />} />
+        <MetricCard label="확인 필요 성분" value={`${needsReview}개`} tone={needsReview ? 'warning' : 'success'} icon={<AlertTriangle size={20} />} />
+        <MetricCard label="과다/초과" value={`${report.statusSummary.caution + report.statusSummary.excess}개`} tone="danger" icon={<Activity size={20} />} />
+        <MetricCard label="약물/질환 주의" value={`${report.interactionWarnings.length}개`} tone="warning" icon={<ShieldCheck size={20} />} />
       </section>
 
-      <section className="panel">
-        <div className="section-heading">
-          <div>
-            <h2>등록 제품</h2>
-            <p>{supplements.length ? `${supplements.length}개 등록됨` : '검수 완료 여부'}</p>
+      <div className="panel-grid two">
+        <section className="panel wide">
+          <div className="section-heading">
+            <div><h2>영양 성분 현황</h2><p>성분별 섭취 상태를 한눈에 확인하세요.</p></div>
+            <button type="button" className="button primary" onClick={onAnalyze}>분석 실행<ChevronRight size={16} /></button>
           </div>
-          <button type="button" className="button ghost" onClick={onStart}>
-            <Plus size={16} />
-            등록
-          </button>
-        </div>
-        <div className="product-list">
-          {supplements.length === 0 && <p className="muted">등록된 영양제가 없습니다.</p>}
-          {supplements.map((supplement) => (
-            <article className="product-row" key={supplement.id}>
-              <div>
-                <strong>{supplement.productName}</strong>
-                <span>{supplement.ingredients.length}개 성분 · {supplement.brandName || '일반'}</span>
-              </div>
-              <span className={supplement.confirmed ? 'status-pill success' : 'status-pill warning'}>
-                {supplement.confirmed ? '확정' : '검수 전'}
-              </span>
-            </article>
+          <div className="risk-board">
+            {report.totals.filter((t) => t.status !== 'normal').slice(0, 4).map((total) => (
+              <article className={`risk-row ${getStatusTone(total.status)}`} key={total.nutrientId}>
+                <div><strong>{total.standardName}</strong><span>{Math.round(total.totalAmount * 100) / 100}{total.unit}</span></div>
+                <span className="status-pill">{statusLabel(total.status)}</span>
+                <p>{total.message}</p>
+              </article>
+            ))}
+            {report.totals.filter((t) => t.status !== 'normal').length === 0 && (
+              <div className="empty-state" style={{ padding: '24px' }}><Check size={26} /><h3>모든 성분이 적정 수준입니다</h3></div>
+            )}
+          </div>
+        </section>
+        <section className="panel">
+          <div className="section-heading">
+            <div><h2>등록 제품</h2><p>{supplements.length}개 등록됨</p></div>
+            <button type="button" className="button ghost" onClick={onStart}><Plus size={16} />등록</button>
+          </div>
+          <div className="product-list">
+            {supplements.map((s) => (
+              <article className="product-row" key={s.id}>
+                <div><strong>{s.productName}</strong><span>{s.ingredients.length}개 성분 · {s.brandName || '일반'}</span></div>
+                <span className={s.confirmed ? 'status-pill success' : 'status-pill warning'}>{s.confirmed ? '확정' : '검수 전'}</span>
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      {report.interactionWarnings.length > 0 && (
+        <section className="panel" style={{ marginTop: '24px' }}>
+          <div className="section-heading"><div><h2>⚠️ 주의 사항</h2><p>약물/영양소 상호작용 경고</p></div></div>
+          <div className="risk-board">
+            {report.interactionWarnings.slice(0, 3).map((w) => (
+              <article className={`risk-row ${getStatusTone(w.severity)}`} key={`${w.nutrientName}-${w.message}`}>
+                <div><strong>{w.nutrientName}</strong><span className="status-pill">{w.severity === 'high' ? '🔴 금기' : '🟡 주의'}</span></div>
+                <p>{w.message}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <div className="panel-grid two" style={{ marginTop: '24px' }}>
+        <section className="panel">
+          <div className="section-heading">
+            <div><h2>📅 오늘의 복용</h2><p>시간약리학 기반 타임라인</p></div>
+            {onSchedule && <button type="button" className="button ghost" onClick={onSchedule}>전체 보기<ChevronRight size={16} /></button>}
+          </div>
+          {/* TODO: 사용자님 작업 영역 - 실제 스케줄 엔진 데이터로 교체하세요 */}
+          {mockTodaySchedule.map((slot, idx) => (
+            <div key={idx} style={{ display: 'flex', gap: '12px', padding: '10px 0', borderBottom: idx < mockTodaySchedule.length - 1 ? '1px solid #f0f4f2' : 'none' }}>
+              <span style={{ minWidth: '80px', color: '#18ae90', fontWeight: 800, fontSize: '13px' }}>{slot.time}</span>
+              <span style={{ color: '#1a2c28', fontSize: '14px' }}>{slot.items.join(', ')}</span>
+            </div>
           ))}
-        </div>
-      </section>
-    </div>
+        </section>
+        <section className="panel">
+          <div className="section-heading">
+            <div><h2>💡 추천 조합</h2><p>시너지 효과가 높은 조합</p></div>
+            {onChat && <button type="button" className="button ghost" onClick={onChat}>AI에게 물어보기<ChevronRight size={16} /></button>}
+          </div>
+          {/* TODO: 사용자님 작업 영역 - 실제 시너지 분석 결과로 교체하세요 */}
+          {mockSynergies.map((s, idx) => (
+            <div key={idx} style={{ display: 'flex', gap: '12px', padding: '10px 0', borderBottom: idx < mockSynergies.length - 1 ? '1px solid #f0f4f2' : 'none' }}>
+              <strong style={{ minWidth: '140px', color: '#173c3c', fontSize: '14px' }}>{s.combo}</strong>
+              <span style={{ color: '#52605b', fontSize: '13px' }}>{s.benefit}</span>
+            </div>
+          ))}
+        </section>
+      </div>
+    </>
   )
 }
 
@@ -285,7 +242,27 @@ export function ProfileAndMedication({
             <input type="checkbox" checked={profile.lactationStatus} onChange={(e) => onProfile({ ...profile, lactationStatus: e.target.checked })} />수유 중
           </label>
           <label className="full">기저질환
-            <input placeholder="예: kidney, 신장, 당뇨" value={profile.conditions.join(', ')} onChange={(e) => onProfile({ ...profile, conditions: splitList(e.target.value) })} />
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
+              {['고혈압', '당뇨', '고지혈증', '신장질환', '갑상선질환', '골다공증', '간질환', '빈혈', '심부정맥', '천식', '관절염', '우울증', '불면증', '위궤양', '통풍'].map((c) => {
+                const active = profile.conditions.includes(c)
+                return (
+                  <button key={c} type="button" onClick={() => {
+                    const next = active ? profile.conditions.filter((x) => x !== c) : [...profile.conditions, c]
+                    onProfile({ ...profile, conditions: next })
+                  }} style={{
+                    padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 750, cursor: 'pointer',
+                    border: active ? '1px solid #18ae90' : '1px solid #e1e8e5',
+                    background: active ? '#e6f9f4' : '#fff', color: active ? '#0a6e58' : '#52605b',
+                  }}>
+                    {active ? '✓ ' : ''}{c}
+                  </button>
+                )
+              })}
+            </div>
+            <input placeholder="기타 질환 직접 입력 (쉼표 구분)" value={profile.conditions.filter((c) => !['고혈압','당뇨','고지혈증','신장질환','갑상선질환','골다공증','간질환','빈혈','심부정맥','천식','관절염','우울증','불면증','위궤양','통풍'].includes(c)).join(', ')} onChange={(e) => {
+              const presets = profile.conditions.filter((c) => ['고혈압','당뇨','고지혈증','신장질환','갑상선질환','골다공증','간질환','빈혈','심부정맥','천식','관절염','우울증','불면증','위궤양','통풍'].includes(c))
+              onProfile({ ...profile, conditions: [...presets, ...splitList(e.target.value)] })
+            }} style={{ marginTop: '8px' }} />
           </label>
           <label className="full">알레르기
             <input value={profile.allergies.join(', ')} onChange={(e) => onProfile({ ...profile, allergies: splitList(e.target.value) })} />
@@ -310,7 +287,7 @@ export function ProfileAndMedication({
           </div>
         </div>
         <div className="form-grid medication-form">
-          <input placeholder="약명: warfarin, levothyroxine" value={draftMedication.name} onChange={(e) => setDraftMedication({ ...draftMedication, name: e.target.value })} />
+          <input placeholder="약명: 와파린, 메트포르민, 레보티록신 등" value={draftMedication.name} onChange={(e) => setDraftMedication({ ...draftMedication, name: e.target.value })} />
           <input placeholder="복용 목적" value={draftMedication.purpose} onChange={(e) => setDraftMedication({ ...draftMedication, purpose: e.target.value })} />
           <input placeholder="복용 빈도" value={draftMedication.frequency} onChange={(e) => setDraftMedication({ ...draftMedication, frequency: e.target.value })} />
           <input placeholder="메모" value={draftMedication.memo} onChange={(e) => setDraftMedication({ ...draftMedication, memo: e.target.value })} />
@@ -344,6 +321,8 @@ export function SupplementWorkspace({
   onSupplements: (supplements: SupplementProduct[]) => void
   onAnalyze: () => void
 }) {
+  const [registrationMethod, setRegistrationMethod] = useState<'photo' | 'search' | 'manual'>('photo')
+  const [searchQuery, setSearchQuery] = useState('')
   const [productName, setProductName] = useState('')
   const [brandName, setBrandName] = useState('')
   const [dailyServings, setDailyServings] = useState(1)
@@ -381,6 +360,25 @@ export function SupplementWorkspace({
       setLabelImagePath('')
       setDraftIngredients([])
       setParseWarnings([error instanceof Error ? error.message : '이미지 파싱 실패'])
+    } finally {
+      setParsing(false)
+    }
+  }
+
+  async function handleSearch() {
+    if (!searchQuery.trim()) return
+    setParsing(true)
+    setParseWarnings([])
+    try {
+      setSyncMessage('Exa.ai 웹 검색 기능이 준비 중입니다. 현재는 테스트용 모의 데이터만 제공됩니다.')
+      // 모의 데이터
+      setProductName(searchQuery)
+      setBrandName('Exa Searched Brand')
+      setDraftIngredients([
+        { id: createId('ing'), nutrientId: 'vitamin_c', standardName: '비타민 C', amount: 500, unit: 'mg', confidence: 1, reviewRequired: false, rawName: 'Vitamin C', rawText: 'Vitamin C 500mg' }
+      ])
+    } catch (error) {
+      setParseWarnings([error instanceof Error ? error.message : '검색 실패'])
     } finally {
       setParsing(false)
     }
@@ -439,21 +437,60 @@ export function SupplementWorkspace({
     <div className="panel-grid">
       <section className="panel">
         <div className="section-heading">
-          <div><h2>영양제 등록</h2><p>사진 업로드 후 추출값을 수정하고 확정하세요.</p></div>
+          <div><h2>영양제 등록</h2><p>세 가지 방식 중 하나를 선택해 영양제를 등록하세요.</p></div>
         </div>
+        
+        <div className="registration-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '1px solid #e1e8e5', paddingBottom: '12px' }}>
+          <button type="button" className={`button ${registrationMethod === 'photo' ? 'primary' : 'ghost'}`} onClick={() => setRegistrationMethod('photo')}>
+            <FileImage size={16} /> 사진 촬영/업로드
+          </button>
+          <button type="button" className={`button ${registrationMethod === 'search' ? 'primary' : 'ghost'}`} onClick={() => setRegistrationMethod('search')}>
+            <Sparkles size={16} /> 제품명 검색 (Exa.ai)
+          </button>
+          <button type="button" className={`button ${registrationMethod === 'manual' ? 'primary' : 'ghost'}`} onClick={() => setRegistrationMethod('manual')}>
+            <Plus size={16} /> 수동 입력
+          </button>
+        </div>
+
         <div className="supplement-layout">
-          <div className="upload-zone">
-            <FileImage size={28} />
-            <strong>{imageName || '성분표 사진 업로드'}</strong>
-            <span>{parsing ? 'AI가 성분표를 분석하는 중입니다.' : 'JPG, PNG, WEBP 파일을 선택하면 parse-label 흐름을 실행합니다.'}</span>
-            <label className="button ghost">
-              <Camera size={16} />파일 선택
-              <input hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => {
-                const file = e.target.files?.[0]
-                if (file) parseLabel(file)
-              }} />
-            </label>
-          </div>
+          {registrationMethod === 'photo' && (
+            <div className="upload-zone">
+              <FileImage size={28} />
+              <strong>{imageName || '성분표 사진 업로드'}</strong>
+              <span>{parsing ? 'AI가 성분표를 분석하는 중입니다.' : 'JPG, PNG, WEBP 파일을 선택하면 parse-label 흐름을 실행합니다.'}</span>
+              <label className="button ghost">
+                <Camera size={16} />파일 선택
+                <input hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) parseLabel(file)
+                }} />
+              </label>
+            </div>
+          )}
+          
+          {registrationMethod === 'search' && (
+            <div className="upload-zone" style={{ flexDirection: 'row', justifyContent: 'center' }}>
+              <input 
+                type="text" 
+                placeholder="영양제 브랜드명이나 제품명을 검색하세요" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ flex: 1, maxWidth: '400px' }}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              />
+              <button type="button" className="button primary" onClick={handleSearch} disabled={parsing}>
+                {parsing ? '검색 중...' : '검색'}
+              </button>
+            </div>
+          )}
+
+          {registrationMethod === 'manual' && (
+            <div className="upload-zone">
+              <strong>직접 정보 입력</strong>
+              <span>아래 폼에 제품 정보를 직접 입력하고 수동으로 성분을 추가하세요.</span>
+            </div>
+          )}
+
           <div className="form-grid">
             <label>제품명<input placeholder="제품명을 입력하거나 성분표를 업로드하세요" value={productName} onChange={(e) => setProductName(e.target.value)} /></label>
             <label>브랜드<input placeholder="브랜드명" value={brandName} onChange={(e) => setBrandName(e.target.value)} /></label>

@@ -11,9 +11,10 @@ import type { AnalysisReport, Medication, Profile, SupplementProduct } from '../
 import { routes, useCurrentPath } from './routes'
 import { LandingPage } from '../pages/LandingPage'
 import { LoginPage } from '../pages/LoginPage'
-import { WorkspacePage } from '../pages/WorkspacePage'
-
-type WorkspaceTab = 'overview' | 'profile' | 'supplements' | 'analysis'
+import { SidebarLayout } from '../components/layout/SidebarLayout'
+import { Dashboard, ProfileAndMedication, SupplementWorkspace, AnalysisResult } from '../components/workspace/WorkspacePage'
+import { SchedulePage } from '../pages/SchedulePage'
+import { ChatPage } from '../pages/ChatPage'
 
 const defaultProfile: Profile = {
   gender: 'female', birthYear: 1998, heightCm: 165, weightKg: 55,
@@ -27,11 +28,10 @@ function App() {
   const [profile, setProfile] = useState<Profile>(defaultProfile)
   const [medications, setMedications] = useState<Medication[]>([])
   const [supplements, setSupplements] = useState<SupplementProduct[]>([])
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>('overview')
   const [report, setReport] = useState<AnalysisReport | null>(null)
   const [analysisSyncMessage, setAnalysisSyncMessage] = useState('')
 
-  const openProfileAfterSignIn = useCallback(() => setActiveTab('profile'), [])
+  const openProfileAfterSignIn = useCallback(() => navigateTo(routes.profile), [navigateTo])
   const { sessionEmail, setSessionEmail, authNotice, setAuthNotice } = useAuth({
     defaultProfile,
     onProfile: setProfile,
@@ -44,11 +44,6 @@ function App() {
   const previewReport = runAnalysis(profile, medications, supplements)
   const confirmedCount = supplements.filter((supplement) => supplement.confirmed).length
   const needsReview = supplements.flatMap((supplement) => supplement.ingredients).filter((ingredient) => ingredient.reviewRequired).length
-
-  function goToWorkspace(tab: WorkspaceTab) {
-    setActiveTab(tab)
-    navigateTo(routes.workspace)
-  }
 
   async function handleRunAnalysis() {
     setAnalysisSyncMessage('')
@@ -66,28 +61,54 @@ function App() {
     } catch (error) {
       setAnalysisSyncMessage(error instanceof Error ? error.message : '서버 분석 저장에 실패했습니다.')
     }
-    setActiveTab('analysis')
+    navigateTo(routes.analysis)
   }
 
-  if (currentPath === routes.workspace) {
+  // Workspace routing
+  if (currentPath.startsWith(routes.workspace)) {
     return (
-      <main className="landing-shell workspace-page-shell">
+      <SidebarLayout
+        currentPath={currentPath}
+        navigateTo={navigateTo}
+        sessionEmail={sessionEmail}
+        onSessionEmail={setSessionEmail}
+        onBackHome={() => navigateTo(routes.home)}
+      >
         {authNotice && (
-          <section className={`auth-callback-notice ${authNotice.tone}`} role="status">
+          <section className={`auth-callback-notice ${authNotice.tone}`} role="status" style={{ marginBottom: '24px' }}>
             <span>{authNotice.message}</span>
             <button type="button" onClick={() => setAuthNotice(null)} aria-label="로그인 알림 닫기">닫기</button>
           </section>
         )}
-        <WorkspacePage
-          sessionEmail={sessionEmail} onSessionEmail={setSessionEmail}
-          onBackHome={() => navigateTo(routes.home)} activeTab={activeTab} onTabChange={setActiveTab}
-          confirmedCount={confirmedCount} needsReview={needsReview} previewReport={previewReport}
-          profile={profile} medications={medications} supplements={supplements}
-          report={report} analysisSyncMessage={analysisSyncMessage}
-          onProfile={setProfile} onMedications={setMedications}
-          onSupplements={setSupplements} onAnalyze={handleRunAnalysis}
-        />
-      </main>
+
+        {currentPath === routes.workspace && (
+          <Dashboard
+            report={previewReport}
+            supplements={supplements}
+            confirmedCount={confirmedCount}
+            needsReview={needsReview}
+            onStart={() => navigateTo(routes.supplements)}
+            onAnalyze={handleRunAnalysis}
+            onSchedule={() => navigateTo(routes.schedule)}
+            onChat={() => navigateTo(routes.chat)}
+          />
+        )}
+        {currentPath === routes.profile && (
+          <ProfileAndMedication profile={profile} medications={medications} onProfile={setProfile} onMedications={setMedications} />
+        )}
+        {currentPath === routes.supplements && (
+          <SupplementWorkspace supplements={supplements} onSupplements={setSupplements} onAnalyze={handleRunAnalysis} />
+        )}
+        {currentPath === routes.analysis && (
+          <AnalysisResult report={report} syncMessage={analysisSyncMessage} onAnalyze={handleRunAnalysis} />
+        )}
+        {currentPath === routes.schedule && (
+          <SchedulePage supplements={supplements} />
+        )}
+        {currentPath === routes.chat && (
+          <ChatPage />
+        )}
+      </SidebarLayout>
     )
   }
 
@@ -103,7 +124,7 @@ function App() {
         <LoginPage
           sessionEmail={sessionEmail} onSessionEmail={setSessionEmail}
           onBackHome={() => navigateTo(routes.home)}
-          onOpenWorkspace={() => { setActiveTab('profile'); navigateTo(routes.workspace) }}
+          onOpenWorkspace={() => navigateTo(routes.profile)}
         />
       </main>
     )
@@ -118,16 +139,17 @@ function App() {
         </section>
       )}
       <LandingPage
+        sessionEmail={sessionEmail}
         confirmedCount={confirmedCount}
         needsReview={needsReview}
         previewReport={previewReport}
         onLogin={() => navigateTo(routes.login)}
-        onStart={() => goToWorkspace('supplements')}
-        onUpload={() => goToWorkspace('supplements')}
-        onOpenResults={() => goToWorkspace('analysis')}
+        onOpenResults={() => navigateTo(routes.analysis)}
+        onDashboard={() => navigateTo(routes.workspace)}
       />
     </main>
   )
 }
 
 export default App
+

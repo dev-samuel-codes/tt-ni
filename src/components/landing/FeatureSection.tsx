@@ -1,11 +1,13 @@
-import { Camera, Sparkles, Activity, HeartPulse, ClipboardList, User } from 'lucide-react'
+import { Camera, Sparkles, Activity, HeartPulse, Search, Calendar, MessageCircle, ClipboardList, User } from 'lucide-react'
 
 export function FeatureReasonSection() {
   const items = [
-    ['성분표 사진 업로드', '영양제 라벨을 찍으면 AI가 글자를 인식해 성분 정보를 추출합니다.', Camera],
-    ['AI 성분 자동 분석', '복잡한 성분명을 표준화하고 함량, 단위까지 정리합니다.', Sparkles],
-    ['섭취 상태 분석', '중복 섭취, 과다, 부족을 판단해 영양소별 섭취 상태를 보여줍니다.', Activity],
-    ['맞춤 추천 가이드', '지금 내게 필요한 영양소와 복용 팁을 개인 맞춤형으로 추천합니다.', HeartPulse],
+    ['영양제 라벨 AI 인식', '영양제 라벨을 찍으면 Vision AI가 성분명·함량·단위를 자동으로 추출합니다.', Camera],
+    ['웹 검색 기반 조회', '제품명만 입력하면 웹 검색으로 성분 정보를 수집하고 구조화합니다.', Search],
+    ['KDRIs 기반 분석', '성별·연령·임신 여부에 맞춘 개인 맞춤형 섭취 상태를 분석합니다.', Activity],
+    ['약물 상호작용 감지', '처방약과 영양제 성분 간의 알려진 상호작용을 자동으로 경고합니다.', Sparkles],
+    ['시간약리학 스케줄러', '공복/식후/저녁 등 최적의 복용 시간대를 과학적으로 배치합니다.', Calendar],
+    ['맞춤형 AI 상담', '내 프로필과 영양제 데이터를 바탕으로 개인화된 상담을 받을 수 있어요.', MessageCircle],
   ] as const
 
   return (
@@ -26,10 +28,11 @@ export function FeatureReasonSection() {
 
 export function HowItWorksSection() {
   const steps = [
-    ['사진 업로드', '영양제 성분표가 보이게 선명하게 촬영해 업로드합니다.', Camera],
-    ['성분 자동 인식', 'AI가 성분명과 함량을 인식해 데이터로 변환합니다.', ClipboardList],
-    ['사용자 확인', '인식된 성분과 복용 주기를 확인하고 저장합니다.', User],
-    ['분석 결과 확인', '내 섭취 상태와 추천 가이드를 한눈에 확인합니다.', Activity],
+    ['프로필 등록', '성별, 연령, 건강 상태, 복용 약 정보를 입력합니다.', User],
+    ['영양제 등록', '사진 촬영, 제품 검색, 수동 입력 중 편한 방법을 선택합니다.', Camera],
+    ['성분 분석 확인', 'KDRIs 기반으로 과다·부족·중복 상태를 한눈에 확인합니다.', ClipboardList],
+    ['최적 스케줄 제안', '시간약리학 원리에 따라 복용 타임라인이 자동 생성됩니다.', Calendar],
+    ['AI 상담 활용', '궁금한 점을 AI에게 물어보고 맞춤 답변을 받으세요.', HeartPulse],
   ] as const
 
   return (
