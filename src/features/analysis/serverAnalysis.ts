@@ -1,4 +1,4 @@
-import type { AnalysisReport, RiskStatus, Unit } from './types'
+import type { AnalysisReport, RiskStatus, Unit } from '../../types'
 
 type ServerRiskStatus = RiskStatus | string
 

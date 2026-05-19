@@ -2,7 +2,7 @@ import {
   interactionRules,
   nutrients,
   referenceValues,
-} from './nutritionData'
+} from '../nutrition/nutritionData'
 import type {
   AnalysisReport,
   Medication,
@@ -12,7 +12,7 @@ import type {
   RiskStatus,
   SupplementProduct,
   Unit,
-} from './types'
+} from '../../types'
 
 export function getAge(profile: Pick<Profile, 'birthYear'>, now = new Date()): number {
   return Math.max(0, now.getFullYear() - profile.birthYear)

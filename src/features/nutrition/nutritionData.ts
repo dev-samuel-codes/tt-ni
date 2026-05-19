@@ -1,4 +1,4 @@
-import type { InteractionRule, Nutrient, ReferenceValue } from './types'
+import type { InteractionRule, Nutrient, ReferenceValue } from '../../types'
 
 export const nutrients: Nutrient[] = [
   {

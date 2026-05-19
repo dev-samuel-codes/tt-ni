@@ -1,30 +1,19 @@
 import { useState } from 'react'
 import {
   Activity, AlertTriangle, ArrowLeft, Camera, Check, ChevronRight,
-  ClipboardList, FileImage, Lock, Pill, Plus, ShieldCheck, Sparkles, Trash2, User, Database
+  ClipboardList, FileImage, Pill, Plus, ShieldCheck, Sparkles, Trash2, User
 } from 'lucide-react'
-import type { AnalysisReport, Medication, ParsedIngredient, Profile, SupplementProduct, Unit } from '../lib/types'
-import { findNutrientByName, nutrients } from '../lib/nutritionData'
-import { statusLabel } from '../lib/analysisEngine'
-import { supabase } from '../lib/supabaseClient'
-import { AuthPanel } from './AuthPanel'
+import type { AnalysisReport, Medication, ParsedIngredient, Profile, SupplementProduct, Unit } from '../../types'
+import { findNutrientByName, nutrients } from '../../features/nutrition/nutritionData'
+import { statusLabel } from '../../features/analysis/analysisEngine'
+import { createId, getStatusTone, splitList } from '../../lib/utils'
+import { saveProfileBundle } from '../../features/profile/profileService'
+import { createManualIngredient, parseLabelImage, saveSupplementProduct } from '../../features/supplements/supplementService'
+import { AuthPanel } from '../auth/AuthPanel'
 import { MetricCard, LegalNotice } from './Shared'
 
-const createId = (prefix: string) => `${prefix}-${crypto.randomUUID()}`
 const knownNutrientIds = new Set(nutrients.map((nutrient) => nutrient.id))
-const allowedLabelMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
 type WorkspaceTab = 'overview' | 'profile' | 'supplements' | 'analysis'
-
-function splitList(value: string): string[] {
-  return value.split(',').map((item) => item.trim()).filter(Boolean)
-}
-
-function getStatusTone(status: string): string {
-  if (status === 'excess' || status === 'high') return 'danger'
-  if (status === 'caution' || status === 'deficient' || status === 'review') return 'warning'
-  if (status === 'normal') return 'success'
-  return 'neutral'
-}
 
 export function WorkspacePage({
   sessionEmail, onSessionEmail, onBackHome, activeTab, onTabChange,
@@ -102,7 +91,7 @@ export function WorkspacePage({
         </section>
 
         {activeTab === 'overview' && (
-          <DashboardTab
+          <Dashboard
             report={previewReport}
             supplements={supplements}
             onStart={() => onTabChange('supplements')}
@@ -110,89 +99,15 @@ export function WorkspacePage({
           />
         )}
         {activeTab === 'profile' && (
-          <ProfileTab profile={profile} medications={medications} onProfile={onProfile} onMedications={onMedications} />
+          <ProfileAndMedication profile={profile} medications={medications} onProfile={onProfile} onMedications={onMedications} />
         )}
         {activeTab === 'supplements' && (
-          <SupplementTab supplements={supplements} onSupplements={onSupplements} onAnalyze={onAnalyze} />
+          <SupplementWorkspace supplements={supplements} onSupplements={onSupplements} onAnalyze={onAnalyze} />
         )}
-        {activeTab === 'analysis' && <AnalysisTab report={report} syncMessage={analysisSyncMessage} onAnalyze={onAnalyze} />}
+        {activeTab === 'analysis' && <AnalysisResult report={report} syncMessage={analysisSyncMessage} onAnalyze={onAnalyze} />}
 
         <LegalNotice />
       </section>
-    </section>
-  )
-}
-
-export function LoginPage({
-  sessionEmail, onSessionEmail, onBackHome, onOpenWorkspace,
-}: {
-  sessionEmail: string | null
-  onSessionEmail: (email: string | null) => void
-  onBackHome: () => void
-  onOpenWorkspace: () => void
-}) {
-  return (
-    <section className="login-page" aria-label="로그인">
-      <header className="login-page-header">
-        <button type="button" className="login-back-button" onClick={onBackHome}>
-          <ArrowLeft size={18} />
-          홈으로
-        </button>
-        <a className="logo-lockup" href="/" onClick={(event) => {
-          event.preventDefault()
-          onBackHome()
-        }} aria-label="tt-ni 홈">
-          <img src="/tt-ni-logo.svg" alt="+-ni" />
-        </a>
-      </header>
-
-      <div className="login-page-grid">
-        <div className="login-copy">
-          <span className="login-caption">내 영양제 데이터를 안전하게 보관하세요</span>
-          <h1>로그인하고 분석 기록을 이어서 관리하세요.</h1>
-          <p>프로필, 복용 약, 영양제 성분표와 분석 리포트를 계정에 저장해 다음 접속에서도 그대로 이어갈 수 있습니다.</p>
-          <div className="login-highlights" aria-label="로그인 후 가능한 기능">
-            <article>
-              <ShieldCheck size={20} />
-              <div>
-                <strong>개인 데이터 저장</strong>
-                <span>프로필과 복용 정보를 계정 단위로 관리</span>
-              </div>
-            </article>
-            <article>
-              <Database size={20} />
-              <div>
-                <strong>분석 결과 동기화</strong>
-                <span>Supabase에 리포트와 입력 정보를 보관</span>
-              </div>
-            </article>
-            <article>
-              <Sparkles size={20} />
-              <div>
-                <strong>맞춤 추천 준비</strong>
-                <span>누적 기록 기반으로 복용 관리 고도화</span>
-              </div>
-            </article>
-          </div>
-        </div>
-
-        <div className="login-panel">
-          <div className="login-panel-heading">
-            <Lock size={19} />
-            <div>
-              <h2>{sessionEmail ? '로그인 상태' : 'tt-ni 로그인'}</h2>
-              <p>{sessionEmail ? '현재 계정으로 분석 작업공간을 열 수 있습니다.' : '소셜 계정 또는 이메일로 계속하세요.'}</p>
-            </div>
-          </div>
-          <AuthPanel sessionEmail={sessionEmail} onSessionEmail={onSessionEmail} variant="page" />
-          {sessionEmail && (
-            <button type="button" className="button primary login-workspace-button" onClick={onOpenWorkspace}>
-              작업공간 열기
-              <ChevronRight size={16} />
-            </button>
-          )}
-        </div>
-      </div>
     </section>
   )
 }
@@ -210,7 +125,7 @@ function EmptyState({ title, detail, action }: { title: string; detail: string; 
   )
 }
 
-function DashboardTab({
+export function Dashboard({
   report, supplements, onStart, onAnalyze,
 }: {
   report: AnalysisReport
@@ -303,7 +218,7 @@ function DashboardTab({
   )
 }
 
-function ProfileTab({
+export function ProfileAndMedication({
   profile, medications, onProfile, onMedications,
 }: {
   profile: Profile
@@ -325,43 +240,7 @@ function ProfileTab({
   async function saveProfileToSupabase() {
     setSyncMessage('')
     try {
-      const { data: authData, error: authError } = await supabase.auth.getUser()
-      if (authError || !authData.user) throw new Error('로그인 후 Supabase에 저장할 수 있습니다.')
-      const userId = authData.user.id
-      const profileResult = await supabase.from('user_profiles').upsert({
-        user_id: userId,
-        gender: profile.gender,
-        birth_year: profile.birthYear,
-        height_cm: profile.heightCm,
-        weight_kg: profile.weightKg,
-        pregnancy_status: profile.pregnancyStatus,
-        lactation_status: profile.lactationStatus,
-        consent_accepted: profile.consentAccepted,
-      }, { onConflict: 'user_id' })
-      if (profileResult.error) throw profileResult.error
-
-      const conditionRows = [
-        ...profile.conditions.map((name) => ({ condition_code: name.toLowerCase(), condition_name: name, severity: 'notice' })),
-        ...profile.allergies.map((name) => ({ condition_code: `allergy:${name.toLowerCase()}`, condition_name: name, severity: 'caution' })),
-        ...profile.dietaryRestrictions.map((name) => ({ condition_code: `diet:${name.toLowerCase()}`, condition_name: name, severity: 'notice' })),
-      ]
-      await supabase.from('user_conditions').delete().eq('user_id', userId)
-      if (conditionRows.length > 0) {
-        const conditionResult = await supabase.from('user_conditions').insert(conditionRows.map((row) => ({ ...row, user_id: userId })))
-        if (conditionResult.error) throw conditionResult.error
-      }
-
-      await supabase.from('user_medications').delete().eq('user_id', userId)
-      if (medications.length > 0) {
-        const medicationResult = await supabase.from('user_medications').insert(
-          medications.map((medication) => ({
-            user_id: userId, medication_name: medication.name, dosage_text: medication.purpose,
-            frequency: medication.frequency, memo: medication.memo,
-          })),
-        )
-        if (medicationResult.error) throw medicationResult.error
-      }
-      setSyncMessage('프로필, 질환/알레르기, 복용 약을 Supabase에 저장했습니다.')
+      setSyncMessage(await saveProfileBundle(profile, medications))
     } catch (error) {
       setSyncMessage(error instanceof Error ? error.message : 'Supabase 저장에 실패했습니다.')
     }
@@ -458,7 +337,7 @@ function ProfileTab({
   )
 }
 
-function SupplementTab({
+export function SupplementWorkspace({
   supplements, onSupplements, onAnalyze,
 }: {
   supplements: SupplementProduct[]
@@ -488,34 +367,17 @@ function SupplementTab({
   async function parseLabel(file?: File) {
     setParsing(true)
     setParseWarnings([])
-    let uploadedPath = ''
     try {
-      if (!file) throw new Error('성분표 이미지 파일을 선택해야 AI 파싱을 실행할 수 있습니다.')
-      if (!allowedLabelMimeTypes.has(file.type)) throw new Error('JPG, PNG, WEBP 형식의 성분표 이미지만 업로드할 수 있습니다.')
-      setImageName(file.name)
+      const parsed = await parseLabelImage(file)
+      setImageName(parsed.imageName)
       setLabelImagePath('')
       setDraftIngredients([])
-      const { data: authData, error: authError } = await supabase.auth.getUser()
-      if (authError || !authData.user) throw new Error('로그인 후 성분표 이미지를 업로드할 수 있습니다.')
-      const path = `${authData.user.id}/${crypto.randomUUID()}-${file.name}`
-      const upload = await supabase.storage.from('label-images').upload(path, file, {
-        contentType: file.type || 'application/octet-stream', upsert: false,
-      })
-      if (upload.error) throw upload.error
-      uploadedPath = upload.data.path
-      setLabelImagePath(upload.data.path)
-      const { data, error } = await supabase.functions.invoke('parse-label', {
-        body: { image_path: upload.data.path },
-      })
-      if (error) throw error
-      if (data.productName) setProductName(data.productName)
-      if (data.dailyServingsRecommended) setDailyServings(data.dailyServingsRecommended)
-      setDraftIngredients(data.ingredients)
-      setParseWarnings(data.warnings ?? [])
+      setLabelImagePath(parsed.labelImagePath)
+      if (parsed.productName) setProductName(parsed.productName)
+      if (parsed.dailyServingsRecommended) setDailyServings(parsed.dailyServingsRecommended)
+      setDraftIngredients(parsed.ingredients)
+      setParseWarnings(parsed.warnings)
     } catch (error) {
-      if (uploadedPath) {
-        await supabase.storage.from('label-images').remove([uploadedPath])
-      }
       setLabelImagePath('')
       setDraftIngredients([])
       setParseWarnings([error instanceof Error ? error.message : '이미지 파싱 실패'])
@@ -541,10 +403,7 @@ function SupplementTab({
   }
 
   function addManualIngredient() {
-    setDraftIngredients([...draftIngredients, {
-      id: createId('ingredient'), rawName: '', standardName: '', nutrientId: '',
-      amount: 0, unit: 'mg', confidence: 1, rawText: 'manual', reviewRequired: false,
-    }])
+    setDraftIngredients([...draftIngredients, createManualIngredient()])
   }
 
   async function confirmSupplement() {
@@ -559,37 +418,12 @@ function SupplementTab({
       dailyServings, intakeTime, imageName,
       ingredients: draftIngredients, confirmed: true,
     }
-    let productId = ''
     try {
-      const { data: authData, error: authError } = await supabase.auth.getUser()
-      if (authError || !authData.user) throw new Error('Supabase 저장은 로그인 후 사용할 수 있습니다.')
-      const productInsert = await supabase.from('supplement_products').insert({
-        owner_user_id: authData.user.id, product_name: productName, brand_name: brandName,
-        source_type: labelImagePath ? 'photo' : 'manual', label_image_path: labelImagePath || null,
-      }).select('id').single()
-      if (productInsert.error) throw productInsert.error
-      productId = productInsert.data.id as string
-      const ingredientsInsert = await supabase.from('supplement_ingredients').insert(
-        draftIngredients.map((ingredient) => ({
-          product_id: productId, nutrient_id: ingredient.nutrientId, raw_name: ingredient.rawName || ingredient.standardName,
-          standard_name: ingredient.standardName, amount: ingredient.amount, unit: ingredient.unit,
-          amount_per_daily_serving: ingredient.amount, confidence: ingredient.confidence, review_required: ingredient.reviewRequired,
-        })),
-      )
-      if (ingredientsInsert.error) throw ingredientsInsert.error
-      const userSupplementInsert = await supabase.from('user_supplements').insert({
-        user_id: authData.user.id, product_id: productId, daily_servings: dailyServings, intake_time: intakeTime, active: true,
-      })
-      if (userSupplementInsert.error) throw userSupplementInsert.error
-      supplement.id = productId
-      setSyncMessage('Supabase에 제품, 성분, 복용량을 저장했습니다.')
+      const saved = await saveSupplementProduct(supplement, labelImagePath)
+      supplement.id = saved.productId
+      setSyncMessage(saved.message)
     } catch (error) {
-      let message = error instanceof Error ? error.message : 'Supabase 저장에 실패했습니다.'
-      if (productId) {
-        const cleanup = await supabase.from('supplement_products').delete().eq('id', productId)
-        if (cleanup.error) message = `${message} 제품 임시 데이터 정리도 실패했습니다: ${cleanup.error.message}`
-      }
-      setSyncMessage(message)
+      setSyncMessage(error instanceof Error ? error.message : 'Supabase 저장에 실패했습니다.')
       return
     }
     onSupplements([...supplements, supplement])
@@ -670,7 +504,7 @@ function SupplementTab({
   )
 }
 
-function AnalysisTab({ report, syncMessage, onAnalyze }: { report: AnalysisReport | null; syncMessage: string; onAnalyze: () => void }) {
+export function AnalysisResult({ report, syncMessage, onAnalyze }: { report: AnalysisReport | null; syncMessage: string; onAnalyze: () => void }) {
   const [filter, setFilter] = useState<'all' | 'excess' | 'deficient' | 'duplicates' | 'medication'>('all')
   if (!report) {
     return (

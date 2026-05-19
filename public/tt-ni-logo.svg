@@ -25,106 +25,13 @@
     <filter id="padShadow" x="410" y="470" width="112" height="116" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
       <feDropShadow dx="0" dy="6" stdDeviation="7" flood-color="#188f80" flood-opacity="0.14"/>
     </filter>
-    <style>
-      .logo-band {
-        transform-box: fill-box;
-        transform-origin: center;
-        will-change: transform, opacity;
-      }
-
-      .band-holes {
-        transform-box: fill-box;
-        transform-origin: center;
-      }
-
-      .horizontal-band {
-        animation: horizontalBandCycle 5.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
-      }
-
-      .horizontal-band .band-holes {
-        animation: horizontalHoleFlex 5.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
-      }
-
-      .vertical-band,
-      .center-pad-band {
-        animation: verticalBandCycle 5.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
-      }
-
-      .vertical-band .band-holes,
-      .center-pad-band .band-holes {
-        animation: verticalHoleFlex 5.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
-      }
-
-      @keyframes horizontalBandCycle {
-        0%, 14% {
-          opacity: 1;
-          transform: translate(0, 0) rotate(0deg);
-        }
-        27%, 84% {
-          opacity: 0;
-          transform: translate(-155px, -20px) rotate(-8deg);
-        }
-        97%, 100% {
-          opacity: 1;
-          transform: translate(0, 0) rotate(0deg);
-        }
-      }
-
-      @keyframes verticalBandCycle {
-        0%, 42% {
-          opacity: 1;
-          transform: translate(0, 0) rotate(0deg);
-        }
-        56%, 68% {
-          opacity: 0;
-          transform: translate(18px, -150px) rotate(7deg);
-        }
-        82%, 100% {
-          opacity: 1;
-          transform: translate(0, 0) rotate(0deg);
-        }
-      }
-
-      @keyframes horizontalHoleFlex {
-        0%, 14%, 97%, 100% {
-          transform: skewY(0deg) scaleX(1);
-        }
-        27%, 84% {
-          transform: skewY(-4deg) scaleX(0.97);
-        }
-      }
-
-      @keyframes verticalHoleFlex {
-        0%, 42%, 82%, 100% {
-          transform: skewX(0deg) scaleY(1);
-        }
-        56%, 68% {
-          transform: skewX(4deg) scaleY(0.98);
-        }
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        .horizontal-band,
-        .vertical-band,
-        .center-pad-band {
-          animation: none;
-        }
-      }
-    </style>
   </defs>
 
   <g filter="url(#softShadow)">
-    <g class="logo-band vertical-band">
-      <path fill="url(#verticalBandage)" d="M465 357 C493.7 357 517 380.3 517 409 V645 C517 673.7 493.7 697 465 697 C436.3 697 413 673.7 413 645 V409 C413 380.3 436.3 357 465 357 Z">
-        <animate
-          attributeName="d"
-          dur="5.8s"
-          repeatCount="indefinite"
-          keyTimes="0;0.42;0.56;0.68;0.82;1"
-          values="M465 357 C493.7 357 517 380.3 517 409 V645 C517 673.7 493.7 697 465 697 C436.3 697 413 673.7 413 645 V409 C413 380.3 436.3 357 465 357 Z;M465 357 C493.7 357 517 380.3 517 409 V645 C517 673.7 493.7 697 465 697 C436.3 697 413 673.7 413 645 V409 C413 380.3 436.3 357 465 357 Z;M461 360 C491 354 520 379 523 410 V644 C521 675 494 699 463 694 C433 689 407 671 410 641 V409 C413 382 433 366 461 360 Z;M461 360 C491 354 520 379 523 410 V644 C521 675 494 699 463 694 C433 689 407 671 410 641 V409 C413 382 433 366 461 360 Z;M465 357 C493.7 357 517 380.3 517 409 V645 C517 673.7 493.7 697 465 697 C436.3 697 413 673.7 413 645 V409 C413 380.3 436.3 357 465 357 Z;M465 357 C493.7 357 517 380.3 517 409 V645 C517 673.7 493.7 697 465 697 C436.3 697 413 673.7 413 645 V409 C413 380.3 436.3 357 465 357 Z"/>
-      </path>
+    <g>
+      <path fill="url(#verticalBandage)" d="M465 357 C493.7 357 517 380.3 517 409 V645 C517 673.7 493.7 697 465 697 C436.3 697 413 673.7 413 645 V409 C413 380.3 436.3 357 465 357 Z"/>
 
-      <g class="band-holes" fill="#fff">
+      <g fill="#fff">
         <circle cx="444" cy="400" r="5.8"/>
         <circle cx="465" cy="400" r="5.8"/>
         <circle cx="486" cy="400" r="5.8"/>
@@ -141,17 +48,10 @@
       </g>
     </g>
 
-    <g class="logo-band horizontal-band">
-      <path fill="url(#horizontalBandage)" d="M348.5 475 H578.5 C607.5 475 631 498.5 631 527.5 C631 556.5 607.5 580 578.5 580 H348.5 C319.5 580 296 556.5 296 527.5 C296 498.5 319.5 475 348.5 475 Z">
-        <animate
-          attributeName="d"
-          dur="5.8s"
-          repeatCount="indefinite"
-          keyTimes="0;0.14;0.27;0.84;0.97;1"
-          values="M348.5 475 H578.5 C607.5 475 631 498.5 631 527.5 C631 556.5 607.5 580 578.5 580 H348.5 C319.5 580 296 556.5 296 527.5 C296 498.5 319.5 475 348.5 475 Z;M348.5 475 H578.5 C607.5 475 631 498.5 631 527.5 C631 556.5 607.5 580 578.5 580 H348.5 C319.5 580 296 556.5 296 527.5 C296 498.5 319.5 475 348.5 475 Z;M350 481 H577 C608 475 635 499 631 531 C627 563 602 584 574 576 H347 C317 587 292 557 297 524 C302 494 322 486 350 481 Z;M350 481 H577 C608 475 635 499 631 531 C627 563 602 584 574 576 H347 C317 587 292 557 297 524 C302 494 322 486 350 481 Z;M348.5 475 H578.5 C607.5 475 631 498.5 631 527.5 C631 556.5 607.5 580 578.5 580 H348.5 C319.5 580 296 556.5 296 527.5 C296 498.5 319.5 475 348.5 475 Z;M348.5 475 H578.5 C607.5 475 631 498.5 631 527.5 C631 556.5 607.5 580 578.5 580 H348.5 C319.5 580 296 556.5 296 527.5 C296 498.5 319.5 475 348.5 475 Z"/>
-      </path>
+    <g>
+      <path fill="url(#horizontalBandage)" d="M348.5 475 H578.5 C607.5 475 631 498.5 631 527.5 C631 556.5 607.5 580 578.5 580 H348.5 C319.5 580 296 556.5 296 527.5 C296 498.5 319.5 475 348.5 475 Z"/>
 
-      <g class="band-holes" fill="#fff">
+      <g fill="#fff">
         <circle cx="334" cy="507" r="6"/>
         <circle cx="356" cy="507" r="6"/>
         <circle cx="334" cy="529" r="6"/>
@@ -168,17 +68,10 @@
       </g>
     </g>
 
-    <g class="logo-band center-pad-band">
-      <path fill="url(#centerPad)" filter="url(#padShadow)" d="M445 475 H486 C503.1 475 517 488.9 517 506 V549 C517 566.1 503.1 580 486 580 H445 C427.9 580 414 566.1 414 549 V506 C414 488.9 427.9 475 445 475 Z">
-        <animate
-          attributeName="d"
-          dur="5.8s"
-          repeatCount="indefinite"
-          keyTimes="0;0.42;0.56;0.68;0.82;1"
-          values="M445 475 H486 C503.1 475 517 488.9 517 506 V549 C517 566.1 503.1 580 486 580 H445 C427.9 580 414 566.1 414 549 V506 C414 488.9 427.9 475 445 475 Z;M445 475 H486 C503.1 475 517 488.9 517 506 V549 C517 566.1 503.1 580 486 580 H445 C427.9 580 414 566.1 414 549 V506 C414 488.9 427.9 475 445 475 Z;M443 476 H487 C504 474 519 489 520 507 V548 C519 565 503 581 485 579 H445 C427 582 412 566 413 548 V506 C414 490 426 478 443 476 Z;M443 476 H487 C504 474 519 489 520 507 V548 C519 565 503 581 485 579 H445 C427 582 412 566 413 548 V506 C414 490 426 478 443 476 Z;M445 475 H486 C503.1 475 517 488.9 517 506 V549 C517 566.1 503.1 580 486 580 H445 C427.9 580 414 566.1 414 549 V506 C414 488.9 427.9 475 445 475 Z;M445 475 H486 C503.1 475 517 488.9 517 506 V549 C517 566.1 503.1 580 486 580 H445 C427.9 580 414 566.1 414 549 V506 C414 488.9 427.9 475 445 475 Z"/>
-      </path>
+    <g>
+      <path fill="url(#centerPad)" filter="url(#padShadow)" d="M445 475 H486 C503.1 475 517 488.9 517 506 V549 C517 566.1 503.1 580 486 580 H445 C427.9 580 414 566.1 414 549 V506 C414 488.9 427.9 475 445 475 Z"/>
 
-      <g class="band-holes" fill="#15977f" opacity="0.74">
+      <g fill="#15977f" opacity="0.74">
         <circle cx="449" cy="514" r="4.4"/>
         <circle cx="465" cy="514" r="4.4"/>
         <circle cx="481" cy="514" r="4.4"/>

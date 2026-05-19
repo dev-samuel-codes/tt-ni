@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { AnalysisReport } from '../lib/types'
+import type { AnalysisReport } from '../../types'
 import { Camera, ChevronRight, ShieldCheck, User, Sparkles, Check } from 'lucide-react'
 
 const summaryTargetPercent = 92

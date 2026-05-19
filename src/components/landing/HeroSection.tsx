@@ -1,5 +1,5 @@
 import { Camera, ChevronRight, ShieldCheck, User, HeartPulse } from 'lucide-react'
-import { BrandMark, MiniFeature } from './Shared'
+import { BrandMark, MiniFeature } from '../workspace/Shared'
 
 export function LandingHeader({ onLogin, onStart }: { onLogin: () => void; onStart: () => void }) {
   return (

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { convertAmount, runAnalysis } from './analysisEngine'
 import { createAnalysisReportFromServer } from './serverAnalysis'
-import type { Medication, Profile, SupplementProduct } from './types'
+import type { Medication, Profile, SupplementProduct } from '../../types'
 
 const profile: Profile = {
   gender: 'female',

@@ -1,14 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Loader2, Lock, LogOut } from 'lucide-react'
-import { supabase } from '../lib/supabaseClient'
-import type { Provider } from '@supabase/supabase-js'
-
-type SocialProvider = Extract<Provider, 'google' | 'kakao'>
-type SocialProviderStatus = Record<SocialProvider, boolean | null>
-const socialProviderLabels: Record<SocialProvider, string> = {
-  google: '구글',
-  kakao: '카카오',
-}
+import { supabase } from '../../lib/supabaseClient'
+import type { SocialProvider, SocialProviderStatus } from '../../features/auth/authTypes'
+import { socialProviderLabels } from '../../features/auth/authTypes'
+import { loadSocialProviderStatus } from '../../features/auth/providerStatus'
 
 export function AuthPanel({
   sessionEmail,
@@ -33,18 +28,7 @@ export function AuthPanel({
     const controller = new AbortController()
     async function loadProviderStatus() {
       try {
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/settings`, {
-          headers: {
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-          signal: controller.signal,
-        })
-        if (!response.ok) throw new Error('OAuth provider 설정 상태를 불러오지 못했습니다.')
-        const settings = await response.json() as { external?: Partial<Record<SocialProvider, boolean>> }
-        setSocialProviderStatus({
-          google: settings.external?.google ?? false,
-          kakao: settings.external?.kakao ?? false,
-        })
+        setSocialProviderStatus(await loadSocialProviderStatus(controller.signal))
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') return
         setSocialProviderStatus({ google: null, kakao: null })
