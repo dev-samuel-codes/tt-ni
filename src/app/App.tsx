@@ -3,6 +3,7 @@ import '../styles/App.css'
 import '../styles/auth.css'
 import '../styles/landing.css'
 import '../styles/workspace.css'
+import '../styles/legal.css'
 import { runAnalysis } from '../features/analysis/analysisEngine'
 import { createAnalysisReportFromServer } from '../features/analysis/serverAnalysis'
 import { useAuth } from '../features/auth/useAuth'
@@ -11,6 +12,8 @@ import type { AnalysisReport, Medication, Profile, SupplementProduct } from '../
 import { routes, useCurrentPath } from './routes'
 import { LandingPage } from '../pages/LandingPage'
 import { LoginPage } from '../pages/LoginPage'
+import { PrivacyPolicyPage } from '../pages/PrivacyPolicyPage'
+import { TermsOfServicePage } from '../pages/TermsOfServicePage'
 import { SidebarLayout } from '../components/layout/SidebarLayout'
 import { Dashboard, ProfileAndMedication, SupplementWorkspace, AnalysisResult } from '../components/workspace/WorkspacePage'
 import { SchedulePage } from '../pages/SchedulePage'
@@ -142,6 +145,22 @@ function App() {
     )
   }
 
+  if (currentPath === routes.privacy) {
+    return (
+      <main className="landing-shell">
+        <PrivacyPolicyPage onBack={() => navigateTo(routes.home)} />
+      </main>
+    )
+  }
+
+  if (currentPath === routes.terms) {
+    return (
+      <main className="landing-shell">
+        <TermsOfServicePage onBack={() => navigateTo(routes.home)} />
+      </main>
+    )
+  }
+
   return (
     <main className="landing-shell">
       {authNotice && (
@@ -158,6 +177,7 @@ function App() {
         onLogin={() => navigateTo(routes.login)}
         onOpenResults={() => navigateTo(routes.analysis)}
         onDashboard={() => navigateTo(routes.workspace)}
+        onNavigate={navigateTo}
       />
     </main>
   )

@@ -11,6 +11,7 @@ export function LandingPage({
   onLogin,
   onOpenResults,
   onDashboard,
+  onNavigate,
 }: {
   sessionEmail: string | null
   confirmedCount: number
@@ -19,6 +20,7 @@ export function LandingPage({
   onLogin: () => void
   onOpenResults: () => void
   onDashboard: () => void
+  onNavigate?: (path: string) => void
 }) {
   return (
     <>
@@ -36,7 +38,7 @@ export function LandingPage({
       <PreviewSection report={previewReport} onOpenResults={onOpenResults} />
       <CtaBand sessionEmail={sessionEmail} onLogin={onLogin} onDashboard={onDashboard} />
       <TrustStrip />
-      <MarketingFooter />
+      <MarketingFooter onNavigate={onNavigate} />
     </>
   )
 }

@@ -208,23 +208,21 @@ export function TrustStrip() {
   )
 }
 
-export function MarketingFooter() {
+export function MarketingFooter({ onNavigate }: { onNavigate?: (path: string) => void }) {
   return (
     <footer className="marketing-footer">
       <a className="logo-lockup small" href="#top">
         <img src="/tt-ni-logo.svg" alt="+-ni" />
       </a>
       <nav aria-label="하단 링크">
-        <a href="#features">회사 소개</a>
-        <a href="#steps">이용약관</a>
-        <a href="#preview">개인정보처리방침</a>
-        <a href="/workspace">문의하기</a>
+        <button type="button" className="footer-link" onClick={() => onNavigate?.('/terms')}>이용약관</button>
+        <button type="button" className="footer-link" onClick={() => onNavigate?.('/privacy')}>개인정보처리방침</button>
       </nav>
-      <span>© 2026 +-ni. All rights reserved.</span>
-      <p style={{ marginTop: '8px', fontSize: '12px', color: '#8a9a95', maxWidth: '600px', lineHeight: '1.5' }}>
+      <p className="legal-disclaimer">
         본 서비스의 분석 결과는 2025 한국인 영양소 섭취기준(KDRIs) 참고 정보이며, 의학적 진단이나 처방을 대체하지 않습니다.
         개인차가 있으므로 의심 증상 발생 시 전문의와 상담하세요.
       </p>
+      <span>© 2026 +-ni. All rights reserved.</span>
     </footer>
   )
 }

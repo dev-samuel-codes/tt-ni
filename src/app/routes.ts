@@ -9,6 +9,8 @@ export const routes = {
   schedule: '/workspace/schedule',
   chat: '/workspace/chat',
   profile: '/workspace/profile',
+  privacy: '/privacy',
+  terms: '/terms',
 } as const
 
 export type AppRoute = typeof routes[keyof typeof routes]
