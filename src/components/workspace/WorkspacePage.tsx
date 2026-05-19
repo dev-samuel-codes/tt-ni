@@ -17,11 +17,12 @@ const knownNutrientIds = new Set(nutrients.map((nutrient) => nutrient.id))
 
 
 export function Dashboard({
-  report, supplements, onStart, onAnalyze, confirmedCount, needsReview,
+  report, supplements, onSupplements, onStart, onAnalyze, confirmedCount, needsReview,
   onSchedule, onChat, onProfile, profileIsSetup,
 }: {
   report: AnalysisReport
   supplements: SupplementProduct[]
+  onSupplements: (supplements: SupplementProduct[]) => void
   onStart: () => void
   onAnalyze: () => void
   confirmedCount: number
@@ -158,12 +159,26 @@ export function Dashboard({
             <button type="button" className="button ghost" onClick={onStart}><Plus size={16} />등록</button>
           </div>
           <div className="product-list">
-            {supplements.map((s) => (
-              <article className="product-row" key={s.id}>
-                <div><strong>{s.productName}</strong><span>{s.ingredients.length}개 성분 · {s.brandName || '일반'}</span></div>
-                <span className={s.confirmed ? 'status-pill success' : 'status-pill warning'}>{s.confirmed ? '확정' : '검수 전'}</span>
-              </article>
-            ))}
+            {supplements.map((s) => {
+              async function handleDelete() {
+                if (!window.confirm('정말 삭제하시겠습니까?')) return
+                const { error } = await supabase.from('supplement_products').delete().eq('id', s.id)
+                if (error) {
+                  alert('삭제 중 오류가 발생했습니다: ' + error.message)
+                  return
+                }
+                onSupplements(supplements.filter((item) => item.id !== s.id))
+              }
+              return (
+                <article className="product-row" key={s.id}>
+                  <div><strong>{s.productName}</strong><span>{s.ingredients.length}개 성분 · {s.brandName || '일반'}</span></div>
+                  <span className={s.confirmed ? 'status-pill success' : 'status-pill warning'}>{s.confirmed ? '확정' : '검수 전'}</span>
+                  <button type="button" className="icon-button" aria-label={`${s.productName} 삭제`} onClick={handleDelete}>
+                    <Trash2 size={16} />
+                  </button>
+                </article>
+              )
+            })}
           </div>
         </section>
       </div>

@@ -94,6 +94,7 @@ function App() {
           <Dashboard
             report={previewReport}
             supplements={supplements}
+            onSupplements={setSupplements}
             confirmedCount={confirmedCount}
             needsReview={needsReview}
             onStart={() => navigateTo(routes.supplements)}
