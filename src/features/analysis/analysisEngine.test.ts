@@ -109,4 +109,34 @@ describe('analysis engine', () => {
     expect(report.totals[0].sourceProducts.map((source) => source.productName)).toEqual(['멀티비타민', '아연 단일제'])
     expect(report.recommendations[0].title).toBe('아연 확인')
   })
+
+  it('detects synergy when coq10 and omega3 are both present', () => {
+    const report = runAnalysis(profile, [], [
+      product('p1', 'CoQ10', 'coq10', '코엔자임 Q10', 100, 'mg'),
+      product('p2', '오메가3', 'omega3', '오메가3', 1000, 'mg'),
+    ])
+    const synergy = report.synergyRecommendations.find((s) => s.label === 'CoQ10 + 오메가3')
+    expect(synergy).toBeDefined()
+    expect(synergy!.matchType).toBe('full')
+  })
+
+  it('detects partial synergy when only one nutrient is present', () => {
+    const report = runAnalysis(profile, [], [
+      product('p1', '비타민C', 'vitamin_c', '비타민 C', 500, 'mg'),
+    ])
+    const partialSynergy = report.synergyRecommendations.find((s) => s.label === '비타민 C + 철분')
+    expect(partialSynergy).toBeDefined()
+    expect(partialSynergy!.matchType).toBe('partial')
+    expect(partialSynergy!.missingNutrients).toContain('iron')
+  })
+
+  it('detects antagonism when calcium and iron are both present', () => {
+    const report = runAnalysis(profile, [], [
+      product('p1', '칼슘', 'calcium', '칼슘', 500, 'mg'),
+      product('p2', '철분', 'iron', '철분', 18, 'mg'),
+    ])
+    expect(report.antagonismWarnings.length).toBeGreaterThan(0)
+    const caFeAntagonism = report.antagonismWarnings.find((a) => a.label === '칼슘 ↔ 철분')
+    expect(caFeAntagonism).toBeDefined()
+  })
 })

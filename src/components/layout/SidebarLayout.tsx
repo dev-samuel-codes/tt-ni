@@ -8,7 +8,7 @@ interface SidebarItem {
   id: string
   label: string
   path: AppRoute | string
-  icon: React.FC<any>
+  icon: React.ComponentType<{ size?: number }>
 }
 
 const SIDEBAR_ITEMS: SidebarItem[] = [

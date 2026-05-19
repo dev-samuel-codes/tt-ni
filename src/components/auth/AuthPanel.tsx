@@ -59,7 +59,7 @@ export function AuthPanel({
 
   async function signInWithSocial(provider: SocialProvider) {
     if (socialProviderStatus[provider] === false) {
-      setMessage(`${socialProviderLabels[provider]} 로그인은 Supabase Auth Provider 설정이 먼저 필요합니다.`)
+      setMessage(`${socialProviderLabels[provider]} 로그인은 관리자 설정이 먼저 필요합니다.`)
       return
     }
     setOauthLoading(provider)
@@ -100,7 +100,7 @@ export function AuthPanel({
     <form className={variant === 'page' ? 'auth-card page-auth-card' : 'auth-card'} onSubmit={(event) => event.preventDefault()}>
       <div className="auth-state">
         <Lock size={16} />
-        <span>Supabase Auth</span>
+        <span>계정</span>
       </div>
       <div className="social-auth-actions" aria-label="소셜 로그인">
         <button
@@ -123,7 +123,7 @@ export function AuthPanel({
         </button>
       </div>
       {(socialProviderStatus.google === false || socialProviderStatus.kakao === false) && (
-        <small className="auth-provider-warning">Supabase Dashboard에서 Google/Kakao provider를 활성화하면 소셜 로그인이 바로 동작합니다.</small>
+        <small className="auth-provider-warning">관리자 설정에서 Google/Kakao 로그인을 활성화하면 소셜 로그인이 바로 동작합니다.</small>
       )}
       <div className="auth-divider"><span>또는 이메일로 계속</span></div>
       <input

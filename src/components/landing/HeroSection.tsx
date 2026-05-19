@@ -15,9 +15,9 @@ export function LandingHeader({ sessionEmail, onLogin, onDashboard }: { sessionE
       </nav>
       <div className="landing-actions">
         {sessionEmail ? (
-          <button type="button" className="button primary mint" onClick={onDashboard}>대시보드로 가기</button>
+          <button type="button" className="button primary mint" onClick={onDashboard}>대시보드</button>
         ) : (
-          <button type="button" className="button primary mint" onClick={onLogin}>로그인 / 회원가입</button>
+          <button type="button" className="button primary mint" onClick={onLogin}>로그인</button>
         )}
       </div>
     </header>

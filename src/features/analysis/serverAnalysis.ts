@@ -30,14 +30,28 @@ export interface ServerAnalysisResponse {
   totalNutrients?: ServerTotalNutrient[]
   interactionWarnings?: ServerInteractionWarning[]
   recommendations?: ServerRecommendation[]
+  synergyRecommendations?: Array<{
+    nutrients: string[]
+    label: string
+    benefit: string
+    matchType: 'full' | 'partial'
+    missingNutrients: string[]
+    message: string
+  }>
+  antagonismWarnings?: Array<{
+    nutrients: string[]
+    label: string
+    message: string
+    severity: 'caution' | 'high'
+  }>
 }
 
 const statusMessages: Record<RiskStatus, string> = {
-  normal: 'Supabase 분석 기준으로 큰 중복 신호가 없습니다.',
-  deficient: 'Supabase 분석 기준으로 기준량보다 낮을 수 있습니다.',
-  caution: 'Supabase 분석 기준으로 상한 섭취량에 가까워 확인이 필요합니다.',
-  excess: 'Supabase 분석 기준으로 상한 섭취량을 초과했습니다.',
-  review: 'Supabase 분석 기준 데이터 확인이 필요합니다.',
+  normal: '현재 등록된 영양제 기준으로 큰 중복 신호가 없습니다.',
+  deficient: '현재 등록된 영양제 기준으로 기준량보다 낮을 수 있습니다.',
+  caution: '현재 등록된 영양제 기준으로 상한 섭취량에 가까워 확인이 필요합니다.',
+  excess: '현재 등록된 영양제 기준으로 상한 섭취량을 초과했습니다.',
+  review: '기준 데이터가 아직 없어 직접 확인이 필요합니다.',
 }
 
 const validStatuses = new Set<RiskStatus>(['normal', 'deficient', 'caution', 'excess', 'review'])
@@ -51,7 +65,7 @@ export function createAnalysisReportFromServer(data: ServerAnalysisResponse): An
 
   const totals = (data.totalNutrients ?? []).map((item) => {
     const status = normalizeStatus(item.status)
-    const sources = item.sources?.length ? item.sources : ['Supabase 분석']
+    const sources = item.sources?.length ? item.sources : ['서버 분석']
     const perSourceAmount = item.totalAmount / sources.length
     return {
       nutrientId: item.nutrientId,
@@ -87,12 +101,26 @@ export function createAnalysisReportFromServer(data: ServerAnalysisResponse): An
       severity: warning.severity,
       nutrientName: warning.nutrientName,
       message: warning.message,
-      sourceNote: warning.sourceNote ?? 'Supabase Edge Function',
+      sourceNote: warning.sourceNote ?? '서버 분석',
     })),
     recommendations: (data.recommendations ?? []).map((recommendation) => ({
       status: recommendation.status ?? 'review',
       title: recommendation.title,
       detail: recommendation.detail,
+    })),
+    synergyRecommendations: (data.synergyRecommendations ?? []).map((synergy) => ({
+      nutrients: synergy.nutrients,
+      label: synergy.label,
+      benefit: synergy.benefit,
+      matchType: synergy.matchType,
+      missingNutrients: synergy.missingNutrients,
+      message: synergy.message,
+    })),
+    antagonismWarnings: (data.antagonismWarnings ?? []).map((antagonism) => ({
+      nutrients: antagonism.nutrients,
+      label: antagonism.label,
+      message: antagonism.message,
+      severity: antagonism.severity,
     })),
   }
 }

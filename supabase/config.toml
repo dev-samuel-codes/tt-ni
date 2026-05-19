@@ -423,3 +423,21 @@ entrypoint = "./functions/run-analysis/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/run-analysis/*.html" ]
+
+[functions.exa-search]
+enabled = true
+verify_jwt = true
+import_map = "./functions/exa-search/deno.json"
+entrypoint = "./functions/exa-search/index.ts"
+
+[functions.generate-schedule]
+enabled = true
+verify_jwt = true
+import_map = "./functions/generate-schedule/deno.json"
+entrypoint = "./functions/generate-schedule/index.ts"
+
+[functions.chat-completion]
+enabled = true
+verify_jwt = true
+import_map = "./functions/chat-completion/deno.json"
+entrypoint = "./functions/chat-completion/index.ts"

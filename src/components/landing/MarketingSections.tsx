@@ -179,7 +179,7 @@ export function CtaBand({ sessionEmail, onLogin, onDashboard }: { sessionEmail: 
         <p>사진 한 장으로 더 스마트한 건강 습관을 만들어보세요.</p>
         <button type="button" className="button light large" onClick={sessionEmail ? onDashboard : onLogin}>
           <ChevronRight size={19} />
-          {sessionEmail ? '대시보드로 이동' : '시작하기'}
+          {sessionEmail ? '대시보드' : '시작하기'}
         </button>
       </div>
     </section>

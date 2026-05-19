@@ -120,6 +120,20 @@ export interface AnalysisReport {
     title: string
     detail: string
   }>
+  synergyRecommendations: Array<{
+    nutrients: string[]
+    label: string
+    benefit: string
+    matchType: 'full' | 'partial'
+    missingNutrients: string[]
+    message: string
+  }>
+  antagonismWarnings: Array<{
+    nutrients: string[]
+    label: string
+    message: string
+    severity: 'caution' | 'high'
+  }>
 }
 
 export interface ParseResult {

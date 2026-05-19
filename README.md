@@ -1,117 +1,82 @@
 # tt-ni
 
-영양제 성분표를 입력 또는 사진 업로드로 등록하고, 사용자 조건 기준으로 중복 섭취와 과다/부족 가능성을 계산하는 웹 MVP입니다.
+> **당신의 영양제 조합, AI가 안전하게 설계합니다**
 
-## 구현 범위
+---
 
-- React + TypeScript + Vite 기반 대시보드
-- Supabase Auth 이메일 로그인
-- Supabase Auth Google/Kakao OAuth 로그인 UI 및 provider readiness check
-- 사용자 프로필, 민감 정보 동의, 기저질환/알레르기/식이 제한 입력
-- 복용 약 등록 및 약물/질환 주의 룰 매칭
-- 성분표 사진 업로드 UI, Supabase Storage 업로드, `parse-label` Edge Function 호출
-- AI 추출 결과 editable table 검수 후 저장
-- 성분별 1일 총량 계산, 단위 변환, RDA/AI/UL 비교, 중복 성분 표시
-- 부족/과다/초과/확인 필요/약물 주의 탭형 분석 리포트
-- Supabase Postgres schema, seed data, RLS, private Storage 정책
-- OpenAI Responses API 기반 이미지 성분표 구조화 Edge Function
+## 이런 고민, 해보신 적 없나요?
 
-## 실행
+건강을 위해 여러 영양제를 챙겨 먹고 있지만, 정작 아래와 같은 불안감은 늘 따라다닙니다.
+
+- "비타민 C랑 철분을 같이 먹어도 될까? 어떤 성분끼리 충돌하는지 도통 모르겠다."
+- "지금 복용 중인 혈압약이랑 이 영양제를 함께 먹어도 괜찮을까? 확인할 길이 마땅치 않다."
+- "제품마다 성분표에 적힌 용량이 제각각이라, 도대체 하루에 얼마나 먹고 있는 건지 비교조차 어렵다."
+
+**tt-ni**는 이런 문제를 기술로 해결합니다. 영양제 라벨 사진 한 장이면 충분합니다. AI가 성분을 읽어내고, 한국인 영양소 섭취기준과 비교하여 과잉·부족·충돌 여부를 분석해 드립니다. 마치 **주머니 속 AI 약사**처럼요.
+
+---
+
+## 주요 기능
+
+| | 기능 | 설명 |
+|---|------|------|
+| [사진등록] | **성분표 사진 촬영으로 간편 등록** | 영양제 라벨 사진을 찍으면 Vision AI가 성분명·함량·단위를 자동으로 추출합니다. iPhone HEIC 포맷도 자동으로 JPEG 변환됩니다. |
+| [제품검색] | **영양제 제품명 검색** | 사진이 없어도 제품명만 입력하면 Exa.ai 웹 검색으로 제품 정보를 찾아 성분 데이터를 구조화합니다. |
+| [상호작용] | **영양제-약물 상호작용 알림** | 복용 중인 처방약과 영양제 성분 간 알려진 상호작용(DNI)을 감지하여 경고합니다. 와파린·스타틴·항생제 등 주요 약물군을 지원합니다. |
+| [성분분석] | **과다/부족 섭취 분석** | 등록된 모든 영양제의 성분을 합산하여, 한국인 영양소 섭취기준(KDRI)의 RDA·AI·UL과 비교합니다. 과잉·주의·부족·적정·미확인 5단계로 상태를 진단합니다. |
+| [시너지] | **시너지 영양제 추천** | 함께 먹으면 좋은 조합을 자동으로 찾아 추천합니다. 예: 비타민 C + 철분(흡수율 극대화), CoQ10 + 오메가3(심혈관 시너지). |
+| [스케줄] | **맞춤형 복용 스케줄링** | 크로노파마콜로지 원리에 기반해 공복·식후·저녁 시간대로 최적의 복용 타임라인을 설계합니다. DNI 충돌과 길항 작용까지 고려합니다. |
+| [AI상담] | **AI 영양제 상담 챗봇** | 내 프로필, 건강 상태, 복용 중인 약물과 영양제, 최신 분석 리포트를 맥락으로 반영해 개인화된 답변을 SSE 실시간 스트리밍으로 제공합니다. |
+
+---
+
+## 기술 스택
+
+| 영역 | 기술 |
+|------|------|
+| **Frontend** | React 19, TypeScript, Vite |
+| **Backend** | Supabase (Auth, Database, Storage, Edge Functions) |
+| **AI** | OpenAI GPT-5-mini (Vision + Chat), text-embedding-3-small |
+| **검색** | Exa.ai Web Search API |
+| **인프라** | Vercel, Supabase Cloud |
+
+---
+
+## 시작하기
 
 ```bash
+# 1. 의존성 설치
 npm install
-npm run dev
-```
 
-Supabase 연결이 필수입니다. `.env.local`에 프로젝트 URL과 publishable key가 없으면 앱은 실행되지 않습니다.
-
-## 환경 변수
-
-프론트엔드는 브라우저 노출이 가능한 publishable key만 사용합니다.
-
-```bash
+# 2. 환경 변수 설정
 cp .env.example .env.local
 ```
 
+`.env.local` 파일을 열어 아래 값을 입력하세요:
+
 ```env
-VITE_SUPABASE_URL=
-VITE_SUPABASE_PUBLISHABLE_KEY=
+VITE_SUPABASE_URL=https://<your-project>.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=<your-publishable-key>
 ```
 
-OpenAI 키와 서버 권한 키는 프론트 `.env.local`에 넣지 않습니다. Edge Function secret은 Supabase 프로젝트에만 설정합니다.
+> `OPENAI_API_KEY`, `TT_NI_SERVICE_ROLE_KEY` 등 서버 측 비밀 키는 Supabase Edge Function secret으로만 관리하며, 절대 프론트엔드 환경 변수에 넣지 않습니다.
 
 ```bash
-supabase secrets set OPENAI_API_KEY=...
-supabase secrets set OPENAI_MODEL=gpt-4.1-mini
+# 3. Supabase Edge Function secret 설정
+supabase secrets set OPENAI_API_KEY=sk-...
 supabase secrets set TT_NI_SERVICE_ROLE_KEY=...
+supabase secrets set EXA_API_KEY=...
+
+# 4. 개발 서버 실행
+npm run dev
 ```
 
-## Supabase
+---
 
-```bash
-supabase link --project-ref <project-ref>
-supabase db push
-supabase functions deploy parse-label
-supabase functions deploy run-analysis
-```
+## 추가 정보
 
-Edge Function 로컬 테스트가 필요하면 프론트 `.env.local`이 아니라 Git에 넣지 않는 별도 함수용 env 파일을 사용합니다.
-
-```bash
-supabase functions serve parse-label --env-file /tmp/tt-ni-functions.env
-supabase functions serve run-analysis --env-file /tmp/tt-ni-functions.env
-```
-
-## 검증
-
-```bash
-npm run verify
-```
-
-Google/Kakao OAuth provider 설정 상태, 로그인 시작 URL, Supabase authorize redirect는 아래 명령으로 확인합니다. 기본값은 로컬 Vite 포트 `5173`과 대체 포트 `5174`를 함께 검사합니다.
-
-```bash
-npm run auth:check
-```
-
-OAuth credential을 환경변수로 가지고 있으면 Management API로 provider를 켤 수 있습니다.
-
-```bash
-SUPABASE_ACCESS_TOKEN=... \
-TT_NI_GOOGLE_CLIENT_ID=... \
-TT_NI_GOOGLE_CLIENT_SECRET=... \
-TT_NI_KAKAO_CLIENT_ID=... \
-TT_NI_KAKAO_CLIENT_SECRET=... \
-npm run auth:configure
-```
-
-OAuth provider 설정 절차는 [docs/OAUTH_SETUP.md](/Users/samuel/Desktop/Project/tt-ni/docs/OAUTH_SETUP.md)에 정리되어 있습니다.
-
-핵심 분석 로직은 `src/lib/analysisEngine.test.ts`에서 단위 변환, 상한 초과, 중복 성분, 약물 상호작용을 검증합니다. `npm run verify`는 Supabase RLS, Data API grant, Storage bucket/policy, migration 적용 상태도 함께 확인합니다.
-
-원격 Supabase, Storage, OpenAI 이미지 파싱, 분석 리포트 생성을 한 번에 확인하려면 QA 계정과 테스트 PNG를 지정해 실행합니다.
-
-```bash
-TT_NI_QA_EMAIL=qa@example.com \
-TT_NI_QA_PASSWORD='password' \
-TT_NI_LABEL_IMAGE=/path/to/label.png \
-npm run smoke:remote
-```
-
-QA 계정 정보는 `TT_NI_QA_FILE=/path/to/qa.json`으로도 지정할 수 있습니다. JSON에는 `email`, `password`, 선택적으로 `labelImage`를 넣습니다.
-
-`smoke:remote`는 Storage/Edge Function 경로와 제품/성분/복용량 직접 저장 경로를 함께 확인합니다. 테스트 이미지와 테스트 제품 row는 cleanup하고 삭제 여부까지 검증하지만, 원격 함수 동작 증거로 `label_parse_jobs`와 `analysis_reports` row는 남깁니다.
-`smoke:remote:strict`는 Edge Function 재배포 후 약물/질환 경고 응답과 DB 저장까지 추가로 검증합니다.
-
-배포 절차는 [docs/DEPLOYMENT.md](/Users/samuel/Desktop/Project/tt-ni/docs/DEPLOYMENT.md)에 정리되어 있습니다.
-
-## 배포 전 체크
-
-- 배포 플랫폼에는 `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`만 등록합니다.
-- `OPENAI_API_KEY`, `TT_NI_SERVICE_ROLE_KEY`는 Supabase Edge Function secret으로만 유지합니다.
-- Edge Function 소스가 바뀐 경우 `parse-label`, `run-analysis`를 모두 재배포합니다. 승인 후에는 `TT_NI_APPROVE_EDGE_DEPLOY=1 TT_NI_QA_FILE=/path/to/qa.json TT_NI_LABEL_IMAGE=/path/to/label.png npm run deploy:functions`로 함수 배포와 strict 검증을 한 번에 실행할 수 있습니다.
-- 배포 전 `npm run verify`를 다시 실행합니다.
-- 배포 전 실제 AI 경로까지 확인하려면 `npm run verify:remote`도 실행합니다.
-- Edge Function 재배포 후에는 `npm run verify:remote:strict`로 약물/질환 경고 응답까지 확인합니다.
-- 최종 릴리즈 직전에는 `npm run verify:release`를 실행합니다. 이 검사는 Edge Function drift 같은 경고도 실패로 처리합니다.
-- 배포 후에는 Supabase Auth redirect URL에 배포 도메인을 추가하고 `TT_NI_PRODUCTION_URL=<배포 URL> npm run postdeploy:check` 또는 `npm run postdeploy:check -- --url <배포 URL>`를 실행합니다.
+- [아키텍처 및 기술 문서](./docs/ARCHITECTURE.md)
+- [[백엔드] 백엔드 구현 가이드](./docs/BACKEND_GUIDE.md)
+- [[보고서] 영양제 상호작용 보고서](./docs/영양제%20상호작용%20보고서.md)
+- [[배포] 배포 가이드](./docs/DEPLOYMENT.md)
+- [OAuth 설정](./docs/OAUTH_SETUP.md)

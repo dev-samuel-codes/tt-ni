@@ -14,8 +14,109 @@ import type {
   Unit,
 } from '../../types'
 
+const SYNERGY_GROUPS = [
+  {
+    nutrients: ['coq10', 'omega3'],
+    label: 'CoQ10 + 오메가3',
+    benefit: '혈관 내피세포 건강과 항산화 네트워크가 강화되어 심혈관 보호 효과가 배가됩니다. CoQ10이 미토콘드리아 ATP 생성을, 오메가3가 혈류를 개선합니다.',
+    reportReference: '보고서 2.1절',
+  },
+  {
+    nutrients: ['vitamin_c', 'iron'],
+    label: '비타민 C + 철분',
+    benefit: '비타민 C가 비헴철(식물성 철분)을 흡수되기 쉬운 환원 상태(Fe²⁺)로 유지시켜 철분 흡수율을 극대화합니다. 빈혈 예방에 탁월한 조합입니다.',
+    reportReference: '보고서 2.1절',
+  },
+  {
+    nutrients: ['vitamin_e', 'omega3'],
+    label: '비타민 E + 오메가3',
+    benefit: '오메가3의 이중 결합이 활성산소에 의해 산화되는 것을 비타민 E가 방어합니다. 오메가3의 구조적 온전성을 보존하여 노화 방지 효능을 유지합니다.',
+    reportReference: '보고서 2.1절',
+  },
+  {
+    nutrients: ['vitamin_c', 'collagen'],
+    label: '비타민 C + 콜라겐',
+    benefit: '비타민 C는 콜라겐 합성의 필수 조효소로, 프롤린과 라이신의 수산화 반응을 촉진하여 피부 탄력과 관절 건강을 개선합니다.',
+    reportReference: '보고서 2.1절',
+  },
+  {
+    nutrients: ['vitamin_e', 'coq10'],
+    label: '비타민 E + CoQ10',
+    benefit: '지용성 항산화제인 비타민 E와 미토콘드리아 항산화제인 CoQ10이 이중 항산화 방어벽을 형성하여 세포막을 보호합니다.',
+    reportReference: '보고서 2.1절',
+  },
+  {
+    nutrients: ['iron', 'vitamin_c'],
+    label: '철분 + 비타민 C + 셀레늄',
+    benefit: '비타민 C가 철분 흡수를 돕고, 셀레늄이 흡수된 철분의 산화를 방지하여 조혈 기능과 조직 산소 공급을 강화합니다.',
+    reportReference: '보고서 2.1절',
+  },
+]
+
+const ANTAGONISM_GROUPS = [
+  {
+    nutrients: ['calcium', 'iron'],
+    label: '칼슘 ↔ 철분',
+    reason: '장관 점막의 DMT1(2가 금속 수송체)를 공유하여 흡수 경쟁이 발생합니다. 동시 복용 시 철분 흡수율이 크게 저하됩니다.',
+    minIntervalHours: 2,
+    severity: 'caution' as const,
+    reportReference: '보고서 2.2절',
+  },
+  {
+    nutrients: ['calcium', 'magnesium'],
+    label: '칼슘 ↔ 마그네슘',
+    reason: '두 다가 양이온이 같은 흡수 채널을 두고 경쟁하여 상호 흡수율이 감소합니다.',
+    minIntervalHours: 2,
+    severity: 'caution' as const,
+    reportReference: '보고서 2.2절',
+  },
+  {
+    nutrients: ['calcium', 'zinc'],
+    label: '칼슘 ↔ 아연',
+    reason: '다가 양이온 간 흡수 경쟁으로 인해 아연의 생체이용률이 저하됩니다.',
+    minIntervalHours: 2,
+    severity: 'caution' as const,
+    reportReference: '보고서 2.2절',
+  },
+  {
+    nutrients: ['iron', 'zinc'],
+    label: '철분 ↔ 아연',
+    reason: 'DMT1 수송체를 공유하여 경쟁적 흡수 억제가 발생합니다.',
+    minIntervalHours: 2,
+    severity: 'caution' as const,
+    reportReference: '보고서 2.2절',
+  },
+  {
+    nutrients: ['calcium', 'magnesium', 'zinc'],
+    label: '칼슘 ↔ 마그네슘 ↔ 아연',
+    reason: '세 다가 양이온이 동일한 흡수 경로에서 경쟁하므로 동시 복용을 피해야 합니다.',
+    minIntervalHours: 2,
+    severity: 'caution' as const,
+    reportReference: '보고서 2.2절',
+  },
+]
+
 export function getAge(profile: Pick<Profile, 'birthYear'>, now = new Date()): number {
   return Math.max(0, now.getFullYear() - profile.birthYear)
+}
+
+export function isElderly(profile: Pick<Profile, 'birthYear'>): boolean {
+  return getAge(profile) >= 65
+}
+
+export function isChild(profile: Pick<Profile, 'birthYear'>): boolean {
+  const age = getAge(profile)
+  return age >= 0 && age <= 12
+}
+
+export function extrapolateUlChild(ulAdult: number, weightChildKg: number): number {
+  const WEIGHT_ADULT = 65
+  return ulAdult * (weightChildKg / WEIGHT_ADULT)
+}
+
+export function extrapolateEarElderly(earAdult: number, weightElderlyKg: number): number {
+  const WEIGHT_ADULT = 65
+  return earAdult * Math.pow(weightElderlyKg / WEIGHT_ADULT, 0.75)
 }
 
 export function convertAmount(amount: number, fromUnit: Unit, toUnit: Unit, nutrientId: string): number | null {
@@ -179,6 +280,43 @@ export function runAnalysis(profile: Profile, medications: Medication[], supplem
       }
     })
 
+  const userNutrientIds = new Set(totals.map((total) => total.nutrientId))
+
+  const synergyRecommendations: AnalysisReport['synergyRecommendations'] = SYNERGY_GROUPS.map((group) => {
+    const matched = group.nutrients.filter((id) => userNutrientIds.has(id))
+    const missing = group.nutrients.filter((id) => !userNutrientIds.has(id))
+    if (matched.length < 1) return null
+    if (matched.length === group.nutrients.length) {
+      return {
+        nutrients: group.nutrients,
+        label: group.label,
+        benefit: group.benefit,
+        matchType: 'full' as const,
+        missingNutrients: [],
+        message: `보유하신 ${group.label} 조합은 ${group.benefit}`,
+      }
+    }
+    const matchedNames = matched.map((id) => nutrients.find((n) => n.id === id)?.standardName ?? id)
+    const missingNames = missing.map((id) => nutrients.find((n) => n.id === id)?.standardName ?? id)
+    return {
+      nutrients: group.nutrients,
+      label: group.label,
+      benefit: group.benefit,
+      matchType: 'partial' as const,
+      missingNutrients: missing,
+      message: `${matchedNames.join('과 ')}를 보유 중입니다. ${missingNames.join('을')} 함께 섭취하면 ${group.benefit}`,
+    }
+  }).filter((item): item is NonNullable<typeof item> => item !== null)
+
+  const antagonismWarnings: AnalysisReport['antagonismWarnings'] = ANTAGONISM_GROUPS
+    .filter((group) => group.nutrients.every((id) => userNutrientIds.has(id)))
+    .map((group) => ({
+      nutrients: group.nutrients,
+      label: group.label,
+      message: `${group.reason} 최소 ${group.minIntervalHours}시간 이상 간격을 두고 복용하는 것이 좋습니다.`,
+      severity: group.severity,
+    }))
+
   const statusSummary = totals.reduce(
     (acc, total) => {
       acc[total.status] += 1
@@ -225,6 +363,8 @@ export function runAnalysis(profile: Profile, medications: Medication[], supplem
     duplicateItems,
     interactionWarnings,
     recommendations,
+    synergyRecommendations,
+    antagonismWarnings,
   }
 }
 

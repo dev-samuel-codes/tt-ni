@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Activity, AlertTriangle, Camera, Check, ChevronRight,
   FileImage, Pill, Plus, ShieldCheck, Sparkles, Trash2
@@ -9,6 +9,7 @@ import { statusLabel } from '../../features/analysis/analysisEngine'
 import { createId, getStatusTone, splitList } from '../../lib/utils'
 import { saveProfileBundle } from '../../features/profile/profileService'
 import { createManualIngredient, parseLabelImage, saveSupplementProduct } from '../../features/supplements/supplementService'
+import { supabase } from '../../lib/supabaseClient'
 import { MetricCard } from './Shared'
 
 const knownNutrientIds = new Set(nutrients.map((nutrient) => nutrient.id))
@@ -17,7 +18,7 @@ const knownNutrientIds = new Set(nutrients.map((nutrient) => nutrient.id))
 
 export function Dashboard({
   report, supplements, onStart, onAnalyze, confirmedCount, needsReview,
-  onSchedule, onChat,
+  onSchedule, onChat, onProfile, profileIsSetup,
 }: {
   report: AnalysisReport
   supplements: SupplementProduct[]
@@ -27,39 +28,73 @@ export function Dashboard({
   needsReview: number
   onSchedule?: () => void
   onChat?: () => void
+  onProfile: () => void
+  profileIsSetup: boolean
 }) {
   const hasData = report.totals.length > 0
-  // TODO: 사용자님 작업 영역 - 실제 사용자 이름을 프로필에서 가져오세요
-  const userName = '사용자'
+  const [userName, setUserName] = useState('사용자')
+  const [todaySchedule, setTodaySchedule] = useState<Array<{ time: string; items: string[] }>>([])
+  const [scheduleLoading, setScheduleLoading] = useState(true)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        const name = data.user.user_metadata?.name || data.user.email?.split('@')[0] || '사용자'
+        setUserName(name)
+      }
+    }).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (!hasData || supplements.length === 0) return
+    supabase.functions.invoke('generate-schedule', {
+      body: { supplementIds: supplements.map((s) => s.id) },
+    }).then(({ data }) => {
+      if (data?.timeline) setTodaySchedule(data.timeline)
+    }).catch(() => {}).finally(() => setScheduleLoading(false))
+  }, [hasData, supplements])
+
   const today = new Date()
   const dateStr = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일 ${'일월화수목금토'[today.getDay()]}요일`
 
-  // TODO: 사용자님 작업 영역 - 실제 스케줄 엔진에서 오늘의 타임라인을 가져오세요
-  const mockTodaySchedule = hasData ? [
-    { time: '아침 공복', items: ['유산균', '비타민 B군'] },
-    { time: '아침 식후', items: ['오메가3', '비타민 D'] },
-    { time: '저녁 식후', items: ['칼슘', '마그네슘'] },
-  ] : []
-
-  // TODO: 사용자님 작업 영역 - 실제 시너지 데이터를 analysisEngine에서 가져오세요
-  const mockSynergies = [
-    { combo: 'CoQ10 + 오메가3', benefit: '심혈관 건강 시너지 효과' },
-    { combo: '비타민 C + 철분', benefit: '철분 흡수율 극대화' },
-    { combo: '비타민 E + 오메가3', benefit: '지질 과산화 억제' },
-  ]
+  const synergies = report.synergyRecommendations.map((s) => ({ combo: s.label, benefit: s.benefit }))
 
   if (!hasData) {
     return (
       <>
         <div style={{ marginBottom: '32px' }}>
-          <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#173c3c', margin: '0 0 6px' }}>안녕하세요, {userName}님 👋</h2>
+          <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#173c3c', margin: '0 0 6px' }}>안녕하세요, {userName}님</h2>
           <p style={{ color: '#697771', fontSize: '15px', margin: 0 }}>{dateStr}</p>
         </div>
-        <section className="panel" style={{ textAlign: 'center', padding: '48px 24px' }}>
-          <Sparkles size={48} color="#18ae90" style={{ marginBottom: '20px' }} />
-          <h3 style={{ fontSize: '22px', fontWeight: 850, color: '#173c3c', marginBottom: '12px' }}>시작할 준비가 되셨나요?</h3>
-          <p style={{ color: '#52605b', fontSize: '15px', lineHeight: 1.7, maxWidth: '460px', margin: '0 auto 28px' }}>
-            3단계만 거치면 나만의 맞춤형 영양 분석을 받을 수 있어요.
+
+        {!profileIsSetup ? (
+          <section className="panel" style={{ padding: '32px 24px', marginBottom: '24px', background: '#f0f9f6', borderLeft: '4px solid #18ae90' }}>
+            <Sparkles size={32} color="#18ae90" style={{ marginBottom: '16px' }} />
+            <h3 style={{ fontSize: '20px', fontWeight: 850, color: '#0a6e58', margin: '0 0 10px' }}>환영합니다!</h3>
+            <p style={{ color: '#3d5550', fontSize: '15px', lineHeight: 1.7, margin: '0 0 20px' }}>
+              원활한 분석을 위해 먼저 프로필 정보를 입력해주세요. 성별, 출생연도, 건강 상태에 따라 맞춤형 기준이 적용됩니다.
+            </p>
+            <button type="button" className="button primary" onClick={onProfile} style={{ fontSize: '15px', padding: '12px 28px' }}>
+              프로필 입력하기
+            </button>
+          </section>
+        ) : (
+          <section className="panel" style={{ padding: '32px 24px', marginBottom: '24px', background: '#f0f9f6', borderLeft: '4px solid #18ae90' }}>
+            <Sparkles size={32} color="#18ae90" style={{ marginBottom: '16px' }} />
+            <h3 style={{ fontSize: '20px', fontWeight: 850, color: '#0a6e58', margin: '0 0 10px' }}>프로필이 저장되었습니다</h3>
+            <p style={{ color: '#3d5550', fontSize: '15px', lineHeight: 1.7, margin: '0 0 20px' }}>
+              이제 영양제를 등록하고 분석을 시작할 수 있습니다. 사진, 검색, 수동 입력 중 편한 방법으로 등록하세요.
+            </p>
+            <button type="button" className="button primary" onClick={onStart} style={{ fontSize: '15px', padding: '12px 28px' }}>
+              영양제 등록하기
+            </button>
+          </section>
+        )}
+
+        <section className="panel" style={{ textAlign: 'center', padding: '40px 24px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 850, color: '#173c3c', marginBottom: '8px' }}>3단계로 완성하는 맞춤 분석</h3>
+          <p style={{ color: '#52605b', fontSize: '14px', lineHeight: 1.6, maxWidth: '440px', margin: '0 auto 28px' }}>
+            다음 단계를 따라 나만의 영양 분석을 시작하세요.
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '32px', flexWrap: 'wrap', marginBottom: '32px' }}>
             {[
@@ -68,13 +103,17 @@ export function Dashboard({
               { step: '3', label: '분석 시작', desc: '과다·부족·상호작용' },
             ].map((s) => (
               <div key={s.step} style={{ textAlign: 'center', minWidth: '120px' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#18ae90', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '18px', marginBottom: '10px' }}>{s.step}</div>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: s.step === '1' && profileIsSetup ? '#b8d9cd' : '#18ae90', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '18px', marginBottom: '10px' }}>
+                  {s.step === '1' && profileIsSetup ? <Check size={20} /> : s.step}
+                </div>
                 <strong style={{ display: 'block', fontSize: '14px', color: '#173c3c' }}>{s.label}</strong>
                 <small style={{ color: '#8a9a95', fontSize: '12px' }}>{s.desc}</small>
               </div>
             ))}
           </div>
-          <button type="button" className="button primary" onClick={onStart}>영양제 등록하기</button>
+          <button type="button" className="button primary" onClick={profileIsSetup ? onStart : onProfile}>
+            {profileIsSetup ? '영양제 등록하기' : '프로필 입력하기'}
+          </button>
         </section>
       </>
     )
@@ -83,7 +122,7 @@ export function Dashboard({
   return (
     <>
       <div style={{ marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#173c3c', margin: '0 0 6px' }}>안녕하세요, {userName}님 👋</h2>
+        <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#173c3c', margin: '0 0 6px' }}>안녕하세요, {userName}님</h2>
         <p style={{ color: '#697771', fontSize: '15px', margin: 0 }}>{dateStr}</p>
       </div>
 
@@ -131,11 +170,11 @@ export function Dashboard({
 
       {report.interactionWarnings.length > 0 && (
         <section className="panel" style={{ marginTop: '24px' }}>
-          <div className="section-heading"><div><h2>⚠️ 주의 사항</h2><p>약물/영양소 상호작용 경고</p></div></div>
+          <div className="section-heading"><div><h2>주의 사항</h2><p>약물/영양소 상호작용 경고</p></div></div>
           <div className="risk-board">
             {report.interactionWarnings.slice(0, 3).map((w) => (
               <article className={`risk-row ${getStatusTone(w.severity)}`} key={`${w.nutrientName}-${w.message}`}>
-                <div><strong>{w.nutrientName}</strong><span className="status-pill">{w.severity === 'high' ? '🔴 금기' : '🟡 주의'}</span></div>
+                <div><strong>{w.nutrientName}</strong><span className="status-pill">{w.severity === 'high' ? '[금기]' : '[주의]'}</span></div>
                 <p>{w.message}</p>
               </article>
             ))}
@@ -149,9 +188,12 @@ export function Dashboard({
             <div><h2>📅 오늘의 복용</h2><p>시간약리학 기반 타임라인</p></div>
             {onSchedule && <button type="button" className="button ghost" onClick={onSchedule}>전체 보기<ChevronRight size={16} /></button>}
           </div>
-          {/* TODO: 사용자님 작업 영역 - 실제 스케줄 엔진 데이터로 교체하세요 */}
-          {mockTodaySchedule.map((slot, idx) => (
-            <div key={idx} style={{ display: 'flex', gap: '12px', padding: '10px 0', borderBottom: idx < mockTodaySchedule.length - 1 ? '1px solid #f0f4f2' : 'none' }}>
+          {scheduleLoading ? (
+            <p style={{ color: '#8a9a95', padding: '12px 0', fontSize: '14px' }}>오늘의 복용 스케줄을 생성하고 있습니다...</p>
+          ) : todaySchedule.length === 0 ? (
+            <p style={{ color: '#8a9a95', padding: '12px 0', fontSize: '14px' }}>스케줄을 아직 생성하지 못했어요. 분석을 먼저 실행해보세요.</p>
+          ) : todaySchedule.map((slot, idx) => (
+            <div key={idx} style={{ display: 'flex', gap: '12px', padding: '10px 0', borderBottom: idx < todaySchedule.length - 1 ? '1px solid #f0f4f2' : 'none' }}>
               <span style={{ minWidth: '80px', color: '#18ae90', fontWeight: 800, fontSize: '13px' }}>{slot.time}</span>
               <span style={{ color: '#1a2c28', fontSize: '14px' }}>{slot.items.join(', ')}</span>
             </div>
@@ -159,12 +201,13 @@ export function Dashboard({
         </section>
         <section className="panel">
           <div className="section-heading">
-            <div><h2>💡 추천 조합</h2><p>시너지 효과가 높은 조합</p></div>
+            <div><h2>추천 조합</h2><p>시너지 효과가 높은 조합</p></div>
             {onChat && <button type="button" className="button ghost" onClick={onChat}>AI에게 물어보기<ChevronRight size={16} /></button>}
           </div>
-          {/* TODO: 사용자님 작업 영역 - 실제 시너지 분석 결과로 교체하세요 */}
-          {mockSynergies.map((s, idx) => (
-            <div key={idx} style={{ display: 'flex', gap: '12px', padding: '10px 0', borderBottom: idx < mockSynergies.length - 1 ? '1px solid #f0f4f2' : 'none' }}>
+          {synergies.length === 0 ? (
+            <p style={{ color: '#8a9a95', padding: '12px 0', fontSize: '14px' }}>아직 발견된 시너지 조합이 없어요. 영양제를 더 등록해보세요.</p>
+          ) : synergies.map((s, idx) => (
+            <div key={idx} style={{ display: 'flex', gap: '12px', padding: '10px 0', borderBottom: idx < synergies.length - 1 ? '1px solid #f0f4f2' : 'none' }}>
               <strong style={{ minWidth: '140px', color: '#173c3c', fontSize: '14px' }}>{s.combo}</strong>
               <span style={{ color: '#52605b', fontSize: '13px' }}>{s.benefit}</span>
             </div>
@@ -199,7 +242,7 @@ export function ProfileAndMedication({
     try {
       setSyncMessage(await saveProfileBundle(profile, medications))
     } catch (error) {
-      setSyncMessage(error instanceof Error ? error.message : 'Supabase 저장에 실패했습니다.')
+      setSyncMessage(error instanceof Error ? error.message : '저장에 실패했습니다.')
     }
   }
 
@@ -369,16 +412,26 @@ export function SupplementWorkspace({
     if (!searchQuery.trim()) return
     setParsing(true)
     setParseWarnings([])
+    setSyncMessage('')
     try {
-      setSyncMessage('Exa.ai 웹 검색 기능이 준비 중입니다. 현재는 테스트용 모의 데이터만 제공됩니다.')
-      // 모의 데이터
-      setProductName(searchQuery)
-      setBrandName('Exa Searched Brand')
-      setDraftIngredients([
-        { id: createId('ing'), nutrientId: 'vitamin_c', standardName: '비타민 C', amount: 500, unit: 'mg', confidence: 1, reviewRequired: false, rawName: 'Vitamin C', rawText: 'Vitamin C 500mg' }
-      ])
+      const { data, error } = await supabase.functions.invoke('exa-search', {
+        body: { query: searchQuery },
+      })
+      if (error) throw new Error(error.message || '검색 중 오류가 발생했습니다.')
+      if (!data?.ingredients || data.ingredients.length === 0) {
+        setParseWarnings(['검색 결과에서 성분 정보를 찾을 수 없습니다. 제품명을 다시 확인해주세요.'])
+        return
+      }
+      setProductName(data.productName || searchQuery)
+      setBrandName(data.brandName || '')
+      setDraftIngredients(data.ingredients.map((ing: ParsedIngredient & { id?: string }) => ({
+        ...ing,
+        id: ing.id || createId('ing'),
+        confidence: ing.confidence ?? 0.7,
+        reviewRequired: ing.reviewRequired ?? true,
+      })))
     } catch (error) {
-      setParseWarnings([error instanceof Error ? error.message : '검색 실패'])
+      setParseWarnings([error instanceof Error ? error.message : '검색 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'])
     } finally {
       setParsing(false)
     }
@@ -421,7 +474,7 @@ export function SupplementWorkspace({
       supplement.id = saved.productId
       setSyncMessage(saved.message)
     } catch (error) {
-      setSyncMessage(error instanceof Error ? error.message : 'Supabase 저장에 실패했습니다.')
+      setSyncMessage(error instanceof Error ? error.message : '저장에 실패했습니다.')
       return
     }
     onSupplements([...supplements, supplement])
@@ -460,7 +513,7 @@ export function SupplementWorkspace({
               <span>{parsing ? 'AI가 성분표를 분석하는 중입니다.' : 'JPG, PNG, WEBP 파일을 선택하면 parse-label 흐름을 실행합니다.'}</span>
               <label className="button ghost">
                 <Camera size={16} />파일 선택
-                <input hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => {
+                <input hidden type="file" accept="image/jpeg,image/png,image/webp,.heic,.heif" onChange={(e) => {
                   const file = e.target.files?.[0]
                   if (file) parseLabel(file)
                 }} />
@@ -547,13 +600,13 @@ export function AnalysisResult({ report, syncMessage, onAnalyze }: { report: Ana
     return (
       <section className="panel">
         <div className="section-heading">
-          <div><h2>분석 결과</h2><p>Supabase에 저장된 분석 리포트만 결과로 표시합니다.</p></div>
+            <div><h2>분석 결과</h2><p>저장된 분석 결과를 표시합니다.</p></div>
           <button type="button" className="button primary" onClick={onAnalyze}>분석 실행</button>
         </div>
         {syncMessage ? (
           <div className="notice warning"><AlertTriangle size={16} /><span>{syncMessage}</span></div>
         ) : (
-          <p className="muted">분석을 실행하면 원격 Edge Function 저장이 성공한 뒤 결과가 표시됩니다.</p>
+          <p className="muted">분석을 실행하면 결과가 표시됩니다.</p>
         )}
       </section>
     )

@@ -3,7 +3,8 @@ import type { Medication, Profile } from '../../types'
 
 export async function saveProfileBundle(profile: Profile, medications: Medication[]): Promise<string> {
   const { data: authData, error: authError } = await supabase.auth.getUser()
-  if (authError || !authData.user) throw new Error('로그인 후 Supabase에 저장할 수 있습니다.')
+  if (authError) throw new Error('세션이 만료되었습니다. 다시 로그인해주세요.')
+  if (!authData.user) throw new Error('로그인 정보를 확인할 수 없습니다. 다시 로그인해주세요.')
   const userId = authData.user.id
 
   const profileResult = await supabase.from('user_profiles').upsert({
@@ -43,5 +44,5 @@ export async function saveProfileBundle(profile: Profile, medications: Medicatio
     if (medicationResult.error) throw medicationResult.error
   }
 
-  return '프로필, 질환/알레르기, 복용 약을 Supabase에 저장했습니다.'
+  return '프로필과 복용 정보를 저장했습니다.'
 }

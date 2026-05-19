@@ -51,6 +51,8 @@ export function useAuth({
   const [{ hasAuthCallback, initialAuthNotice }] = useState(parseAuthCallbackNotice)
   const [sessionEmail, setSessionEmail] = useState<string | null>(null)
   const [authNotice, setAuthNotice] = useState<AuthNoticeState>(initialAuthNotice)
+  const [isAuthInitialized, setIsAuthInitialized] = useState(false)
+  const [profileIsSetup, setProfileIsSetup] = useState(false)
 
   const loadUserData = useCallback(async (userId: string) => {
     const [profileResult, conditionsResult, medicationsResult, userSupplementsResult] = await Promise.all([
@@ -64,6 +66,7 @@ export function useAuth({
     ])
 
     if (profileResult.data) {
+      setProfileIsSetup(true)
       const conditions = conditionsResult.data ?? []
       onProfile({
         gender: profileResult.data.gender,
@@ -116,27 +119,39 @@ export function useAuth({
 
   useEffect(() => {
     let cancelled = false
-    supabase.auth.getSession().then(({ data, error }) => {
+
+    async function initSession() {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
       if (cancelled) return
-      if (error) {
+
+      if (sessionError || !sessionData.session) {
         if (initialAuthNotice) {
-          setAuthNotice({ tone: 'warning', message: `소셜 로그인 세션 생성에 실패했습니다. ${error.message}` })
+          setAuthNotice({ tone: 'warning', message: `로그인 세션을 확인할 수 없습니다. ${sessionError?.message ?? ''}` })
           clearAuthCallbackUrl()
         }
+        setIsAuthInitialized(true)
         return
       }
-      setSessionEmail(data.session?.user.email ?? null)
-      if (data.session?.user) {
-        if (hasAuthCallback) {
-          onSignedIn()
-          clearAuthCallbackUrl()
-        }
-        void loadUserData(data.session.user.id)
-      } else if (initialAuthNotice) {
-        setAuthNotice({ tone: 'warning', message: '소셜 로그인 응답을 받았지만 세션을 만들지 못했습니다. 다시 시도해 주세요.' })
+
+      const { data: userData, error: userError } = await supabase.auth.getUser()
+      if (cancelled) return
+
+      if (userError || !userData.user) {
+        setSessionEmail(null)
+        setIsAuthInitialized(true)
+        return
+      }
+
+      setSessionEmail(userData.user.email ?? null)
+      if (hasAuthCallback) {
+        onSignedIn()
         clearAuthCallbackUrl()
       }
-    })
+      void loadUserData(userData.user.id)
+      setIsAuthInitialized(true)
+    }
+
+    initSession()
 
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return
@@ -145,6 +160,7 @@ export function useAuth({
         if (event === 'SIGNED_IN') onSignedIn()
         void loadUserData(session.user.id)
       } else {
+        setProfileIsSetup(false)
         onProfile(defaultProfile)
         onMedications([])
         onSupplements([])
@@ -163,5 +179,7 @@ export function useAuth({
     setSessionEmail,
     authNotice,
     setAuthNotice,
+    isAuthInitialized,
+    profileIsSetup,
   }
 }

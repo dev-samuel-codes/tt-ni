@@ -1,14 +1,35 @@
 import { supabase } from '../../lib/supabaseClient'
 import { createId } from '../../lib/utils'
 import type { ParsedIngredient, SupplementProduct } from '../../types'
+import { heicTo, isHeic } from 'heic-to'
 
 export const allowedLabelMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
+
+async function convertHeicToJpeg(file: File): Promise<File | null> {
+  try {
+    const result = await heicTo({ blob: file, type: 'image/jpeg', quality: 0.92 })
+    return new File([result], file.name.replace(/\.(heic|heif)$/i, '.jpg'), {
+      type: 'image/jpeg',
+    })
+  } catch {
+    return null
+  }
+}
 
 export async function parseLabelImage(file?: File) {
   let uploadedPath = ''
   try {
     if (!file) throw new Error('성분표 이미지 파일을 선택해야 AI 파싱을 실행할 수 있습니다.')
-    if (!allowedLabelMimeTypes.has(file.type)) throw new Error('JPG, PNG, WEBP 형식의 성분표 이미지만 업로드할 수 있습니다.')
+
+    if (await isHeic(file)) {
+      const converted = await convertHeicToJpeg(file)
+      if (!converted) throw new Error('HEIC 이미지 변환에 실패했습니다. JPG, PNG, WEBP 형식으로 다시 시도해주세요.')
+      file = converted
+    }
+
+    if (!allowedLabelMimeTypes.has(file.type)) {
+      throw new Error('JPG, PNG, WEBP 형식의 성분표 이미지를 업로드해주세요.')
+    }
 
     const { data: authData, error: authError } = await supabase.auth.getUser()
     if (authError || !authData.user) throw new Error('로그인 후 성분표 이미지를 업로드할 수 있습니다.')
@@ -60,7 +81,8 @@ export async function saveSupplementProduct(supplement: SupplementProduct, label
   let productId = ''
   try {
     const { data: authData, error: authError } = await supabase.auth.getUser()
-    if (authError || !authData.user) throw new Error('Supabase 저장은 로그인 후 사용할 수 있습니다.')
+    if (authError) throw new Error('세션이 만료되었습니다. 다시 로그인해주세요.')
+    if (!authData.user) throw new Error('로그인 정보를 확인할 수 없습니다. 다시 로그인해주세요.')
 
     const productInsert = await supabase.from('supplement_products').insert({
       owner_user_id: authData.user.id,
@@ -96,9 +118,9 @@ export async function saveSupplementProduct(supplement: SupplementProduct, label
     })
     if (userSupplementInsert.error) throw userSupplementInsert.error
 
-    return { productId, message: 'Supabase에 제품, 성분, 복용량을 저장했습니다.' }
+    return { productId, message: '제품과 성분 정보를 저장했습니다.' }
   } catch (error) {
-    let message = error instanceof Error ? error.message : 'Supabase 저장에 실패했습니다.'
+    let message = error instanceof Error ? error.message : '저장에 실패했습니다.'
     if (productId) {
       const cleanup = await supabase.from('supplement_products').delete().eq('id', productId)
       if (cleanup.error) message = `${message} 제품 임시 데이터 정리도 실패했습니다: ${cleanup.error.message}`

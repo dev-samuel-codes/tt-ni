@@ -64,6 +64,11 @@ const defaultUnits: Record<string, Ingredient['unit']> = {
   zinc: 'mg',
   iron: 'mg',
   omega3: 'mg',
+  choline: 'mg',
+  ginseng: 'mg',
+  grapefruit: 'mg',
+  coq10: 'mg',
+  probiotics: 'CFU',
 }
 
 const references: Reference[] = [
@@ -90,6 +95,12 @@ const references: Reference[] = [
   { nutrientId: 'iron', gender: 'female', ageMin: 19, ageMax: 50, target: 18, ul: 45, unit: 'mg' },
   { nutrientId: 'iron', gender: 'female', ageMin: 51, ageMax: 150, target: 8, ul: 45, unit: 'mg' },
   { nutrientId: 'omega3', gender: 'any', ageMin: 19, ageMax: 150, target: 1100, unit: 'mg' },
+  { nutrientId: 'choline', gender: 'male', ageMin: 19, ageMax: 150, target: 550, ul: 3500, unit: 'mg' },
+  { nutrientId: 'choline', gender: 'female', ageMin: 19, ageMax: 150, target: 425, ul: 3500, unit: 'mg' },
+  { nutrientId: 'ginseng', gender: 'any', ageMin: 19, ageMax: 150, unit: 'mg' },
+  { nutrientId: 'grapefruit', gender: 'any', ageMin: 19, ageMax: 150, unit: 'mg' },
+  { nutrientId: 'coq10', gender: 'any', ageMin: 19, ageMax: 150, unit: 'mg' },
+  { nutrientId: 'probiotics', gender: 'any', ageMin: 19, ageMax: 150, unit: 'CFU' },
 ]
 
 const interactionRules: InteractionRule[] = [
@@ -133,6 +144,101 @@ const interactionRules: InteractionRule[] = [
     message: '신장 질환이 있으면 마그네슘 보충제 복용 전 전문가 상담이 필요합니다.',
     sourceNote: 'MVP rule: renal condition mineral caution',
   },
+  {
+    nutrientId: 'ginseng',
+    medicationKeyword: 'insulin',
+    severity: 'high',
+    nutrientName: '홍삼',
+    message: '인슐린/당뇨약 복용 중 홍삼(진세노사이드) 고용량 섭취는 중증 저혈당 쇼크 위험이 있습니다.',
+    sourceNote: 'Report: Ginsenoside insulin sensitivity amplification',
+  },
+  {
+    nutrientId: 'grapefruit',
+    medicationKeyword: 'statin',
+    severity: 'high',
+    nutrientName: '자몽 추출물',
+    message: '스타틴 계열 고지혈증 약 복용 중 자몽 추출물 섭취는 절대 금기입니다 (횡문근융해증 위험).',
+    sourceNote: 'Report: CYP3A4 inhibition by furanocoumarin',
+  },
+  {
+    nutrientId: 'vitamin_b12',
+    medicationKeyword: 'metformin',
+    severity: 'caution',
+    nutrientName: '비타민 B12',
+    message: '메트포르민 장기 복용은 비타민 B12 고갈을 유발할 수 있으므로 보충이 권장됩니다.',
+    sourceNote: 'Report: Metformin induces B12 depletion',
+  },
+  {
+    nutrientId: 'coq10',
+    medicationKeyword: 'statin',
+    severity: 'caution',
+    nutrientName: '코엔자임 Q10',
+    message: '스타틴 계열 약물은 체내 코엔자임 Q10을 고갈시키므로 병용 섭취가 권장됩니다.',
+    sourceNote: 'Report: Statin induces CoQ10 depletion',
+  },
+  {
+    nutrientId: 'probiotics',
+    medicationKeyword: 'antibiotic',
+    severity: 'high',
+    nutrientName: '유산균',
+    message: '항생제 복용 시 유산균이 사멸하므로 최소 2시간 이상의 간격을 두고 섭취하세요.',
+    sourceNote: 'Report: Antibiotics destroy probiotics',
+  },
+  {
+    nutrientId: 'calcium',
+    medicationKeyword: 'bisphosphonate',
+    severity: 'high',
+    nutrientName: '칼슘',
+    message: '골다공증 약(비스포스포네이트)은 미네랄과 킬레이트를 형성하므로 최소 2~4시간 간격을 두세요.',
+    sourceNote: 'Report: Bisphosphonate chelation with minerals',
+  },
+  {
+    nutrientId: 'vitamin_c',
+    medicationKeyword: 'aspirin',
+    severity: 'high',
+    nutrientName: '비타민 C',
+    message: '아스피린 복용 중 고용량 비타민 C는 위장관 출혈 위험을 높일 수 있으므로 중성화된 비타민 C를 권장하거나 식후 복용하세요.',
+    sourceNote: 'Report: Aspirin + high-dose vitamin C GI bleeding risk',
+  },
+  {
+    nutrientId: 'ginseng',
+    medicationKeyword: 'warfarin',
+    severity: 'high',
+    nutrientName: '홍삼',
+    message: '와파린 복용 중 홍삼(진세노사이드) 섭취는 출혈 위험을 높일 수 있으므로 주의가 필요합니다.',
+    sourceNote: 'Report: Ginseng antiplatelet effect with warfarin',
+  },
+  {
+    nutrientId: 'vitamin_e',
+    medicationKeyword: 'warfarin',
+    severity: 'caution',
+    nutrientName: '비타민 E',
+    message: '와파린 복용 중 고용량 비타민 E는 혈소판 응집을 억제하여 출혈 위험을 증가시킬 수 있습니다.',
+    sourceNote: 'Report: Vitamin E antiplatelet with warfarin',
+  },
+  {
+    nutrientId: 'magnesium',
+    medicationKeyword: 'bisphosphonate',
+    severity: 'high',
+    nutrientName: '마그네슘',
+    message: '골다공증 약(비스포스포네이트)과 마그네슘은 킬레이트 형성을 방지하기 위해 2시간 이상 간격을 두세요.',
+    sourceNote: 'Report: Bisphosphonate chelation',
+  },
+]
+
+const SYNERGY_GROUPS = [
+  { nutrients: ['coq10', 'omega3'], label: 'CoQ10 + 오메가3', benefit: '혈관 내피세포 건강과 항산화 네트워크가 강화되어 심혈관 보호 효과가 배가됩니다. CoQ10이 미토콘드리아 ATP 생성을, 오메가3가 혈류를 개선합니다.' },
+  { nutrients: ['vitamin_c', 'iron'], label: '비타민 C + 철분', benefit: '비타민 C가 비헴철(식물성 철분)을 흡수되기 쉬운 환원 상태(Fe²⁺)로 유지시켜 철분 흡수율을 극대화합니다. 빈혈 예방에 탁월한 조합입니다.' },
+  { nutrients: ['vitamin_e', 'omega3'], label: '비타민 E + 오메가3', benefit: '오메가3의 이중 결합이 활성산소에 의해 산화되는 것을 비타민 E가 방어합니다. 오메가3의 구조적 온전성을 보존하여 노화 방지 효능을 유지합니다.' },
+  { nutrients: ['vitamin_c', 'collagen'], label: '비타민 C + 콜라겐', benefit: '비타민 C는 콜라겐 합성의 필수 조효소로, 프롤린과 라이신의 수산화 반응을 촉진하여 피부 탄력과 관절 건강을 개선합니다.' },
+  { nutrients: ['vitamin_e', 'coq10'], label: '비타민 E + CoQ10', benefit: '지용성 항산화제인 비타민 E와 미토콘드리아 항산화제인 CoQ10이 이중 항산화 방어벽을 형성하여 세포막을 보호합니다.' },
+]
+
+const ANTAGONISM_GROUPS = [
+  { nutrients: ['calcium', 'iron'], label: '칼슘 ↔ 철분', reason: '장관 점막의 DMT1(2가 금속 수송체)를 공유하여 흡수 경쟁이 발생합니다.', minIntervalHours: 2, severity: 'caution' as const },
+  { nutrients: ['calcium', 'magnesium'], label: '칼슘 ↔ 마그네슘', reason: '두 다가 양이온이 같은 흡수 채널을 두고 경쟁하여 상호 흡수율이 감소합니다.', minIntervalHours: 2, severity: 'caution' as const },
+  { nutrients: ['calcium', 'zinc'], label: '칼슘 ↔ 아연', reason: '다가 양이온 간 흡수 경쟁으로 인해 아연의 생체이용률이 저하됩니다.', minIntervalHours: 2, severity: 'caution' as const },
+  { nutrients: ['iron', 'zinc'], label: '철분 ↔ 아연', reason: 'DMT1 수송체를 공유하여 경쟁적 흡수 억제가 발생합니다.', minIntervalHours: 2, severity: 'caution' as const },
 ]
 
 function getServiceKey(): string {
@@ -250,6 +356,42 @@ Deno.serve(async (req) => {
         message: rule.message,
         sourceNote: rule.sourceNote,
       }))
+
+    const userNutrientIds = new Set(totalNutrients.map((total) => total.nutrientId))
+
+    const synergyRecommendations = SYNERGY_GROUPS.map((group) => {
+      const matched = group.nutrients.filter((id) => userNutrientIds.has(id))
+      const missing = group.nutrients.filter((id) => !userNutrientIds.has(id))
+      if (matched.length < 1) return null
+      if (matched.length === group.nutrients.length) {
+        return {
+          nutrients: group.nutrients,
+          label: group.label,
+          benefit: group.benefit,
+          matchType: 'full' as const,
+          missingNutrients: [] as string[],
+          message: `${group.label} 조합을 보유 중입니다. ${group.benefit}`,
+        }
+      }
+      return {
+        nutrients: group.nutrients,
+        label: group.label,
+        benefit: group.benefit,
+        matchType: 'partial' as const,
+        missingNutrients: missing,
+        message: `${group.label} 조합에서 일부 영양소를 보유 중입니다. 함께 섭취하면 ${group.benefit}`,
+      }
+    }).filter((item): item is NonNullable<typeof item> => item !== null)
+
+    const antagonismWarnings = ANTAGONISM_GROUPS
+      .filter((group) => group.nutrients.every((id) => userNutrientIds.has(id)))
+      .map((group) => ({
+        nutrients: group.nutrients,
+        label: group.label,
+        message: `${group.reason} 최소 ${group.minIntervalHours}시간 이상 간격을 두고 복용하는 것이 좋습니다.`,
+        severity: group.severity,
+      }))
+
     const recommendations = riskItems.map((item) => ({
       status: item.sources.length > 1 ? 'duplicate' : item.status,
       title: `${item.standardName} 확인`,
@@ -270,10 +412,12 @@ Deno.serve(async (req) => {
       total_nutrients_json: totalNutrients,
       risk_items_json: riskItems,
       recommendations_json: recommendations,
+      synergy_recommendations_json: synergyRecommendations,
+      antagonism_warnings_json: antagonismWarnings,
     }).select('id').single()
     if (error) throw error
 
-    return jsonResponse({ analysis_report_id: data.id, summary: statusSummary, totalNutrients, riskItems, interactionWarnings, recommendations })
+    return jsonResponse({ analysis_report_id: data.id, summary: statusSummary, totalNutrients, riskItems, interactionWarnings, recommendations, synergyRecommendations, antagonismWarnings })
   } catch (error) {
     return jsonResponse({ error: error instanceof Error ? error.message : 'Unexpected analysis error' }, 500)
   }

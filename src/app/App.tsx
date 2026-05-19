@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import '../styles/App.css'
 import '../styles/auth.css'
 import '../styles/landing.css'
@@ -32,7 +32,7 @@ function App() {
   const [analysisSyncMessage, setAnalysisSyncMessage] = useState('')
 
   const openProfileAfterSignIn = useCallback(() => navigateTo(routes.profile), [navigateTo])
-  const { sessionEmail, setSessionEmail, authNotice, setAuthNotice } = useAuth({
+  const { sessionEmail, setSessionEmail, authNotice, setAuthNotice, isAuthInitialized, profileIsSetup } = useAuth({
     defaultProfile,
     onProfile: setProfile,
     onMedications: setMedications,
@@ -44,6 +44,15 @@ function App() {
   const previewReport = runAnalysis(profile, medications, supplements)
   const confirmedCount = supplements.filter((supplement) => supplement.confirmed).length
   const needsReview = supplements.flatMap((supplement) => supplement.ingredients).filter((ingredient) => ingredient.reviewRequired).length
+
+  useEffect(() => {
+    if (!isAuthInitialized) return
+    if (currentPath.startsWith(routes.workspace)) {
+      if (!sessionEmail) {
+        navigateTo(routes.login)
+      }
+    }
+  }, [currentPath, sessionEmail, isAuthInitialized, navigateTo])
 
   async function handleRunAnalysis() {
     setAnalysisSyncMessage('')
@@ -57,7 +66,7 @@ function App() {
       if (error) throw error
       const serverReport = createAnalysisReportFromServer(data)
       setReport(serverReport)
-      setAnalysisSyncMessage(`Supabase 분석 리포트 저장 완료: ${serverReport.id}`)
+      setAnalysisSyncMessage(`분석 결과 저장 완료: ${serverReport.id}`)
     } catch (error) {
       setAnalysisSyncMessage(error instanceof Error ? error.message : '서버 분석 저장에 실패했습니다.')
     }
@@ -91,6 +100,8 @@ function App() {
             onAnalyze={handleRunAnalysis}
             onSchedule={() => navigateTo(routes.schedule)}
             onChat={() => navigateTo(routes.chat)}
+            onProfile={() => navigateTo(routes.profile)}
+            profileIsSetup={profileIsSetup}
           />
         )}
         {currentPath === routes.profile && (

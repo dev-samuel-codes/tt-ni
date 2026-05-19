@@ -1,26 +1,271 @@
-import { useState } from 'react'
-import { Send, Bot, User, Plus, MessageCircle, Info } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { Send, Bot, User, Plus, MessageCircle, Info, Loader, AlertCircle } from 'lucide-react'
+import { supabase } from '../lib/supabaseClient'
+
+interface ChatMessage {
+  role: 'user' | 'assistant'
+  text: string
+}
+
+interface ChatSession {
+  id: string
+  title: string
+  active: boolean
+}
 
 export function ChatPage() {
   const [input, setInput] = useState('')
-
-  // TODO: 사용자님 작업 영역 - AI 상담 로직 연동
-  // 1. Supabase Edge Function 또는 별도 AI 백엔드 호출 로직을 handleSend에 구현하세요.
-  // 2. 프로필, 영양제, 분석 리포트를 AI 모델 컨텍스트로 전송하세요.
-  // 3. SSE 스트리밍 응답 처리를 구현하세요.
-
-  // TODO: 사용자님 작업 영역 - 대화 세션 관리 (생성/전환/삭제) 로직 구현
-  const [sessions] = useState([
-    { id: '1', title: '새 대화', active: true },
-  ])
-
-  const [messages, setMessages] = useState([
+  const [sessions, setSessions] = useState<ChatSession[]>([])
+  const [activeSessionId, setActiveSessionId] = useState<string>('')
+  const [sessionsLoading, setSessionsLoading] = useState(true)
+  const [messages, setMessages] = useState<ChatMessage[]>([
     { role: 'assistant', text: '안녕하세요! 등록하신 영양제와 건강 상태에 대해 궁금한 점을 물어보세요.' }
   ])
   const [isLoading, setIsLoading] = useState(false)
+  const [rateLimited, setRateLimited] = useState(false)
+  const [contextBadges, setContextBadges] = useState<string[]>([])
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const fullTextRef = useRef('')
 
-  // TODO: 사용자님 작업 영역 - 실제 컨텍스트 데이터를 프로필/영양제/리포트에서 로드
-  const contextBadges = ['프로필 정보', '영양제 3개', '최근 분석 리포트']
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  const loadSessions = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('chat_sessions')
+        .select('id, title')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      const loaded: ChatSession[] = (data || []).map((s: { id: string; title: string }) => ({
+        id: s.id,
+        title: s.title || '새 대화',
+        active: false,
+      }))
+
+      if (loaded.length > 0) {
+        loaded[0].active = true
+        setActiveSessionId(loaded[0].id)
+        loadMessages(loaded[0].id)
+      }
+      setSessions(loaded)
+    } catch {
+      setSessions([{ id: 'local', title: '새 대화', active: true }])
+      setActiveSessionId('local')
+    } finally {
+      setSessionsLoading(false)
+    }
+  }, [])
+
+  async function loadMessages(sessionId: string) {
+    try {
+      const { data } = await supabase
+        .from('chat_messages')
+        .select('role, text')
+        .eq('session_id', sessionId)
+        .order('created_at', { ascending: true })
+
+      if (data && data.length > 0) {
+        setMessages(data as ChatMessage[])
+      } else {
+        setMessages([
+          { role: 'assistant', text: '안녕하세요! 등록하신 영양제와 건강 상태에 대해 궁금한 점을 물어보세요.' }
+        ])
+      }
+    } catch {
+      // fallback: use current messages
+    }
+  }
+
+  const loadContextBadges = useCallback(async () => {
+    const badges: string[] = []
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const [{ data: profiles }, { data: supplements }, { data: reports }] = await Promise.all([
+        supabase.from('profiles').select('id').limit(1),
+        supabase.from('supplement_products').select('id'),
+        supabase.from('analysis_reports').select('id').order('created_at', { ascending: false }).limit(1),
+      ])
+
+      if (profiles && profiles.length > 0) badges.push('프로필 정보')
+      if (supplements && supplements.length > 0) badges.push(`영양제 ${supplements.length}개`)
+      if (reports && reports.length > 0) badges.push('최근 분석 리포트')
+    } catch {
+      // context loading is best-effort
+    }
+    setContextBadges(badges)
+  }, [])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadSessions()
+    loadContextBadges()
+  }, [loadSessions, loadContextBadges])
+
+  async function createSession(title?: string): Promise<string | null> {
+    try {
+      const { data, error } = await supabase
+        .from('chat_sessions')
+        .insert({ title: title || '새 대화' })
+        .select('id, title')
+        .single()
+
+      if (error) throw error
+      return data.id
+    } catch {
+      return null
+    }
+  }
+
+  async function saveMessage(sessionId: string, msg: ChatMessage) {
+    try {
+      await supabase.from('chat_messages').insert({
+        session_id: sessionId,
+        role: msg.role,
+        text: msg.text,
+      })
+    } catch {
+      // best-effort save
+    }
+  }
+
+  const handleSend = async (text?: string) => {
+    const msgText = text || input
+    if (!msgText.trim() || isLoading || rateLimited) return
+
+    const userMsg: ChatMessage = { role: 'user', text: msgText }
+    const newMessages = [...messages, userMsg]
+    setMessages(newMessages)
+    setInput('')
+    setIsLoading(true)
+    setRateLimited(false)
+
+    let sessionId = activeSessionId
+    if (!sessionId || sessionId === 'local') {
+      const newId = await createSession(msgText.slice(0, 30))
+      if (newId) {
+        sessionId = newId
+        setActiveSessionId(newId)
+        setSessions((prev) => {
+          const updated = prev.map((s) => ({ ...s, active: false }))
+          return [{ id: newId, title: msgText.slice(0, 30), active: true }, ...updated]
+        })
+      } else {
+        sessionId = 'local'
+      }
+    } else {
+      // Update session title on first message if it's still default
+      if (sessions.find((s) => s.id === sessionId)?.title === '새 대화') {
+        setSessions((prev) =>
+          prev.map((s) => (s.id === sessionId ? { ...s, title: msgText.slice(0, 30) } : s))
+        )
+        try {
+          await supabase.from('chat_sessions').update({ title: msgText.slice(0, 30) }).eq('id', sessionId)
+        } catch { /* best-effort */ }
+      }
+    }
+
+    if (sessionId !== 'local') {
+      await saveMessage(sessionId, userMsg)
+    }
+
+    // Placeholder for AI response while streaming
+    setMessages((prev) => [...prev, { role: 'assistant', text: '' }])
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-completion`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}`,
+          },
+          body: JSON.stringify({
+            query: msgText,
+            session_id: sessionId !== 'local' ? sessionId : undefined,
+          }),
+        }
+      )
+
+      if (response.status === 429) {
+        setRateLimited(true)
+        setMessages((prev) => {
+          const updated = [...prev]
+          updated[updated.length - 1] = {
+            role: 'assistant',
+            text: '요청이 너무 많아 잠시 제한되었습니다. 1분 후에 다시 물어봐 주세요.',
+          }
+          return updated
+        })
+        setIsLoading(false)
+        return
+      }
+
+      if (!response.ok) {
+        throw new Error(`서버 응답 오류 (${response.status})`)
+      }
+
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error('응답 스트림을 읽을 수 없습니다.')
+      }
+
+      const decoder = new TextDecoder()
+      fullTextRef.current = ''
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6).trim()
+            if (data === '[DONE]') continue
+            try {
+              const parsed = JSON.parse(data)
+              if (parsed.content) {
+                fullTextRef.current += parsed.content
+                setMessages((prev) => {
+                  const updated = [...prev]
+                  updated[updated.length - 1] = { role: 'assistant', text: fullTextRef.current }
+                  return updated
+                })
+              }
+            } catch {
+              // Skip malformed SSE chunks
+            }
+          }
+        }
+      }
+
+      // Save final message
+      if (sessionId !== 'local' && fullTextRef.current) {
+        await saveMessage(sessionId, { role: 'assistant', text: fullTextRef.current })
+      }
+    } catch {
+      setMessages((prev) => {
+        const updated = [...prev]
+        updated[updated.length - 1] = {
+          role: 'assistant',
+          text: '죄송합니다. 응답을 받아오는 중 문제가 발생했어요. 다시 시도해주세요.',
+        }
+          return updated
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const faqSuggestions = [
     '철분과 같이 먹으면 안 되는 영양제가 있나요?',
@@ -29,37 +274,34 @@ export function ChatPage() {
     '유산균과 항생제 간격은 얼마나 둬야 하나요?',
   ]
 
-  const handleSend = (text?: string) => {
-    const msgText = text || input
-    if (!msgText.trim()) return
-
-    const newMessages = [...messages, { role: 'user', text: msgText }]
-    setMessages(newMessages)
-    setInput('')
-    setIsLoading(true)
-
-    // TODO: 사용자님 작업 영역 - API 호출 및 응답 처리
-    // const response = await fetchAiResponse(msgText, contextData);
-    // setMessages([...newMessages, { role: 'assistant', text: response }]);
-
-    setTimeout(() => {
-      setMessages([...newMessages, { role: 'assistant', text: '(모의 응답) 실제 AI 연동 로직을 구현해주세요.' }])
-      setIsLoading(false)
-    }, 1000)
-  }
-
   const showFaq = messages.length <= 1 && !isLoading
 
   return (
     <div style={{ display: 'flex', gap: '16px', height: 'calc(100vh - 140px)' }}>
       {/* 대화 세션 사이드바 */}
       <div style={{ width: '200px', flexShrink: 0, background: '#f9fbfb', borderRadius: '12px', border: '1px solid #e1e8e5', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <button type="button" className="button primary" style={{ width: '100%', fontSize: '13px' }}>
+        <button type="button" className="button primary" style={{ width: '100%', fontSize: '13px' }} onClick={() => {
+          const newId = 'local'
+          setActiveSessionId(newId)
+          setSessions((prev) => {
+            const updated = prev.map((s) => ({ ...s, active: false }))
+            return [{ id: newId, title: '새 대화', active: true }, ...updated]
+          })
+          setMessages([{ role: 'assistant', text: '안녕하세요! 등록하신 영양제와 건강 상태에 대해 궁금한 점을 물어보세요.' }])
+          setRateLimited(false)
+        }}>
           <Plus size={14} /> 새 대화
         </button>
-        {/* TODO: 사용자님 작업 영역 - 세션 목록을 DB에서 로드하여 렌더링 */}
-        {sessions.map((s) => (
-          <button key={s.id} type="button" style={{
+        {sessionsLoading ? (
+          <p style={{ color: '#8a9a95', fontSize: '13px', textAlign: 'center', padding: '8px 0' }}>불러오는 중...</p>
+        ) : sessions.map((s) => (
+          <button key={s.id} type="button" onClick={() => {
+            setSessions((prev) => prev.map((item) => ({ ...item, active: item.id === s.id })))
+            setActiveSessionId(s.id)
+            setRateLimited(false)
+            if (s.id !== 'local') loadMessages(s.id)
+            else setMessages([{ role: 'assistant', text: '안녕하세요! 등록하신 영양제와 건강 상태에 대해 궁금한 점을 물어보세요.' }])
+          }} style={{
             width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '8px', border: 'none',
             background: s.active ? '#173c3c' : 'transparent', color: s.active ? '#fff' : '#52605b',
             fontSize: '13px', fontWeight: 750, cursor: 'pointer',
@@ -109,14 +351,18 @@ export function ChatPage() {
               <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#18ae90', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>
                 <Bot size={20} />
               </div>
-              <div style={{ padding: '12px 16px', color: '#697771' }}>답변을 작성하고 있습니다...</div>
+              <div style={{ padding: '12px 16px', color: '#697771' }}>
+                <Loader size={16} style={{ display: 'inline', marginRight: '8px', animation: 'spin 1s linear infinite' }} />
+                답변을 작성하고 있습니다...
+              </div>
             </div>
           )}
+          <div ref={messagesEndRef} />
 
           {/* FAQ 추천 칩 */}
           {showFaq && (
             <div style={{ marginTop: '12px' }}>
-              <p style={{ fontSize: '13px', color: '#8a9a95', marginBottom: '10px', fontWeight: 700 }}>💬 자주 묻는 질문</p>
+              <p style={{ fontSize: '13px', color: '#8a9a95', marginBottom: '10px', fontWeight: 700 }}>자주 묻는 질문</p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {faqSuggestions.map((q) => (
                   <button key={q} type="button" onClick={() => handleSend(q)} style={{
@@ -135,18 +381,26 @@ export function ChatPage() {
           )}
         </div>
 
-        <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid #e1e8e5', display: 'flex', gap: '12px' }}>
-          <input
-            type="text" value={input} onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="예: 철분과 같이 먹으면 안 되는 영양제가 있나요?"
-            style={{ flex: 1, padding: '14px 16px', borderRadius: '8px', border: '1px solid #cbd5d0', fontSize: '15px' }}
-            disabled={isLoading}
-          />
-          <button type="button" className="button primary mint" onClick={() => handleSend()}
-            disabled={isLoading || !input.trim()} style={{ minWidth: '60px', padding: '0' }}>
-            <Send size={20} />
-          </button>
+        <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid #e1e8e5' }}>
+          {rateLimited && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#b96b00', fontSize: '13px', background: '#fff8d9', padding: '8px 12px', borderRadius: '8px', marginBottom: '12px' }}>
+              <AlertCircle size={14} />
+              <span>요청이 너무 많아 잠시 제한되었습니다. 1분 후에 다시 시도해주세요.</span>
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <input
+              type="text" value={input} onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+              placeholder={rateLimited ? '잠시 후 다시 시도해주세요...' : '예: 철분과 같이 먹으면 안 되는 영양제가 있나요?'}
+              style={{ flex: 1, padding: '14px 16px', borderRadius: '8px', border: '1px solid #cbd5d0', fontSize: '15px' }}
+              disabled={isLoading || rateLimited}
+            />
+            <button type="button" className="button primary mint" onClick={() => handleSend()}
+              disabled={isLoading || !input.trim() || rateLimited} style={{ minWidth: '60px', padding: '0' }}>
+              <Send size={20} />
+            </button>
+          </div>
         </div>
       </section>
     </div>

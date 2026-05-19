@@ -41,7 +41,7 @@ export function LoginPage({
               <Database size={20} />
               <div>
                 <strong>분석 결과 동기화</strong>
-                <span>Supabase에 리포트와 입력 정보를 보관</span>
+                <span>리포트와 입력 정보를 안전하게 보관</span>
               </div>
             </article>
             <article>
