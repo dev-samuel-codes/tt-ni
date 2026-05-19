@@ -1,6 +1,12 @@
 import { supabase } from '../../lib/supabaseClient'
 import type { Medication, Profile } from '../../types'
 
+/**
+ * 프로필, 건강 상태, 알레르기, 식이 제한, 복용 약물을 한 번에 저장합니다.
+ * user_profiles은 upsert(존재하면 갱신, 없으면 삽입),
+ * user_conditions와 user_medications은 delete 후 insert로 전체 교체합니다.
+ * condition_code prefix 규칙: 일반 질환(없음), allergy:(알레르기), diet:(식이 제한)
+ */
 export async function saveProfileBundle(profile: Profile, medications: Medication[]): Promise<string> {
   const { data: authData, error: authError } = await supabase.auth.getUser()
   if (authError) throw new Error('세션이 만료되었습니다. 다시 로그인해주세요.')

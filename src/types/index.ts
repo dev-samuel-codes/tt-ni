@@ -1,9 +1,13 @@
+/** 성별 */
 export type Gender = 'female' | 'male' | 'other'
 
+/** 영양소 위험 상태 */
 export type RiskStatus = 'normal' | 'deficient' | 'caution' | 'excess' | 'review'
 
+/** 영양소 함량 단위 */
 export type Unit = 'mg' | 'mcg' | 'IU' | 'g' | 'CFU' | 'unknown'
 
+/** 사용자 건강 프로필 */
 export interface Profile {
   gender: Gender
   birthYear: number
@@ -17,6 +21,7 @@ export interface Profile {
   consentAccepted: boolean
 }
 
+/** 사용자 복용 약물 */
 export interface Medication {
   id: string
   name: string
@@ -25,6 +30,7 @@ export interface Medication {
   memo: string
 }
 
+/** 파싱된 영양성분 (라벨 인식/검색/수동 입력 공통) */
 export interface ParsedIngredient {
   id: string
   rawName: string
@@ -40,6 +46,7 @@ export interface ParsedIngredient {
   caution?: string
 }
 
+/** 등록된 영양제 제품 (사용자별) */
 export interface SupplementProduct {
   id: string
   productName: string
@@ -52,6 +59,7 @@ export interface SupplementProduct {
   confirmed: boolean
 }
 
+/** 영양소 메타데이터 (표준명, 카테고리, 별칭, 기본단위 등) */
 export interface Nutrient {
   id: string
   standardName: string
@@ -61,6 +69,7 @@ export interface Nutrient {
   riskLevel: 'low' | 'medium' | 'high'
 }
 
+/** KDRIs 영양소별 참조 섭취량 기준 (성별·연령대별) */
 export interface ReferenceValue {
   nutrientId: string
   gender: Gender | 'any'
@@ -72,6 +81,7 @@ export interface ReferenceValue {
   unit: Unit
 }
 
+/** 약물/질환-영양소 상호작용 규칙 */
 export interface InteractionRule {
   id: string
   nutrientId: string
@@ -82,6 +92,7 @@ export interface InteractionRule {
   sourceNote: string
 }
 
+/** 영양소별 1일 총 섭취량 집계 결과 */
 export interface NutrientTotal {
   nutrientId: string
   standardName: string
@@ -100,6 +111,7 @@ export interface NutrientTotal {
   message: string
 }
 
+/** 분석 리포트 (영양소별 상태, 상호작용, 추천 사항 포함) */
 export interface AnalysisReport {
   id: string
   createdAt: string
@@ -139,6 +151,7 @@ export interface AnalysisReport {
   }>
 }
 
+/** 라벨 파싱 결과 (이미지 인식/검색 공통) */
 export interface ParseResult {
   productName: string | null
   servingSize: {

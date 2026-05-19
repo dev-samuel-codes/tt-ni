@@ -19,6 +19,7 @@ import { Dashboard, ProfileAndMedication, SupplementWorkspace, AnalysisResult } 
 import { SchedulePage } from '../pages/SchedulePage'
 import { ChatPage } from '../pages/ChatPage'
 
+/** 기본 프로필 값 (성인 여성 기준) */
 const defaultProfile: Profile = {
   gender: 'female', birthYear: 1998, heightCm: 165, weightKg: 55,
   pregnancyStatus: 'none', lactationStatus: false,
@@ -26,6 +27,15 @@ const defaultProfile: Profile = {
   consentAccepted: true,
 }
 
+/**
+ * 앱 루트 컴포넌트
+ *
+ * 라우팅 구조:
+ * - /workspace/* → SidebarLayout 내에서 Dashboard, Profile, Supplements, Analysis, Schedule, Chat
+ * - /login → LoginPage
+ * - /privacy, /terms → 각각 PrivacyPolicyPage, TermsOfServicePage
+ * - / (기본) → LandingPage
+ */
 function App() {
   const { currentPath, navigateTo } = useCurrentPath()
   const [profile, setProfile] = useState<Profile>(defaultProfile)
@@ -44,10 +54,12 @@ function App() {
     onSignedIn: openProfileAfterSignIn,
   })
 
+  /** 로컬 분석 미리보기 (서버 저장 없이 즉시 표시용) */
   const previewReport = runAnalysis(profile, medications, supplements)
   const confirmedCount = supplements.filter((supplement) => supplement.confirmed).length
   const needsReview = supplements.flatMap((supplement) => supplement.ingredients).filter((ingredient) => ingredient.reviewRequired).length
 
+  /** 비로그인 상태에서 워크스페이스 접근 시 로그인 페이지로 리다이렉트 */
   useEffect(() => {
     if (!isAuthInitialized) return
     if (currentPath.startsWith(routes.workspace)) {

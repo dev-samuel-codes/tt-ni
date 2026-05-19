@@ -50,6 +50,7 @@ interface InteractionRule {
   sourceNote: string
 }
 
+/** 영양소별 기본 단위 (참조치가 없을 때 폴백) */
 const defaultUnits: Record<string, Ingredient['unit']> = {
   vitamin_a: 'mcg',
   vitamin_b1: 'mg',
@@ -71,6 +72,7 @@ const defaultUnits: Record<string, Ingredient['unit']> = {
   probiotics: 'CFU',
 }
 
+/** KDRIs 참조 섭취량 (프론트엔드 nutritionData.ts와 동기화 필요, 서버 측 독립 실행을 위해 복제) */
 const references: Reference[] = [
   { nutrientId: 'vitamin_a', gender: 'male', ageMin: 19, ageMax: 150, target: 900, ul: 3000, unit: 'mcg' },
   { nutrientId: 'vitamin_a', gender: 'female', ageMin: 19, ageMax: 150, target: 700, ul: 3000, unit: 'mcg' },
@@ -103,6 +105,7 @@ const references: Reference[] = [
   { nutrientId: 'probiotics', gender: 'any', ageMin: 19, ageMax: 150, unit: 'CFU' },
 ]
 
+/** 상호작용 규칙 (프론트엔드 nutritionData.ts와 동기화 필요) */
 const interactionRules: InteractionRule[] = [
   {
     nutrientId: 'vitamin_k',
@@ -226,6 +229,7 @@ const interactionRules: InteractionRule[] = [
   },
 ]
 
+/** 시너지 그룹 (프론트엔드 analysisEngine.ts와 동기화 필요) */
 const SYNERGY_GROUPS = [
   { nutrients: ['coq10', 'omega3'], label: 'CoQ10 + 오메가3', benefit: '혈관 내피세포 건강과 항산화 네트워크가 강화되어 심혈관 보호 효과가 배가됩니다. CoQ10이 미토콘드리아 ATP 생성을, 오메가3가 혈류를 개선합니다.' },
   { nutrients: ['vitamin_c', 'iron'], label: '비타민 C + 철분', benefit: '비타민 C가 비헴철(식물성 철분)을 흡수되기 쉬운 환원 상태(Fe²⁺)로 유지시켜 철분 흡수율을 극대화합니다. 빈혈 예방에 탁월한 조합입니다.' },
@@ -234,6 +238,7 @@ const SYNERGY_GROUPS = [
   { nutrients: ['vitamin_e', 'coq10'], label: '비타민 E + CoQ10', benefit: '지용성 항산화제인 비타민 E와 미토콘드리아 항산화제인 CoQ10이 이중 항산화 방어벽을 형성하여 세포막을 보호합니다.' },
 ]
 
+/** 길항작용 그룹 (프론트엔드 analysisEngine.ts와 동기화 필요) */
 const ANTAGONISM_GROUPS = [
   { nutrients: ['calcium', 'iron'], label: '칼슘 ↔ 철분', reason: '장관 점막의 DMT1(2가 금속 수송체)를 공유하여 흡수 경쟁이 발생합니다.', minIntervalHours: 2, severity: 'caution' as const },
   { nutrients: ['calcium', 'magnesium'], label: '칼슘 ↔ 마그네슘', reason: '두 다가 양이온이 같은 흡수 채널을 두고 경쟁하여 상호 흡수율이 감소합니다.', minIntervalHours: 2, severity: 'caution' as const },
@@ -254,6 +259,7 @@ function getServiceKey(): string {
   return first
 }
 
+/** 영양소 단위 변환 (프론트엔드 convertAmount와 동일 로직) */
 function convert(amount: number, from: Ingredient['unit'], to: Ingredient['unit'], nutrientId: string): number | null {
   if (from === to) return amount
   if (from === 'unknown' || to === 'unknown') return null

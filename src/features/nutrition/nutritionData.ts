@@ -1,5 +1,10 @@
 import type { InteractionRule, Nutrient, ReferenceValue } from '../../types'
 
+/**
+ * 지원 영양소 데이터베이스
+ * 각 영양소의 ID, 표준명, 카테고리, 별칭, 기본 단위, 위험도를 정의합니다.
+ * 별칭(aliases)은 성분표 파싱/검색 시 매칭에 사용됩니다.
+ */
 export const nutrients: Nutrient[] = [
   {
     id: 'vitamin_a',
@@ -147,6 +152,11 @@ export const nutrients: Nutrient[] = [
   },
 ]
 
+/**
+ * 한국인 영양섭취기준(KDRIs 2025) 참조치
+ * 성별·연령대별 RDA(권장섭취량), AI(충분섭취량), UL(상한섭취량)을 정의합니다.
+ * gender가 'any'면 모든 성별에 적용됩니다.
+ */
 export const referenceValues: ReferenceValue[] = [
   { nutrientId: 'vitamin_a', gender: 'male', ageMin: 19, ageMax: 150, rda: 900, ul: 3000, unit: 'mcg' },
   { nutrientId: 'vitamin_a', gender: 'female', ageMin: 19, ageMax: 150, rda: 700, ul: 3000, unit: 'mcg' },
@@ -173,6 +183,12 @@ export const referenceValues: ReferenceValue[] = [
   { nutrientId: 'omega3', gender: 'any', ageMin: 19, ageMax: 150, ai: 1100, unit: 'mg' },
 ]
 
+/**
+ * 약물-영양소 및 질환-영양소 상호작용 규칙
+ * medicationKeyword: 약물명 키워드(소문자). medicationText에 포함되면 매칭
+ * conditionCode: 건강 상태 코드. conditionText에 포함되면 매칭
+ * severity: notice(참고), caution(주의), high(위험)
+ */
 export const interactionRules: InteractionRule[] = [
   {
     id: 'warfarin-vitamin-k',
@@ -273,6 +289,11 @@ export const interactionRules: InteractionRule[] = [
 ]
 
 
+/**
+ * 성분명으로 영양소를 검색합니다.
+ * 표준명 정확 일치 또는 별칭 포함 여부로 매칭합니다.
+ * 검색어는 소문자로 정규화하여 비교합니다.
+ */
 export function findNutrientByName(name: string): Nutrient | undefined {
   const normalized = name.trim().toLowerCase()
   return nutrients.find((nutrient) => {

@@ -36,6 +36,11 @@ interface RefineResponse {
   summary: string
 }
 
+/**
+ * 내장 영양소 데이터베이스
+ * DB에서 직접 매칭 가능한 영양소들의 표준 정보(별칭, 단위, 권장량, 효능)를 정의합니다.
+ * 매칭되지 않은 성분은 LLM을 통해 보강 분석됩니다.
+ */
 const nutrientDatabase = [
   { id: 'vitamin_a', name: '비타민 A', aliases: ['vitamin a', 'retinol', '레티놀', '베타카로틴', 'beta carotene', '비타민a'], unit: 'mcg', rda: '700-900mcg', benefit: '시력 유지, 면역 기능, 피부 건강' },
   { id: 'vitamin_b1', name: '비타민 B1', aliases: ['b1', 'thiamine', '티아민', '비타민b1'], unit: 'mg', rda: '1.1-1.2mg', benefit: '에너지 대사, 신경 기능 유지' },
@@ -85,6 +90,10 @@ const nutrientDatabase = [
   { id: 'quercetin', name: '케르세틴', aliases: ['quercetin', '케르세틴'], unit: 'mg', rda: '500-1000mg', benefit: '항염, 항히스타민, 항산화' },
 ]
 
+/**
+ * 성분명을 정규화하여 내장 DB에서 매칭합니다.
+ * 정확 일치 또는 별칭 포함 여부로 검색하며, 매칭 실패 시 원본명을 snake_case ID로 반환합니다.
+ */
 function normalizeNutrient(name: string): { id: string; standardName: string; matched: boolean; benefit: string; recommendedDaily: string } {
   const normalized = name.trim().toLowerCase()
   const nutrient = nutrientDatabase.find((item) =>
@@ -151,6 +160,7 @@ Deno.serve(async (req) => {
       }, 429)
     }
 
+    // --- 1차: 내장 DB에서 매칭되는 성분은 바로 정제 ---
     const refinedFromDb: RefinedIngredient[] = []
     const needsLlmRefine: RawIngredient[] = []
 
@@ -176,6 +186,7 @@ Deno.serve(async (req) => {
       }
     }
 
+    // --- 2차: 내장 DB에 없는 성분은 OpenAI LLM으로 분석 ---
     let llmRefined: RefinedIngredient[] = []
     if (openaiKey && needsLlmRefine.length > 0) {
       const llmInput = needsLlmRefine.map((ing) => `- ${ing.name}${ing.amount ? `: ${ing.amount}${ing.unit || ''}` : ''}`).join('\n')
@@ -243,6 +254,7 @@ Return JSON array only. Be precise with amounts and units.`
       }
     }
 
+    // --- 3차: LLM 분석 실패 시 원본 데이터로 폴백 ---
     if (needsLlmRefine.length > 0 && llmRefined.length === 0) {
       for (const ing of needsLlmRefine) {
         llmRefined.push({

@@ -3,12 +3,14 @@ import { createId } from '../../lib/utils'
 import type { ParsedIngredient, SupplementProduct } from '../../types'
 import { heicTo, isHeic } from 'heic-to'
 
+/** LLM 정제 후 확장된 성분 정보 (효능, 권장량, 주의사항 포함) */
 export interface RefinedIngredient extends ParsedIngredient {
   benefit: string
   recommendedDaily: string
   caution: string
 }
 
+/** refine-ingredients Edge Function의 응답 타입 */
 export interface RefineResponse {
   productName: string
   brandName: string
@@ -16,8 +18,13 @@ export interface RefineResponse {
   summary: string
 }
 
+/** 라벨 이미지 업로드 시 허용되는 MIME 타입 */
 export const allowedLabelMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
+/**
+ * 성분명 정제를 위해 Supabase Edge Function(refine-ingredients)을 호출합니다.
+ * DB 매칭 + LLM 분석을 통해 원재료명을 표준 영양소로 변환하고 효능 정보를 추가합니다.
+ */
 export async function refineIngredients(
   productName: string,
   brandName: string,
@@ -35,6 +42,7 @@ export async function refineIngredients(
   return data as RefineResponse
 }
 
+/** HEIC 이미지를 JPEG로 변환합니다. 실패 시 null 반환. */
 async function convertHeicToJpeg(file: File): Promise<File | null> {
   try {
     const result = await heicTo({ blob: file, type: 'image/jpeg', quality: 0.92 })
@@ -46,6 +54,16 @@ async function convertHeicToJpeg(file: File): Promise<File | null> {
   }
 }
 
+/**
+ * 성분표 이미지를 업로드하고 OpenAI Vision API로 파싱합니다.
+ *
+ * 처리 흐름:
+ * 1. HEIC 형식이면 JPEG로 변환
+ * 2. MIME 타입 검증 (JPG, PNG, WEBP만 허용)
+ * 3. Supabase Storage에 이미지 업로드
+ * 4. parse-label Edge Function 호출하여 성분 추출
+ * 5. 실패 시 업로드된 이미지 정리(cleanup)
+ */
 export async function parseLabelImage(file?: File) {
   let uploadedPath = ''
   try {
@@ -93,6 +111,7 @@ export async function parseLabelImage(file?: File) {
   }
 }
 
+/** 수동 입력용 빈 성분 객체를 생성합니다. */
 export function createManualIngredient(): ParsedIngredient {
   return {
     id: createId('ingredient'),
@@ -107,6 +126,11 @@ export function createManualIngredient(): ParsedIngredient {
   }
 }
 
+/**
+ * 영양제 제품 정보와 복용 정보를 업데이트합니다.
+ * 제품명/브랜드는 supplement_products 테이블에서,
+ * 복용 횟수/시간은 user_supplements 테이블에서 각각 업데이트합니다.
+ */
 export async function updateSupplementProduct(
   productId: string,
   patch: Partial<Pick<SupplementProduct, 'productName' | 'brandName' | 'dailyServings' | 'intakeTime'>>,
@@ -134,6 +158,7 @@ export async function updateSupplementProduct(
   return '제품 정보를 수정했습니다.'
 }
 
+/** 개별 성분 정보를 업데이트합니다. amount_per_daily_serving도 함께 갱신합니다. */
 export async function updateSupplementIngredient(
   ingredientId: string,
   patch: Partial<Pick<ParsedIngredient, 'standardName' | 'amount' | 'unit'>>,
@@ -150,6 +175,7 @@ export async function updateSupplementIngredient(
   return '성분 정보를 수정했습니다.'
 }
 
+/** 영양제 제품을 삭제합니다 (CASCADE로 연관 성분, user_supplements도 삭제됨). */
 export async function deleteSupplementProduct(productId: string): Promise<string> {
   const { error } = await supabase
     .from('supplement_products')
@@ -159,6 +185,11 @@ export async function deleteSupplementProduct(productId: string): Promise<string
   return '제품을 삭제했습니다.'
 }
 
+/**
+ * 영양제 제품과 성분, 사용자 연결 정보를 한 트랜잭션처럼 저장합니다.
+ * supplement_products → supplement_ingredients → user_supplements 순으로 삽입합니다.
+ * 중간에 실패하면 이미 삽입된 제품을 정리(cleanup)합니다.
+ */
 export async function saveSupplementProduct(supplement: SupplementProduct, labelImagePath: string): Promise<{ productId: string; message: string }> {
   let productId = ''
   try {

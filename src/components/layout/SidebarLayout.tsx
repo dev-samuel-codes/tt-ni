@@ -4,6 +4,7 @@ import { AuthPanel } from '../auth/AuthPanel'
 import { routes } from '../../app/routes'
 import type { AppRoute } from '../../app/routes'
 
+/** 사이드바 네비게이션 항목 정의 */
 interface SidebarItem {
   id: string
   label: string
@@ -20,6 +21,10 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
   { id: 'profile', label: '내 정보', path: routes.profile, icon: User },
 ]
 
+/**
+ * 워크스페이스 레이아웃: 사이드바 + 메인 콘텐츠 + 모바일 햄버거 메뉴
+ * 데스크탑에서는 고정 사이드바, 모바일에서는 오버레이 방식으로 전환됩니다.
+ */
 export function SidebarLayout({
   currentPath,
   navigateTo,

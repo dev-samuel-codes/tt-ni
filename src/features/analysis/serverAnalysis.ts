@@ -1,7 +1,9 @@
 import type { AnalysisReport, RiskStatus, Unit } from '../../types'
 
+/** 서버에서 반환한 원본 위험 상태 (알 수 없는 값 포함 가능) */
 type ServerRiskStatus = RiskStatus | string
 
+/** 서버 분석 결과의 영양소 총계 항목 */
 interface ServerTotalNutrient {
   nutrientId: string
   standardName: string
@@ -54,12 +56,18 @@ const statusMessages: Record<RiskStatus, string> = {
   review: '기준 데이터가 아직 없어 직접 확인이 필요합니다.',
 }
 
+/** 유효한 RiskStatus 값 집합 */
 const validStatuses = new Set<RiskStatus>(['normal', 'deficient', 'caution', 'excess', 'review'])
 
+/** 서버에서 받은 상태값을 유효한 RiskStatus로 정규화합니다. 알 수 없는 값은 'review'로 처리. */
 function normalizeStatus(status: ServerRiskStatus): RiskStatus {
   return validStatuses.has(status as RiskStatus) ? status as RiskStatus : 'review'
 }
 
+/**
+ * 서버 분석 응답을 프론트엔드 AnalysisReport 타입으로 변환합니다.
+ * sources 배열을 sourceProducts로 분할하고, 상태 메시지를 보완합니다.
+ */
 export function createAnalysisReportFromServer(data: ServerAnalysisResponse): AnalysisReport {
   if (!data.analysis_report_id) throw new Error('서버 분석 리포트 ID를 받지 못했습니다.')
 

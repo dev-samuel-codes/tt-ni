@@ -14,6 +14,11 @@ import type {
   Unit,
 } from '../../types'
 
+/**
+ * 시너지 그룹
+ * 사용자가 보유한 영양소 조합 중 상호 보완적인 효능을 발휘하는 조합을 정의합니다.
+ * FULL 매치 (모든 구성 영양소 보유) 또는 PARTIAL 매치 (일부만 보유)로 구분됩니다.
+ */
 const SYNERGY_GROUPS = [
   {
     nutrients: ['coq10', 'omega3'],
@@ -53,6 +58,11 @@ const SYNERGY_GROUPS = [
   },
 ]
 
+/**
+ * 길항작용 그룹
+ * 동시 복용 시 흡수 경쟁이나 상호 간섭이 발생하는 영양소 쌍을 정의합니다.
+ * 특정 시간 간격(minIntervalHours)을 두고 복용하는 것을 권장합니다.
+ */
 const ANTAGONISM_GROUPS = [
   {
     nutrients: ['calcium', 'iron'],
@@ -96,29 +106,45 @@ const ANTAGONISM_GROUPS = [
   },
 ]
 
+/** 출생연도로부터 현재 만 나이를 계산합니다. */
 export function getAge(profile: Pick<Profile, 'birthYear'>, now = new Date()): number {
   return Math.max(0, now.getFullYear() - profile.birthYear)
 }
 
+/** 65세 이상 여부를 확인합니다. */
 export function isElderly(profile: Pick<Profile, 'birthYear'>): boolean {
   return getAge(profile) >= 65
 }
 
+/** 12세 이하 아동 여부를 확인합니다. */
 export function isChild(profile: Pick<Profile, 'birthYear'>): boolean {
   const age = getAge(profile)
   return age >= 0 && age <= 12
 }
 
+/**
+ * 성인 UL(상한섭취량)을 아동 체중 기준으로 비례 외삽합니다.
+ * 성인 기준 체중 65kg 대비 비율로 환산합니다.
+ */
 export function extrapolateUlChild(ulAdult: number, weightChildKg: number): number {
   const WEIGHT_ADULT = 65
   return ulAdult * (weightChildKg / WEIGHT_ADULT)
 }
 
+/**
+ * 성인 EAR(평균필요량)을 노년층 체중 기준으로 대사율 가중 외삽합니다.
+ * 체중의 0.75승 비율로 환산하여 기초대사량 차이를 반영합니다.
+ */
 export function extrapolateEarElderly(earAdult: number, weightElderlyKg: number): number {
   const WEIGHT_ADULT = 65
   return earAdult * Math.pow(weightElderlyKg / WEIGHT_ADULT, 0.75)
 }
 
+/**
+ * 영양소 단위를 변환합니다.
+ * 기본 단위(g↔mg↔mcg) 및 비타민별 특수 단위(IU↔mcg↔mg)를 지원합니다.
+ * 변환 불가능한 경우 null을 반환합니다.
+ */
 export function convertAmount(amount: number, fromUnit: Unit, toUnit: Unit, nutrientId: string): number | null {
   if (fromUnit === toUnit) return amount
   if (fromUnit === 'unknown' || toUnit === 'unknown') return null
@@ -148,6 +174,10 @@ export function convertAmount(amount: number, fromUnit: Unit, toUnit: Unit, nutr
   return null
 }
 
+/**
+ * 프로필 정보(성별, 연령)에 맞는 한국인 영양섭취기준(KDRIs) 참조치를 조회합니다.
+ * 성별(gender)과 연령대(ageMin ~ ageMax)가 일치하는 기준을 반환합니다.
+ */
 export function findReferenceValue(profile: Profile, nutrientId: string): ReferenceValue | undefined {
   const age = getAge(profile)
   return referenceValues.find((reference) => {
@@ -156,6 +186,14 @@ export function findReferenceValue(profile: Profile, nutrientId: string): Refere
   })
 }
 
+/**
+ * 총 섭취량을 기준치와 비교하여 위험 상태를 판정합니다.
+ * - excess: UL(상한섭취량) 초과
+ * - caution: UL의 80% 이상 접근
+ * - deficient: RDA/AI 대비 70% 미만
+ * - normal: 위 조건에 해당하지 않음
+ * - review: 기준 데이터 부재
+ */
 function summarizeStatus(total: number, reference?: ReferenceValue): { status: RiskStatus; message: string; percentOfTarget?: number; percentOfUl?: number } {
   if (!reference) {
     return {
@@ -203,6 +241,18 @@ function summarizeStatus(total: number, reference?: ReferenceValue): { status: R
   }
 }
 
+/**
+ * 영양제 분석 리포트를 생성하는 메인 함수입니다.
+ *
+ * 처리 흐름:
+ * 1. 확정된(confirmed) 영양제만 집계
+ * 2. 각 원재료의 단위를 기준 단위로 환산 후 1일 총 섭취량 합산
+ * 3. KDRIs 기준치와 비교하여 각 영양소별 상태(normal/deficient/caution/excess/review) 평가
+ * 4. 중복 성분 식별 (여러 제품에 동일 영양소가 포함된 경우)
+ * 5. 약물-영양소 상호작용(DNI) 경고 생성
+ * 6. 시너지 조합 추천 (full/partial 매치)
+ * 7. 길항작용 경고 (동시 복용 시 흡수 경쟁 발생)
+ */
 export function runAnalysis(profile: Profile, medications: Medication[], supplements: SupplementProduct[]): AnalysisReport {
   const confirmedSupplements = supplements.filter((supplement) => supplement.confirmed)
   const totalsByNutrient = new Map<string, NutrientTotal>()
@@ -368,6 +418,7 @@ export function runAnalysis(profile: Profile, medications: Medication[], supplem
   }
 }
 
+/** 위험 상태 enum 값을 사용자에게 표시할 한글 라벨로 변환합니다. */
 export function statusLabel(status: RiskStatus): string {
   const labels: Record<RiskStatus, string> = {
     normal: '적정',

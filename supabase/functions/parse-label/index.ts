@@ -58,6 +58,7 @@ const schema = {
   required: ['product_name', 'serving_size', 'daily_servings_recommended', 'ingredients', 'warnings'],
 }
 
+/** 정규화된 영양소 별칭 매칭을 위한 내부 DB (프론트엔드 nutritionData.ts와 동기화 필요) */
 const nutrientAliases = [
   { id: 'vitamin_a', name: '비타민 A', aliases: ['vitamin a', 'retinol', '레티놀', '베타카로틴'] },
   { id: 'vitamin_b1', name: '비타민 B1', aliases: ['b1', 'thiamine', '티아민'] },
@@ -74,6 +75,10 @@ const nutrientAliases = [
   { id: 'omega3', name: '오메가3', aliases: ['omega 3', 'omega-3', 'epa', 'dha', '오메가'] },
 ]
 
+/**
+ * 성분명을 정규화하여 표준 영양소 ID와 이름으로 매핑합니다.
+ * 미매칭 시 원본명을 snake_case ID로 변환하여 반환합니다.
+ */
 function normalizeNutrient(name: string): { id: string; name: string; matched: boolean } {
   const normalized = name.toLowerCase()
   const nutrient = nutrientAliases.find((item) =>
@@ -83,6 +88,10 @@ function normalizeNutrient(name: string): { id: string; name: string; matched: b
   return { id: nutrient.id, name: nutrient.name, matched: true }
 }
 
+/**
+ * Supabase Service Role Key를 환경변수에서 가져옵니다.
+ * 우선순위: TT_NI_SERVICE_ROLE_KEY > SUPABASE_SERVICE_ROLE_KEY > SUPABASE_SECRET_KEYS
+ */
 function getServiceKey(): string {
   const projectKey = Deno.env.get('TT_NI_SERVICE_ROLE_KEY')
   if (projectKey) return projectKey
@@ -96,6 +105,7 @@ function getServiceKey(): string {
   return first
 }
 
+/** OpenAI Responses API 출력에서 구조화된 텍스트를 추출합니다. */
 function getOutputText(payload: { output?: Array<{ content?: Array<{ type: string; text?: string }> }> }): string {
   const text = payload.output?.flatMap((item) => item.content ?? []).find((item) => item.type === 'output_text')?.text
   if (!text) throw new Error('OpenAI response did not include structured output text')
@@ -107,12 +117,14 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405)
 
   try {
+    // --- 인증 및 요청 검증 ---
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) return jsonResponse({ error: 'Authorization header is required' }, 401)
 
     const { image_path } = await req.json() as { image_path?: string }
     if (!image_path) return jsonResponse({ error: 'image_path is required' }, 400)
 
+    // --- Supabase & OpenAI 클라이언트 초기화 ---
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const openaiKey = Deno.env.get('OPENAI_API_KEY')
     if (!supabaseUrl) throw new Error('SUPABASE_URL is required')
@@ -122,10 +134,12 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     })
 
+    // --- 사용자 인증 및 이미지 소유권 확인 ---
     const { data: userData, error: userError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
     if (userError || !userData.user) return jsonResponse({ error: 'Invalid user session' }, 401)
     if (!image_path.startsWith(`${userData.user.id}/`)) return jsonResponse({ error: 'Image path does not belong to this user' }, 403)
 
+    // --- Storage에서 이미지 다운로드 및 Base64 인코딩 ---
     const { data: imageBlob, error: downloadError } = await supabase.storage.from('label-images').download(image_path)
     if (downloadError) throw downloadError
 
@@ -134,6 +148,7 @@ Deno.serve(async (req) => {
     const base64 = btoa(binary)
     const mimeType = imageBlob.type || 'image/jpeg'
 
+    // --- OpenAI Vision API 호출 (JSON Schema 기반 구조화 출력) ---
     const response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
@@ -182,6 +197,7 @@ Deno.serve(async (req) => {
     const payload = await response.json()
     const parsed = JSON.parse(getOutputText(payload)) as ParseOutput
 
+    // --- 성분명 정규화 및 표준 영양소 ID 매핑 ---
     const normalized = {
       productName: parsed.product_name,
       servingSize: parsed.serving_size,

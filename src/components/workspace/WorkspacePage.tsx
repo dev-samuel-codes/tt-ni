@@ -12,10 +12,16 @@ import { createManualIngredient, parseLabelImage, saveSupplementProduct, updateS
 import { supabase } from '../../lib/supabaseClient'
 import { MetricCard } from './Shared'
 
+/** nutritionData.ts에 정의된 영양소 ID 집합 (성분 검증용) */
 const knownNutrientIds = new Set(nutrients.map((nutrient) => nutrient.id))
 
 
 
+/**
+ * 대시보드 컴포넌트
+ * 분석 결과 요약, 등록 제품 목록, 주의 사항, 오늘의 복용 스케줄, 추천 조합을 표시합니다.
+ * 프로필이 설정되지 않은 경우 프로필 입력 안내를 먼저 보여줍니다.
+ */
 export function Dashboard({
   report, supplements, onSupplements, onStart, onAnalyze, confirmedCount, needsReview,
   onSchedule, onChat, onProfile, profileIsSetup,
@@ -233,6 +239,11 @@ export function Dashboard({
   )
 }
 
+/**
+ * 프로필 및 약물 관리 컴포넌트
+ * 기본 정보(성별, 연령, 체중 등), 건강 상태(기저질환, 알레르기, 식이 제한),
+ * 복용 약물 목록을 편집하고 Supabase에 저장합니다.
+ */
 export function ProfileAndMedication({
   profile, medications, onProfile, onMedications,
 }: {
@@ -372,6 +383,17 @@ export function ProfileAndMedication({
   )
 }
 
+/**
+ * 영양제 등록 워크스페이스 컴포넌트
+ *
+ * 세 가지 등록 방식을 지원합니다:
+ * 1. 사진 촬영/업로드 → OpenAI Vision으로 성분표 파싱
+ * 2. 제품명 검색 → Exa.ai API로 웹 검색
+ * 3. 수동 입력 → 직접 성분명/함량/단위 입력
+ *
+ * 등록 전 성분 검수(표준명 매칭, 단위 확인, 신뢰도 평가)를 수행하고
+ * refine-ingredients Edge Function을 통해 성분 정보를 보강합니다.
+ */
 export function SupplementWorkspace({
   supplements, onSupplements, onAnalyze,
 }: {
@@ -798,6 +820,11 @@ export function SupplementWorkspace({
   )
 }
 
+/**
+ * 분석 결과 컴포넌트
+ * 영양소별 상태, 약물 상호작용 경고, 복용량 조정 후보를 탭과 필터로 표시합니다.
+ * 분석이 실행되지 않은 경우 실행 버튼을 표시합니다.
+ */
 export function AnalysisResult({ report, syncMessage, onAnalyze }: { report: AnalysisReport | null; syncMessage: string; onAnalyze: () => void }) {
   const [filter, setFilter] = useState<'all' | 'excess' | 'deficient' | 'duplicates' | 'medication'>('all')
   if (!report) {

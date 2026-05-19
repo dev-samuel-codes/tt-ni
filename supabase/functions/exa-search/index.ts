@@ -2,6 +2,7 @@ import '@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
 
+/** Exa.ai 검색 요청 */
 interface ExaSearchRequest {
   query: string
 }
@@ -30,6 +31,7 @@ interface Product {
   sourceUrl: string
 }
 
+/** 영양소명 패턴 매칭을 위한 정규식 (웹 페이지 텍스트에서 함량 정보 추출) */
 const nutrientPatterns = [
   { name: 'Vitamin A', patterns: [/vitamin\s*a/i, /retinol/i, /beta[-\s]?carotene/i] },
   { name: 'Vitamin B1', patterns: [/vitamin\s*b1/i, /thiamine/i] },
@@ -46,6 +48,7 @@ const nutrientPatterns = [
   { name: 'Omega-3', patterns: [/omega[\s-]*3/i, /epa/i, /dha/i] },
 ]
 
+/** 알려진 영양제 브랜드명 (검색 결과에서 브랜드명 추출용) */
 const brandPatterns = [
   'Nature Made', "Nature's Bounty", 'NOW Foods', 'Garden of Life',
   'Thorne', 'Pure Encapsulations', 'Solgar', 'Jarrow Formulas',
@@ -54,6 +57,11 @@ const brandPatterns = [
   'Source Naturals', 'Solaray', 'Swanson', 'Carlson Labs',
 ]
 
+/**
+ * 웹 페이지 텍스트에서 영양성분 정보를 추출합니다.
+ * "수치 + 단위(mcg/mg/g/IU/CFU)" 패턴을 찾고, 단위 앞의 텍스트가 알려진 영양소명과 매칭되면 추출합니다.
+ * 중복 추출을 방지하기 위해 Set으로 관리합니다.
+ */
 function extractIngredients(text: string): Ingredient[] {
   const ingredients: Ingredient[] = []
   const seen = new Set<string>()
@@ -84,6 +92,7 @@ function extractIngredients(text: string): Ingredient[] {
   return ingredients
 }
 
+/** 검색 결과 텍스트와 제목에서 브랜드명을 추출합니다. 미발견 시 빈 문자열 반환. */
 function extractBrand(text: string, title: string): string {
   const combined = `${title} ${text}`
   for (const brand of brandPatterns) {
@@ -94,6 +103,7 @@ function extractBrand(text: string, title: string): string {
   return ''
 }
 
+/** 검색 결과 제목에서 이커머스 접미사(Amazon.com, Walmart 등)를 제거하여 제품명을 정제합니다. */
 function extractProductName(result: ExaSearchResult): string {
   let name = result.title
     .replace(/\s*[-–|]\s*(Amazon\.com|Walmart|iHerb|Target|eBay).*/i, '')

@@ -37,6 +37,7 @@ interface ChatMessage {
 }
 
 const MAX_TURNS = 20
+/** 사용자별 1일 최대 메시지 수 */
 const MAX_MESSAGES_PER_DAY = 50
 
 function getServiceKey(): string {
@@ -52,6 +53,11 @@ function getServiceKey(): string {
   return first
 }
 
+/**
+ * 개인화된 AI 응답을 위한 시스템 프롬프트를 생성합니다.
+ * 사용자 프로필(성별, 나이, 건강상태, 약물), 복용 중인 영양제, 분석 리포트를 포함하여
+ * 컨텍스트 인식형 맞춤 응답이 가능하도록 구성합니다.
+ */
 function buildSystemPrompt(context: ChatRequest['context']): string {
   const { profile, supplements, report } = context
 
@@ -113,6 +119,11 @@ function buildSystemPrompt(context: ChatRequest['context']): string {
   return prompt
 }
 
+/**
+ * 대화가 너무 길어지면 이전 대화를 OpenAI로 요약하여 컨텍스트를 압축합니다.
+ * 최근 MAX_TURNS * 2개의 메시지만 보존하고, 이전 내용은 요약본으로 대체합니다.
+ * 실패 시 이전 내용을 생략하는 폴백 방식을 사용합니다.
+ */
 async function compressHistory(
   openaiKey: string,
   model: string,
@@ -195,6 +206,10 @@ async function compressHistory(
   }
 }
 
+/**
+ * 사용자의 1일 메시지 사용량을 확인하여 속도 제한을 적용합니다.
+ * 하루 MAX_MESSAGES_PER_DAY개를 초과하면 429를 반환해야 합니다.
+ */
 async function checkRateLimit(
   supabase: ReturnType<typeof createClient>,
   userId: string
