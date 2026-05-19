@@ -998,6 +998,7 @@
 }
 
 .donut {
+  --donut-progress: 0%;
   width: 142px;
   height: 142px;
   border-radius: 999px;
@@ -1006,7 +1007,7 @@
   align-content: center;
   background:
     radial-gradient(circle closest-side, white 64%, transparent 65%),
-    conic-gradient(var(--mint) 0 92%, #dcefe9 0);
+    conic-gradient(var(--mint) 0 var(--donut-progress), #dcefe9 0);
 }
 
 .donut strong {

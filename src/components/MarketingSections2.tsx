@@ -1,16 +1,62 @@
+import { useEffect, useRef, useState } from 'react'
 import type { AnalysisReport } from '../lib/types'
 import { Camera, ChevronRight, ShieldCheck, User, Sparkles, Check } from 'lucide-react'
+
+const summaryTargetPercent = 92
 
 export function PreviewSection({ report, onOpenResults }: { report: AnalysisReport; onOpenResults: () => void }) {
   const excessItems = report.totals.filter((total) => total.status === 'excess' || total.status === 'caution').slice(0, 2)
   const deficientItems = report.totals.filter((total) => total.status === 'deficient').slice(0, 3)
+  const sectionRef = useRef<HTMLElement | null>(null)
+  const [summaryPercent, setSummaryPercent] = useState(() => {
+    if (typeof window === 'undefined') return 0
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    return prefersReducedMotion || !('IntersectionObserver' in window) ? summaryTargetPercent : 0
+  })
+
+  useEffect(() => {
+    const section = sectionRef.current
+    if (!section) return
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (prefersReducedMotion || !('IntersectionObserver' in window)) return
+
+    let frameId = 0
+    const duration = 1300
+    const startAnimation = () => {
+      const startedAt = performance.now()
+      const animate = (now: number) => {
+        const progress = Math.min((now - startedAt) / duration, 1)
+        const easedProgress = 1 - Math.pow(1 - progress, 3)
+        setSummaryPercent(Math.round(summaryTargetPercent * easedProgress))
+        if (progress < 1) frameId = requestAnimationFrame(animate)
+      }
+      frameId = requestAnimationFrame(animate)
+    }
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return
+      startAnimation()
+      observer.disconnect()
+    }, { threshold: 0.35 })
+
+    observer.observe(section)
+    return () => {
+      observer.disconnect()
+      cancelAnimationFrame(frameId)
+    }
+  }, [])
+
   return (
-    <section id="preview" className="preview-section">
+    <section id="preview" className="preview-section" ref={sectionRef}>
       <h2>분석 결과 미리보기</h2>
       <div className="preview-panel">
         <article className="summary-ring">
           <h3>총 섭취 요약</h3>
-          <div className="donut"><strong>92%</strong><span>권장 대비 평균</span></div>
+          <div className="donut" style={{ '--donut-progress': `${summaryPercent}%` } as React.CSSProperties}>
+            <strong>{summaryPercent}%</strong>
+            <span>권장 대비 평균</span>
+          </div>
           <ul>
             <li>총 섭취 성분 <b>27종</b></li>
             <li>적정 <b>{Math.max(report.statusSummary.normal, 22)}종</b></li>
