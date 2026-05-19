@@ -622,7 +622,13 @@
   position: relative;
   display: grid;
   place-items: center;
-  animation: mockup-float 6.8s ease-in-out 1.6s infinite;
+}
+
+.dashboard-float-layer {
+  width: 100%;
+  display: grid;
+  place-items: center;
+  animation: dashboard-float 7.2s ease-in-out 1.6s infinite;
   will-change: transform;
 }
 
@@ -833,10 +839,17 @@
   background: linear-gradient(180deg, #dce8ee, #acc4cc);
 }
 
-.floating-score {
+.score-float-layer {
   position: absolute;
   right: -6px;
   bottom: 72px;
+  width: 150px;
+  animation: score-float 5.8s ease-in-out 1.85s infinite;
+  will-change: transform;
+}
+
+.floating-score {
+  position: relative;
   width: 150px;
   min-height: 215px;
   padding: 22px 20px;
@@ -1768,18 +1781,29 @@ th {
   }
 }
 
-@keyframes mockup-float {
+@keyframes dashboard-float {
   0%, 100% {
     transform: translateY(0);
   }
 
   50% {
-    transform: translateY(-14px);
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes score-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(18px);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mockup-float-layer,
+  .dashboard-float-layer,
+  .score-float-layer,
   .dashboard-frame,
   .floating-score {
     animation: none;
@@ -2023,7 +2047,7 @@ th {
     display: none;
   }
 
-  .floating-score {
+  .score-float-layer {
     right: 12px;
     bottom: 18px;
   }
