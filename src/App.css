@@ -842,7 +842,7 @@
 
 .score-float-layer {
   position: absolute;
-  right: -22px;
+  right: -48px;
   bottom: -28px;
   width: 174px;
   animation: score-float 5.8s ease-in-out 1.85s infinite;
