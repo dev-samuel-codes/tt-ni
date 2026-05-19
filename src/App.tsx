@@ -19,6 +19,12 @@ const defaultProfile: Profile = {
 }
 
 function App() {
+  const hasAuthCallback = useState(() => {
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+    const searchParams = new URLSearchParams(window.location.search)
+    return hashParams.has('access_token') || searchParams.has('code')
+  })[0]
+
   const initialAuthNotice = useState<{ tone: 'success' | 'warning'; message: string } | null>(() => {
     const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
     const searchParams = new URLSearchParams(window.location.search)
@@ -27,9 +33,6 @@ function App() {
     const errorCode = hashParams.get('error_code') ?? searchParams.get('error_code')
     if (error || errorDescription || errorCode) {
       return { tone: 'warning', message: `소셜 로그인에 실패했습니다. ${errorDescription ?? error ?? errorCode}` }
-    }
-    if (hashParams.has('access_token') || searchParams.has('code')) {
-      return { tone: 'success', message: '소셜 로그인 인증 응답을 확인하는 중입니다.' }
     }
     return null
   })[0]
@@ -110,8 +113,7 @@ function App() {
       }
       setSessionEmail(data.session?.user.email ?? null)
       if (data.session?.user) {
-        if (initialAuthNotice) {
-          setAuthNotice({ tone: 'success', message: '로그인되었습니다. 저장된 복용 정보를 불러오는 중입니다.' })
+        if (hasAuthCallback) {
           setActiveTab('profile')
           clearAuthCallbackUrl()
         }
@@ -126,7 +128,6 @@ function App() {
       setSessionEmail(session?.user.email ?? null)
       if (session?.user) {
         if (event === 'SIGNED_IN') {
-          setAuthNotice({ tone: 'success', message: '로그인되었습니다. 저장된 복용 정보를 불러오는 중입니다.' })
           setActiveTab('profile')
         }
         void loadUserData(session.user.id)
@@ -138,7 +139,7 @@ function App() {
       }
     })
     return () => { cancelled = true; data.subscription.unsubscribe() }
-  }, [initialAuthNotice])
+  }, [hasAuthCallback, initialAuthNotice])
 
   const previewReport = runAnalysis(profile, medications, supplements)
   const confirmedCount = supplements.filter((supplement) => supplement.confirmed).length
