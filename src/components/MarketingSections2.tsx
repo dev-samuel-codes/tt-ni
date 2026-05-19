@@ -8,6 +8,7 @@ export function PreviewSection({ report, onOpenResults }: { report: AnalysisRepo
   const excessItems = report.totals.filter((total) => total.status === 'excess' || total.status === 'caution').slice(0, 2)
   const deficientItems = report.totals.filter((total) => total.status === 'deficient').slice(0, 3)
   const sectionRef = useRef<HTMLElement | null>(null)
+  const summaryRingRef = useRef<HTMLElement | null>(null)
   const [summaryPercent, setSummaryPercent] = useState(() => {
     if (typeof window === 'undefined') return 0
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -15,40 +16,46 @@ export function PreviewSection({ report, onOpenResults }: { report: AnalysisRepo
   })
 
   useEffect(() => {
-    const section = sectionRef.current
-    if (!section) return
+    const summaryRing = summaryRingRef.current
+    if (!summaryRing) return
 
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     if (prefersReducedMotion || !('IntersectionObserver' in window)) return
 
     let frameId = 0
+    let startTimeout = 0
     const duration = 1300
     const startAnimation = () => {
       cancelAnimationFrame(frameId)
+      window.clearTimeout(startTimeout)
       setSummaryPercent(0)
-      const startedAt = performance.now()
-      const animate = (now: number) => {
-        const progress = Math.min((now - startedAt) / duration, 1)
-        const easedProgress = 1 - Math.pow(1 - progress, 3)
-        setSummaryPercent(Math.round(summaryTargetPercent * easedProgress))
-        if (progress < 1) frameId = requestAnimationFrame(animate)
-      }
-      frameId = requestAnimationFrame(animate)
+      startTimeout = window.setTimeout(() => {
+        const startedAt = performance.now()
+        const animate = (now: number) => {
+          const progress = Math.min((now - startedAt) / duration, 1)
+          const easedProgress = 1 - Math.pow(1 - progress, 3)
+          setSummaryPercent(Math.round(summaryTargetPercent * easedProgress))
+          if (progress < 1) frameId = requestAnimationFrame(animate)
+        }
+        frameId = requestAnimationFrame(animate)
+      }, 120)
     }
 
     const observer = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting) {
         cancelAnimationFrame(frameId)
+        window.clearTimeout(startTimeout)
         setSummaryPercent(0)
         return
       }
       startAnimation()
-    }, { threshold: 0.35 })
+    }, { threshold: 0.72 })
 
-    observer.observe(section)
+    observer.observe(summaryRing)
     return () => {
       observer.disconnect()
       cancelAnimationFrame(frameId)
+      window.clearTimeout(startTimeout)
     }
   }, [])
 
@@ -56,7 +63,7 @@ export function PreviewSection({ report, onOpenResults }: { report: AnalysisRepo
     <section id="preview" className="preview-section" ref={sectionRef}>
       <h2>분석 결과 미리보기</h2>
       <div className="preview-panel">
-        <article className="summary-ring">
+        <article className="summary-ring" ref={summaryRingRef}>
           <h3>총 섭취 요약</h3>
           <div className="donut" style={{ '--donut-progress': `${summaryPercent}%` } as React.CSSProperties}>
             <strong>{summaryPercent}%</strong>
