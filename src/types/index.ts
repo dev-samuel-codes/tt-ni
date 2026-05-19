@@ -35,6 +35,9 @@ export interface ParsedIngredient {
   confidence: number
   rawText: string
   reviewRequired: boolean
+  benefit?: string
+  recommendedDaily?: string
+  caution?: string
 }
 
 export interface SupplementProduct {

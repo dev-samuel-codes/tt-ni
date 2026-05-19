@@ -3,7 +3,37 @@ import { createId } from '../../lib/utils'
 import type { ParsedIngredient, SupplementProduct } from '../../types'
 import { heicTo, isHeic } from 'heic-to'
 
+export interface RefinedIngredient extends ParsedIngredient {
+  benefit: string
+  recommendedDaily: string
+  caution: string
+}
+
+export interface RefineResponse {
+  productName: string
+  brandName: string
+  ingredients: RefinedIngredient[]
+  summary: string
+}
+
 export const allowedLabelMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
+
+export async function refineIngredients(
+  productName: string,
+  brandName: string,
+  ingredients: Array<{ name: string; amount?: number | null; unit?: string }>,
+): Promise<RefineResponse> {
+  const { data, error } = await supabase.functions.invoke('refine-ingredients', {
+    body: { productName, brandName, ingredients },
+  })
+  if (error) {
+    if (error.message?.includes('DAILY_LIMIT_EXCEEDED')) {
+      throw new Error('일일 API 호출 한도를 초과했습니다. 내일 다시 시도해주세요.')
+    }
+    throw new Error(error.message || '성분 정제 중 오류가 발생했습니다.')
+  }
+  return data as RefineResponse
+}
 
 async function convertHeicToJpeg(file: File): Promise<File | null> {
   try {

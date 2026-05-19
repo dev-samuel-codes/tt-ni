@@ -8,7 +8,7 @@ import { findNutrientByName, nutrients } from '../../features/nutrition/nutritio
 import { statusLabel } from '../../features/analysis/analysisEngine'
 import { createId, getStatusTone, splitList } from '../../lib/utils'
 import { saveProfileBundle } from '../../features/profile/profileService'
-import { createManualIngredient, parseLabelImage, saveSupplementProduct, updateSupplementProduct, updateSupplementIngredient, deleteSupplementProduct } from '../../features/supplements/supplementService'
+import { createManualIngredient, parseLabelImage, saveSupplementProduct, updateSupplementProduct, updateSupplementIngredient, deleteSupplementProduct, refineIngredients } from '../../features/supplements/supplementService'
 import { supabase } from '../../lib/supabaseClient'
 import { MetricCard } from './Shared'
 
@@ -557,11 +557,41 @@ export function SupplementWorkspace({
       setSyncMessage('제품명, 1일 복용 횟수, 등록 가능한 표준 성분명, 함량, 단위를 모두 확인해야 저장할 수 있습니다.')
       return
     }
+
+    setSyncMessage('영양성분을 정제하고 있습니다...')
+    let finalIngredients = draftIngredients
+
+    try {
+      const refined = await refineIngredients(
+        productName,
+        brandName,
+        draftIngredients.map((ing) => ({
+          name: ing.standardName || ing.rawName,
+          amount: ing.amount,
+          unit: ing.unit,
+        })),
+      )
+      if (refined.ingredients && refined.ingredients.length > 0) {
+        finalIngredients = refined.ingredients.map((ing) => ({
+          ...ing,
+          id: ing.id || createId('ingredient'),
+        }))
+        setDraftIngredients(finalIngredients)
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : ''
+      if (msg.includes('일일 API 호출 한도')) {
+        setSyncMessage(msg)
+        return
+      }
+      // LLM refine failed, continue with original ingredients
+    }
+
     const supplement: SupplementProduct = {
       id: createId('supplement'), productName, brandName,
       sourceType: labelImagePath ? 'photo' : 'manual',
       dailyServings, intakeTime, imageName,
-      ingredients: draftIngredients, confirmed: true,
+      ingredients: finalIngredients, confirmed: true,
     }
     try {
       const saved = await saveSupplementProduct(supplement, labelImagePath)
@@ -624,19 +654,36 @@ export function SupplementWorkspace({
                     {editMessage && <div className="notice"><Check size={16} /><span>{editMessage}</span></div>}
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div>
-                      <strong>{s.productName}</strong>
-                      <span style={{ marginLeft: '8px', color: '#8a9a95', fontSize: '13px' }}>{s.ingredients.length}개 성분 · {s.brandName || '일반'} · {s.dailyServings}회/일 · {s.intakeTime}</span>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <strong>{s.productName}</strong>
+                        <span style={{ marginLeft: '8px', color: '#8a9a95', fontSize: '13px' }}>{s.ingredients.length}개 성분 · {s.brandName || '일반'} · {s.dailyServings}회/일 · {s.intakeTime}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button type="button" className="icon-button" aria-label={`${s.productName} 수정`} onClick={() => startEdit(s)}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                        </button>
+                        <button type="button" className="icon-button" aria-label={`${s.productName} 삭제`} onClick={() => handleDeleteSupplement(s.id, s.productName)}>
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      <button type="button" className="icon-button" aria-label={`${s.productName} 수정`} onClick={() => startEdit(s)}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                      </button>
-                      <button type="button" className="icon-button" aria-label={`${s.productName} 삭제`} onClick={() => handleDeleteSupplement(s.id, s.productName)}>
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
+                    {s.ingredients.some((ing) => ing.benefit || ing.recommendedDaily || ing.caution) && (
+                      <div style={{ marginTop: '12px', borderTop: '1px solid #f0f4f2', paddingTop: '12px' }}>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#173c3c', marginBottom: '8px' }}>성분 정보</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {s.ingredients.filter((ing) => ing.benefit || ing.recommendedDaily || ing.caution).map((ing) => (
+                            <div key={ing.id} style={{ background: '#f8fafa', padding: '8px 12px', borderRadius: '8px', fontSize: '12px' }}>
+                              <div style={{ fontWeight: 700, color: '#173c3c', marginBottom: '4px' }}>{ing.standardName} <span style={{ color: '#8a9a95', fontWeight: 400 }}>{ing.amount}{ing.unit}</span></div>
+                              {ing.benefit && <div style={{ color: '#3d5550', marginBottom: '2px' }}><span style={{ color: '#18ae90', fontWeight: 600 }}>효능:</span> {ing.benefit}</div>}
+                              {ing.recommendedDaily && <div style={{ color: '#3d5550', marginBottom: '2px' }}><span style={{ color: '#18ae90', fontWeight: 600 }}>권장 섭취량:</span> {ing.recommendedDaily}</div>}
+                              {ing.caution && <div style={{ color: '#c5392f' }}><span style={{ fontWeight: 600 }}>주의:</span> {ing.caution}</div>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </article>
