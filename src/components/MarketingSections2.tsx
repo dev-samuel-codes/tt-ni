@@ -24,6 +24,8 @@ export function PreviewSection({ report, onOpenResults }: { report: AnalysisRepo
     let frameId = 0
     const duration = 1300
     const startAnimation = () => {
+      cancelAnimationFrame(frameId)
+      setSummaryPercent(0)
       const startedAt = performance.now()
       const animate = (now: number) => {
         const progress = Math.min((now - startedAt) / duration, 1)
@@ -35,9 +37,12 @@ export function PreviewSection({ report, onOpenResults }: { report: AnalysisRepo
     }
 
     const observer = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return
+      if (!entry.isIntersecting) {
+        cancelAnimationFrame(frameId)
+        setSummaryPercent(0)
+        return
+      }
       startAnimation()
-      observer.disconnect()
     }, { threshold: 0.35 })
 
     observer.observe(section)
