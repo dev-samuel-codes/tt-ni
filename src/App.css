@@ -617,6 +617,15 @@
   background: radial-gradient(circle, rgba(51, 203, 176, 0.24), transparent 66%);
 }
 
+.mockup-float-layer {
+  width: min(100%, 650px);
+  position: relative;
+  display: grid;
+  place-items: center;
+  animation: mockup-float 6.8s ease-in-out 1.6s infinite;
+  will-change: transform;
+}
+
 .dashboard-frame {
   width: min(100%, 650px);
   min-height: 585px;
@@ -1759,7 +1768,18 @@ th {
   }
 }
 
+@keyframes mockup-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-14px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .mockup-float-layer,
   .dashboard-frame,
   .floating-score {
     animation: none;

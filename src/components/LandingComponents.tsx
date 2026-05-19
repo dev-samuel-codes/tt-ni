@@ -34,56 +34,58 @@ export function HeroMockup({
   return (
     <div className="hero-visual" aria-label="tt-ni 분석 대시보드 미리보기">
       <div className="soft-orbit" />
-      <div className="dashboard-frame">
-        <aside className="mock-sidebar">
-          <BrandMark />
-          {['대시보드', '성분 분석', '복용 관리', '추천', '내 정보'].map((item, index) => (
-            <span className={index === 0 ? 'active' : ''} key={item}>{item}</span>
-          ))}
-        </aside>
-        <div className="mock-content">
-          <div className="mock-top">
-            <div>
-              <h2>안녕하세요, 홍길동님</h2>
-              <p>오늘의 영양제 섭취 상태를 확인해보세요.</p>
+      <div className="mockup-float-layer">
+        <div className="dashboard-frame">
+          <aside className="mock-sidebar">
+            <BrandMark />
+            {['대시보드', '성분 분석', '복용 관리', '추천', '내 정보'].map((item, index) => (
+              <span className={index === 0 ? 'active' : ''} key={item}>{item}</span>
+            ))}
+          </aside>
+          <div className="mock-content">
+            <div className="mock-top">
+              <div>
+                <h2>안녕하세요, 홍길동님</h2>
+                <p>오늘의 영양제 섭취 상태를 확인해보세요.</p>
+              </div>
+              <span className="avatar-dot" />
             </div>
-            <span className="avatar-dot" />
-          </div>
-          <div className="mock-cards">
-            <article>
-              <strong>오늘의 성분 요약</strong>
-              <div className="score-row">
-                <span>
-                  <b>{totalCount}</b>종
-                </span>
-                <span className="ring">92%</span>
+            <div className="mock-cards">
+              <article>
+                <strong>오늘의 성분 요약</strong>
+                <div className="score-row">
+                  <span>
+                    <b>{totalCount}</b>종
+                  </span>
+                  <span className="ring">92%</span>
+                </div>
+              </article>
+              <article>
+                <strong>주의가 필요한 항목</strong>
+                <ul>
+                  <li><i className="danger-dot" />과다 <b>{Math.max(riskCount, 2)}종</b></li>
+                  <li><i className="warn-dot" />부족 <b>{Math.max(needsReview, 3)}종</b></li>
+                  <li><i className="info-dot" />중복 <b>4종</b></li>
+                </ul>
+              </article>
+            </div>
+            <article className="mock-chart">
+              <strong>주요 영양소 섭취 현황</strong>
+              <div className="bar-chart">
+                {[64, 38, 54, 77, 48, 90, 60, 82].map((height, index) => (
+                  <span style={{ '--bar': `${height}%` } as React.CSSProperties} key={index} />
+                ))}
               </div>
             </article>
-            <article>
-              <strong>주의가 필요한 항목</strong>
-              <ul>
-                <li><i className="danger-dot" />과다 <b>{Math.max(riskCount, 2)}종</b></li>
-                <li><i className="warn-dot" />부족 <b>{Math.max(needsReview, 3)}종</b></li>
-                <li><i className="info-dot" />중복 <b>4종</b></li>
-              </ul>
-            </article>
           </div>
-          <article className="mock-chart">
-            <strong>주요 영양소 섭취 현황</strong>
-            <div className="bar-chart">
-              {[64, 38, 54, 77, 48, 90, 60, 82].map((height, index) => (
-                <span style={{ '--bar': `${height}%` } as React.CSSProperties} key={index} />
-              ))}
-            </div>
-          </article>
         </div>
+        <article className="floating-score">
+          <span>비타민 D</span>
+          <strong>65%</strong>
+          <p>권장 섭취량 대비</p>
+          <i />
+        </article>
       </div>
-      <article className="floating-score">
-        <span>비타민 D</span>
-        <strong>65%</strong>
-        <p>권장 섭취량 대비</p>
-        <i />
-      </article>
     </div>
   )
 }
