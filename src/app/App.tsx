@@ -85,8 +85,13 @@ function App() {
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : '서버 분석 저장에 실패했습니다.'
       setAnalysisSyncMessage(errMsg)
-      // 서버 실패 시 로컬 분석 엔진의 결과를 fallback으로 사용
-      setReport(previewReport)
+      if (previewReport.totals.length > 0) {
+        setReport(previewReport)
+        setAnalysisSyncMessage(`서버 연결 실패 - 로컬 분석 결과를 표시합니다: ${errMsg}`)
+      } else {
+        setReport(null)
+        setAnalysisSyncMessage(`분석할 영양제가 없습니다. 영양제를 먼저 등록해주세요. (${errMsg})`)
+      }
     }
     navigateTo(routes.analysis)
   }

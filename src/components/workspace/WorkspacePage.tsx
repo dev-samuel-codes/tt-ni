@@ -558,8 +558,34 @@ export function SupplementWorkspace({
       setLabelImagePath(parsed.labelImagePath)
       if (parsed.productName) setProductName(parsed.productName)
       if (parsed.dailyServingsRecommended) setDailyServings(parsed.dailyServingsRecommended)
-      setDraftIngredients(parsed.ingredients)
-      setParseWarnings(parsed.warnings)
+
+      const autoFixedIngredients = parsed.ingredients.map((ing) => {
+        const fixed = { ...ing }
+        if (fixed.amount === null || fixed.amount === undefined) {
+          fixed.amount = 0
+          fixed.reviewRequired = true
+        }
+        if (fixed.unit === 'unknown') {
+          fixed.unit = 'mg'
+          fixed.reviewRequired = true
+        }
+        if (!fixed.standardName?.trim()) {
+          fixed.standardName = fixed.rawName || '성분명 미확인'
+          fixed.reviewRequired = true
+        }
+        return fixed
+      })
+
+      const autoFixedCount = autoFixedIngredients.filter(
+        (ing, idx) => ing.amount !== parsed.ingredients[idx]?.amount || ing.unit !== parsed.ingredients[idx]?.unit
+      ).length
+
+      setDraftIngredients(autoFixedIngredients)
+      const warnings = [...parsed.warnings]
+      if (autoFixedCount > 0) {
+        warnings.unshift(`${autoFixedCount}개 성분의 함량/단위가 자동 보정되었습니다. 검수 후 저장해주세요.`)
+      }
+      setParseWarnings(warnings)
     } catch (error) {
       setLabelImagePath('')
       setDraftIngredients([])
@@ -665,7 +691,7 @@ export function SupplementWorkspace({
     try {
       const saved = await saveSupplementProduct(supplement, labelImagePath)
       supplement.id = saved.productId
-      setSyncMessage(saved.message)
+      setSyncMessage(`${saved.message} "분석 결과 보기"를 눌러 분석을 실행하세요.`)
     } catch (error) {
       setSyncMessage(error instanceof Error ? error.message : '저장에 실패했습니다.')
       return
@@ -907,7 +933,12 @@ export function AnalysisResult({ report, syncMessage, onAnalyze, isLocalFallback
         {syncMessage ? (
           <div className="notice warning"><AlertTriangle size={16} /><span>{syncMessage}</span></div>
         ) : (
-          <p className="muted">영양제를 등록하고 분석을 실행하면 결과가 표시됩니다.</p>
+          <div style={{ textAlign: 'center', padding: '32px 0' }}>
+            <p style={{ color: '#697771', fontSize: '15px', marginBottom: '12px' }}>
+              {!report ? '분석을 실행하면 결과가 여기에 표시됩니다.' : '등록된 영양제의 성분 정보를 분석한 결과입니다.'}
+            </p>
+            <button type="button" className="button primary" onClick={onAnalyze}>분석 실행하기</button>
+          </div>
         )}
       </section>
     )
