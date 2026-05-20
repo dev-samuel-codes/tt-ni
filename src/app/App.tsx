@@ -83,7 +83,10 @@ function App() {
       setReport(serverReport)
       setAnalysisSyncMessage(`분석 결과 저장 완료: ${serverReport.id}`)
     } catch (error) {
-      setAnalysisSyncMessage(error instanceof Error ? error.message : '서버 분석 저장에 실패했습니다.')
+      const errMsg = error instanceof Error ? error.message : '서버 분석 저장에 실패했습니다.'
+      setAnalysisSyncMessage(errMsg)
+      // 서버 실패 시 로컬 분석 엔진의 결과를 fallback으로 사용
+      setReport(previewReport)
     }
     navigateTo(routes.analysis)
   }
@@ -126,10 +129,17 @@ function App() {
           <ProfileAndMedication profile={profile} medications={medications} onProfile={setProfile} onMedications={setMedications} />
         )}
         {currentPath === routes.supplements && (
-          <SupplementWorkspace supplements={supplements} onSupplements={setSupplements} onAnalyze={handleRunAnalysis} />
+          <SupplementWorkspace supplements={supplements} onSupplements={setSupplements} onAnalyze={handleRunAnalysis} sessionEmail={sessionEmail ?? ''} />
         )}
         {currentPath === routes.analysis && (
-          <AnalysisResult report={report} syncMessage={analysisSyncMessage} onAnalyze={handleRunAnalysis} />
+          <AnalysisResult
+            report={report || previewReport}
+            syncMessage={analysisSyncMessage}
+            onAnalyze={handleRunAnalysis}
+            isLocalFallback={!report && previewReport.totals.length > 0}
+            sessionEmail={sessionEmail ?? undefined}
+            onLogin={() => navigateTo(routes.login)}
+          />
         )}
         {currentPath === routes.schedule && (
           <SchedulePage supplements={supplements} profile={profile} medications={medications} />

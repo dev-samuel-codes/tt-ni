@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import {
   Activity, AlertTriangle, Camera, Check, ChevronRight,
-  FileImage, Pill, Plus, ShieldCheck, Sparkles, Trash2
+  FileImage, Lock, LogIn, Pill, Plus, ShieldCheck, Sparkles, Trash2
 } from 'lucide-react'
 import type { AnalysisReport, Medication, ParsedIngredient, Profile, SupplementProduct, Unit } from '../../types'
-import { findNutrientByName, nutrients } from '../../features/nutrition/nutritionData'
+import { findNutrientByName } from '../../features/nutrition/nutritionData'
 import { statusLabel } from '../../features/analysis/analysisEngine'
 import { createId, getStatusTone, splitList } from '../../lib/utils'
 import { saveProfileBundle } from '../../features/profile/profileService'
@@ -12,8 +12,6 @@ import { createManualIngredient, parseLabelImage, saveSupplementProduct, updateS
 import { supabase } from '../../lib/supabaseClient'
 import { MetricCard } from './Shared'
 
-/** nutritionData.ts에 정의된 영양소 ID 집합 (성분 검증용) */
-const knownNutrientIds = new Set(nutrients.map((nutrient) => nutrient.id))
 
 
 
@@ -430,12 +428,14 @@ export function ProfileAndMedication({
  * refine-ingredients Edge Function을 통해 성분 정보를 보강합니다.
  */
 export function SupplementWorkspace({
-  supplements, onSupplements, onAnalyze,
+  supplements, onSupplements, onAnalyze, sessionEmail,
 }: {
   supplements: SupplementProduct[]
   onSupplements: (supplements: SupplementProduct[]) => void
   onAnalyze: () => void
+  sessionEmail: string
 }) {
+  const [parsingStep, setParsingStep] = useState('')
   const [registrationMethod, setRegistrationMethod] = useState<'photo' | 'search' | 'manual'>('photo')
   const [searchQuery, setSearchQuery] = useState('')
   const [productName, setProductName] = useState('')
@@ -461,7 +461,7 @@ export function SupplementWorkspace({
     productName.trim().length > 0 && Number.isFinite(dailyServings) && dailyServings > 0 &&
     draftIngredients.length > 0 &&
     draftIngredients.every((ingredient) =>
-      ingredient.standardName.trim().length > 0 && knownNutrientIds.has(ingredient.nutrientId) &&
+      ingredient.standardName.trim().length > 0 &&
       ingredient.amount !== null && Number.isFinite(ingredient.amount) && ingredient.amount >= 0 &&
       ingredient.unit !== 'unknown',
     )
@@ -538,10 +538,20 @@ export function SupplementWorkspace({
   }
 
   async function parseLabel(file?: File) {
+    if (!sessionEmail) {
+      setParseWarnings(['로그인 후 이용할 수 있는 기능입니다. 상단 메뉴에서 로그인해주세요.'])
+      return
+    }
     setParsing(true)
+    setParsingStep('준비 중...')
     setParseWarnings([])
     try {
-      const parsed = await parseLabelImage(file)
+      const parsed = await parseLabelImage(file, (step) => {
+        if (step === 'converting') setParsingStep('HEIC 이미지 변환 중...')
+        else if (step === 'uploading') setParsingStep('이미지 업로드 중...')
+        else if (step === 'parsing') setParsingStep('AI가 성분을 추출 중...')
+      })
+      setParsingStep('정제 완료!')
       setImageName(parsed.imageName)
       setLabelImagePath('')
       setDraftIngredients([])
@@ -556,6 +566,7 @@ export function SupplementWorkspace({
       setParseWarnings([error instanceof Error ? error.message : '이미지 파싱 실패'])
     } finally {
       setParsing(false)
+      setTimeout(() => setParsingStep(''), 2000)
     }
   }
 
@@ -770,10 +781,26 @@ export function SupplementWorkspace({
         <div className="supplement-layout">
           {registrationMethod === 'photo' && (
             <div className="upload-zone">
+              {!sessionEmail && (
+                <div className="login-lock-banner">
+                  <Lock size={18} />
+                  <span>로그인 후 이용할 수 있는 기능입니다</span>
+                </div>
+              )}
               <FileImage size={28} />
               <strong>{imageName || '성분표 사진 업로드'}</strong>
-              <span>{parsing ? 'AI가 성분표를 분석하는 중입니다.' : 'JPG, PNG, WEBP 파일을 선택하면 parse-label 흐름을 실행합니다.'}</span>
-              <label className="button ghost">
+              <span>
+                {parsing
+                  ? (parsingStep || 'AI가 성분표를 분석하는 중입니다.')
+                  : 'JPG, PNG, WEBP, HEIC 파일을 선택하면 AI가 자동으로 성분을 추출합니다.'}
+              </span>
+              {parsing && parsingStep && (
+                <div className="parsing-step-indicator">
+                  <div className="parsing-step-spinner" />
+                  <span>{parsingStep}</span>
+                </div>
+              )}
+              <label className={`button ghost ${!sessionEmail ? 'disabled-upload' : ''}`}>
                 <Camera size={16} />파일 선택
                 <input hidden type="file" accept="image/jpeg,image/png,image/webp,.heic,.heif" onChange={(e) => {
                   const file = e.target.files?.[0]
@@ -826,22 +853,22 @@ export function SupplementWorkspace({
           <div><h2>성분 검수</h2><p>신뢰도 낮음 또는 단위 불명은 노란색으로 표시됩니다.</p></div>
           <button type="button" className="button ghost" onClick={addManualIngredient}><Plus size={16} />수동 성분</button>
         </div>
-        <div className="table-wrap">
+        <div className="table-wrap med-review-table">
           <table>
             <thead><tr><th>성분명</th><th>함량</th><th>단위</th><th>신뢰도</th><th>상태</th><th></th></tr></thead>
             <tbody>
               {draftIngredients.map((ingredient) => (
-                <tr key={ingredient.id}>
-                  <td><input value={ingredient.standardName} onChange={(e) => updateIngredient(ingredient.id, { standardName: e.target.value })} /></td>
-                  <td><input type="number" value={ingredient.amount ?? ''} onChange={(e) => updateIngredient(ingredient.id, { amount: Number(e.target.value) })} /></td>
-                  <td>
+                <tr key={ingredient.id} data-label-name={ingredient.standardName || ingredient.rawName}>
+                  <td data-label="성분명"><input value={ingredient.standardName} onChange={(e) => updateIngredient(ingredient.id, { standardName: e.target.value })} /></td>
+                  <td data-label="함량"><input type="number" value={ingredient.amount ?? ''} onChange={(e) => updateIngredient(ingredient.id, { amount: Number(e.target.value) })} /></td>
+                  <td data-label="단위">
                     <select value={ingredient.unit} onChange={(e) => updateIngredient(ingredient.id, { unit: e.target.value as Unit })}>
                       {['mg', 'mcg', 'IU', 'g', 'CFU', 'unknown'].map((unit) => (<option key={unit} value={unit}>{unit}</option>))}
                     </select>
                   </td>
-                  <td>{Math.round(ingredient.confidence * 100)}%</td>
-                  <td><span className={ingredient.reviewRequired ? 'status-pill warning' : 'status-pill success'}>{ingredient.reviewRequired ? '확인 필요' : '확인됨'}</span></td>
-                  <td><button type="button" className="icon-button" aria-label="성분 삭제" onClick={() => setDraftIngredients(draftIngredients.filter((item) => item.id !== ingredient.id))}><Trash2 size={16} /></button></td>
+                  <td data-label="신뢰도">{Math.round(ingredient.confidence * 100)}%</td>
+                  <td data-label="상태"><span className={ingredient.reviewRequired ? 'status-pill warning' : 'status-pill success'}>{ingredient.reviewRequired ? '확인 필요' : '확인됨'}</span></td>
+                  <td data-label=""><button type="button" className="icon-button" aria-label="성분 삭제" onClick={() => setDraftIngredients(draftIngredients.filter((item) => item.id !== ingredient.id))}><Trash2 size={16} /></button></td>
                 </tr>
               ))}
             </tbody>
@@ -861,9 +888,16 @@ export function SupplementWorkspace({
  * 영양소별 상태, 약물 상호작용 경고, 복용량 조정 후보를 탭과 필터로 표시합니다.
  * 분석이 실행되지 않은 경우 실행 버튼을 표시합니다.
  */
-export function AnalysisResult({ report, syncMessage, onAnalyze }: { report: AnalysisReport | null; syncMessage: string; onAnalyze: () => void }) {
+export function AnalysisResult({ report, syncMessage, onAnalyze, isLocalFallback, sessionEmail, onLogin }: {
+  report: AnalysisReport | null
+  syncMessage: string
+  onAnalyze: () => void
+  isLocalFallback?: boolean
+  sessionEmail?: string
+  onLogin?: () => void
+}) {
   const [filter, setFilter] = useState<'all' | 'excess' | 'deficient' | 'duplicates' | 'medication'>('all')
-  if (!report) {
+  if (!report || report.totals.length === 0) {
     return (
       <section className="panel">
         <div className="section-heading">
@@ -873,7 +907,7 @@ export function AnalysisResult({ report, syncMessage, onAnalyze }: { report: Ana
         {syncMessage ? (
           <div className="notice warning"><AlertTriangle size={16} /><span>{syncMessage}</span></div>
         ) : (
-          <p className="muted">분석을 실행하면 결과가 표시됩니다.</p>
+          <p className="muted">영양제를 등록하고 분석을 실행하면 결과가 표시됩니다.</p>
         )}
       </section>
     )
@@ -888,8 +922,24 @@ export function AnalysisResult({ report, syncMessage, onAnalyze }: { report: Ana
 
   return (
     <section className="panel">
+      {isLocalFallback && (
+        <div className="local-fallback-banner">
+          <div className="fallback-banner-content">
+            <Sparkles size={18} />
+            <div>
+              <strong>로컬 분석 결과입니다</strong>
+              <p>{!sessionEmail ? '로그인하면 분석 결과를 서버에 안전하게 저장할 수 있습니다.' : '서버 연결에 실패했지만, 로컬 분석 엔진으로 결과를 생성했습니다.'}</p>
+            </div>
+          </div>
+          {!sessionEmail && onLogin && (
+            <button type="button" className="button primary fallback-login-btn" onClick={onLogin}>
+              <LogIn size={16} />로그인하기
+            </button>
+          )}
+        </div>
+      )}
       <div className="section-heading">
-        <div><h2>분석 결과</h2><p>{new Date(report.createdAt).toLocaleString()} 기준 스냅샷</p></div>
+        <div><h2>분석 결과</h2><p>{new Date(report.createdAt).toLocaleString()} 기준 {isLocalFallback ? '로컬 분석' : '스냅샷'}</p></div>
         <button type="button" className="button primary" onClick={onAnalyze}>재분석</button>
       </div>
       {syncMessage && (

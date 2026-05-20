@@ -2485,4 +2485,255 @@ textarea:focus {
   padding-bottom: 12px;
 }
 
+/* ==========================================
+   로그인 잠금 배너 (사진 업로드 차단)
+   ========================================== */
+.login-lock-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #fef3e1 0%, #fff6e9 100%);
+  border: 1px solid #f0d9a8;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #8a6d2b;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.disabled-upload {
+  opacity: 0.45;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+/* ==========================================
+   파싱 단계별 로딩 인디케이터
+   ========================================== */
+.parsing-step-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 8px 16px;
+  background: #e6f9f4;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0a6e58;
+  animation: fade-in-up 0.3s ease both;
+}
+
+.parsing-step-spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2.5px solid #c0e4d9;
+  border-top-color: #18ae90;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ==========================================
+   로컬 Fallback 배너 (분석 결과)
+   ========================================== */
+.local-fallback-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: linear-gradient(135deg, #e6f9f4 0%, #f0fdf9 100%);
+  border: 1px solid #b8e6d6;
+  border-radius: 12px;
+  padding: 14px 20px;
+  margin-bottom: 20px;
+  animation: fade-in-up 0.35s ease both;
+}
+
+.fallback-banner-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+}
+
+.fallback-banner-content > svg {
+  flex-shrink: 0;
+  color: #18ae90;
+  margin-top: 2px;
+}
+
+.fallback-banner-content strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  color: #0a6e58;
+  margin-bottom: 2px;
+}
+
+.fallback-banner-content p {
+  margin: 0;
+  font-size: 13px;
+  color: #3d6b5e;
+  line-height: 1.5;
+}
+
+.fallback-login-btn {
+  flex-shrink: 0;
+  font-size: 13px !important;
+  padding: 8px 18px !important;
+  gap: 6px;
+}
+
+/* ==========================================
+   모바일 반응형: 성분 검수 카드 전환 + 스크롤 힌트
+   ========================================== */
+@media (max-width: 768px) {
+  /* 영양제 등록 탭 우측 페이드 마스크 */
+  .registration-tabs {
+    -webkit-mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+    mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+    position: relative;
+  }
+
+  /* 모바일 헤더 아이콘 축소 방지 */
+  .mobile-header-right .auth-card.compact svg,
+  .mobile-header-right .auth-card.compact button {
+    flex-shrink: 0 !important;
+  }
+
+  /* 성분 검수 테이블 → 카드 리스트 변환 */
+  .med-review-table table,
+  .med-review-table thead,
+  .med-review-table tbody,
+  .med-review-table tr,
+  .med-review-table th,
+  .med-review-table td {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .med-review-table thead {
+    display: none !important;
+  }
+
+  .med-review-table tr {
+    background: #f8fafa;
+    border: 1px solid #e8eeeb;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    align-items: center;
+    position: relative;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+
+  .med-review-table tr:hover {
+    box-shadow: 0 4px 16px rgba(24, 174, 144, 0.08);
+    border-color: #c0dbd0;
+  }
+
+  .med-review-table td {
+    width: auto !important;
+    display: flex !important;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 0 !important;
+    border: none !important;
+    font-size: 14px;
+  }
+
+  .med-review-table td::before {
+    content: attr(data-label);
+    font-size: 11px;
+    font-weight: 800;
+    color: #8a9a95;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    min-width: 48px;
+    flex-shrink: 0;
+  }
+
+  .med-review-table td[data-label=""]::before {
+    display: none;
+  }
+
+  /* 성분명 입력 전체 폭 */
+  .med-review-table td[data-label="성분명"] {
+    width: 100% !important;
+    flex: 1 1 100%;
+  }
+
+  .med-review-table td[data-label="성분명"] input {
+    width: 100%;
+  }
+
+  /* 함량/단위 같은 줄 */
+  .med-review-table td[data-label="함량"],
+  .med-review-table td[data-label="단위"] {
+    flex: 1 1 calc(50% - 6px);
+  }
+
+  .med-review-table td[data-label="함량"] input,
+  .med-review-table td[data-label="단위"] select {
+    width: 100%;
+  }
+
+  /* 신뢰도/상태 같은 줄 */
+  .med-review-table td[data-label="신뢰도"],
+  .med-review-table td[data-label="상태"] {
+    flex: 0 0 auto;
+  }
+
+  /* 삭제 버튼 우측 정렬 */
+  .med-review-table td[data-label=""] {
+    position: absolute;
+    right: 12px;
+    top: 12px;
+    width: auto !important;
+    flex: 0 0 auto !important;
+    padding: 0 !important;
+  }
+
+  /* Fallback 배너 모바일 스택 */
+  .local-fallback-banner {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .fallback-login-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 360px) {
+  /* 초소형 화면(iPhone SE 등) 추가 최적화 */
+  .registration-tabs button {
+    font-size: 12px !important;
+    padding: 6px 10px !important;
+  }
+
+  .med-review-table tr {
+    padding: 10px 12px;
+  }
+
+  .mobile-header-right .auth-card.compact {
+    max-width: 140px !important;
+  }
+
+  .mobile-header-right .auth-card.compact span {
+    max-width: 64px !important;
+  }
+}
 

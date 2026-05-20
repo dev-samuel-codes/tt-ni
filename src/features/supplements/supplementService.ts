@@ -64,12 +64,16 @@ async function convertHeicToJpeg(file: File): Promise<File | null> {
  * 4. parse-label Edge Function 호출하여 성분 추출
  * 5. 실패 시 업로드된 이미지 정리(cleanup)
  */
-export async function parseLabelImage(file?: File) {
+export async function parseLabelImage(
+  file?: File,
+  onStepChange?: (step: 'converting' | 'uploading' | 'parsing') => void
+) {
   let uploadedPath = ''
   try {
     if (!file) throw new Error('성분표 이미지 파일을 선택해야 AI 파싱을 실행할 수 있습니다.')
 
     if (await isHeic(file)) {
+      onStepChange?.('converting')
       const converted = await convertHeicToJpeg(file)
       if (!converted) throw new Error('HEIC 이미지 변환에 실패했습니다. JPG, PNG, WEBP 형식으로 다시 시도해주세요.')
       file = converted
@@ -82,6 +86,7 @@ export async function parseLabelImage(file?: File) {
     const { data: authData, error: authError } = await supabase.auth.getUser()
     if (authError || !authData.user) throw new Error('로그인 후 성분표 이미지를 업로드할 수 있습니다.')
 
+    onStepChange?.('uploading')
     const path = `${authData.user.id}/${crypto.randomUUID()}-${file.name}`
     const upload = await supabase.storage.from('label-images').upload(path, file, {
       contentType: file.type || 'application/octet-stream',
@@ -90,6 +95,7 @@ export async function parseLabelImage(file?: File) {
     if (upload.error) throw upload.error
 
     uploadedPath = upload.data.path
+    onStepChange?.('parsing')
     const { data, error } = await supabase.functions.invoke('parse-label', {
       body: { image_path: upload.data.path },
     })
