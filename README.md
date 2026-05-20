@@ -20,9 +20,10 @@
 
 | 기능 | 설명 |
 |------|------|
-| **AI 성분표 인식** | 영양제 라벨 사진을 업로드하면 Vision AI가 성분을 자동 추출합니다. iPhone HEIC 포맷도 자동 변환됩니다. |
+| **AI 성분표 인식** | 영양제 라벨 사진을 업로드하면 Vision AI(GPT-5-mini)가 성분을 자동 추출합니다. 추출된 성분 중 불완전한 데이터(함량 미상, 단위 미상)는 자동으로 보정되어 저장 버튼이 활성화됩니다. iPhone HEIC 포맷도 자동 변환됩니다. |
 | **제품명 검색** | Exa.ai 웹 검색을 통해 제품명만으로 성분 정보를 자동 수집합니다. |
 | **수동 입력** | 사진이나 검색이 불필요한 경우 성분을 직접 입력할 수 있습니다. |
+| **성분 자동 보정** | AI가 추출하지 못한 함량/단위를 자동으로 기본값(0mg)으로 보정하여 저장 버튼이 비활성화되는 문제를 해결합니다. |
 | **등록 영양제 목록** | 지금까지 등록한 모든 영양제를 한눈에 확인할 수 있습니다. |
 | **부분 수정** | 제품명, 브랜드, 복용 횟수, 복용 시간, 개별 성분의 함량·단위를 수정할 수 있습니다. |
 | **삭제** | 더 이상 복용하지 않는 영양제를 목록에서 제거할 수 있습니다. |
@@ -32,16 +33,18 @@
 | 기능 | 설명 |
 |------|------|
 | **KDRIs 기반 분석** | 사용자 프로필(성별·연령·건강 상태)에 맞춘 한국인 영양소 섭취기준으로 과다·부족·적정 상태를 분석합니다. |
-| **약물 상호작용 검사** | 복용 중인 처방약과 영양제 성분 간의 알려진 상호작용을 감지하여 경고합니다. |
+| **약물 상호작용 검사** | 복용 중인 처방약과 영양제 성분 간의 알려진 상호작용을 감지하여 경고합니다. 와파린-비타민K, 스타틴-CoQ10, 메트포르민-비타민B12 등 15개 이상의 규칙을 검사합니다. |
 | **중복 성분 탐지** | 여러 영양제에 중복 포함된 성분의 총 섭취량을 합산하여 과다 여부를 판단합니다. |
-| **시너지 추천** | 함께 복용하면 효과가 높아지는 영양소 조합을 추천합니다. |
+| **시너지 추천** | 함께 복용하면 효과가 높아지는 영양소 조합을 추천합니다. (CoQ10+오메가3, 비타민C+철분 등) |
+| **길항 작용 경고** | 동시 복용 시 흡수 경쟁이 발생하는 영양소 조합을 경고하고 최소 복용 간격을 제안합니다. |
+| **로컬 폴백 분석** | 서버 연결이 원활하지 않아도 클라이언트 측 분석 엔진이 즉시 결과를 제공합니다. |
 
 ### 복용 관리
 
 | 기능 | 설명 |
 |------|------|
-| **복용 스케줄** | 시간약리학(Chronopharmacology) 원리에 기반하여 영양제별 최적 복용 시간대를 설계합니다. |
-| **AI 채팅 상담** | 사용자의 프로필, 건강 상태, 복용 중인 약물, 분석 결과를 반영한 개인화된 AI 상담을 제공합니다. |
+| **복용 스케줄** | 시간약리학(Chronopharmacology) 원리에 기반하여 영양제별 최적 복용 시간대(공복/식후/저녁/취침 전)를 설계합니다. 약물-영양소 상호작용 및 길항 작용을 고려한 충돌 해결 로직이 포함됩니다. |
+| **AI 채팅 상담** | 사용자의 프로필, 건강 상태, 복용 중인 약물, 등록된 영양제, 최신 분석 결과를 컨텍스트로 반영한 개인화된 AI 상담을 제공합니다. SSE 스트리밍으로 실시간 응답이 표시됩니다. |
 
 ---
 
@@ -49,12 +52,12 @@
 
 | 영역 | 기술 |
 |------|------|
-| 프론트엔드 | React 19, TypeScript, Vite |
+| 프론트엔드 | React 19, TypeScript, Vite 8 |
 | 백엔드 | Supabase (Auth, PostgreSQL, Storage, Edge Functions) |
-| AI | OpenAI GPT-5-mini (Vision, Chat), text-embedding-3-small |
+| AI | OpenAI GPT-5-mini (Vision, Chat, Refinement) |
 | 검색 | Exa.ai API |
 | 배포 | Vercel, Supabase Cloud |
-| 테스트 | Vitest, @testing-library/react |
+| 테스트 | Vitest, @testing-library/react, Playwright |
 
 ---
 
@@ -63,9 +66,9 @@
 ### 사전 요구사항
 
 - Node.js 18 이상
-- Supabase 프로젝트 (URL, Anon Key)
-- OpenAI API Key (Vision, Chat 기능용)
-- Exa.ai API Key (제품 검색 기능용)
+- Supabase 프로젝트 (URL, Publishable Key)
+- OpenAI API Key (Vision, Chat, Refinement 기능용)
+- Exa.ai API Key (제품 검색 기능용, 선택사항)
 
 ### 설치 및 실행
 
@@ -79,7 +82,7 @@ npm install
 
 # 3. 환경 변수 설정
 cp .env.example .env.local
-# .env.local 파일을 열어 Supabase URL과 Anon Key를 입력하세요
+# .env.local 파일을 열어 Supabase URL과 Publishable Key를 입력하세요
 
 # 4. Supabase 연결 및 배포
 npx supabase login
@@ -87,21 +90,25 @@ npx supabase link --project-ref <your-project-ref>
 npx supabase db push
 npx supabase functions deploy
 
-# 5. 개발 서버 실행
+# 5. Edge Function Secrets 설정
+npx supabase secrets set OPENAI_API_KEY=sk-xxx EXA_API_KEY=xxx
+
+# 6. 개발 서버 실행
 npm run dev
 ```
 
 ### 환경 변수
 
+`.env.local`:
 ```env
 VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 ```
 
-Edge Function에서 사용하는 키는 Supabase Vault secrets로 관리합니다:
-
-```bash
-supabase secrets set EXA_API_KEY=xxx OPENAI_API_KEY=xxx
+Edge Function Secrets (Supabase Vault):
+```
+OPENAI_API_KEY    # AI 파싱/채팅/성분 정제용
+EXA_API_KEY       # 제품명 검색용 (선택)
 ```
 
 ---
@@ -124,31 +131,37 @@ tt-ni/
 │   │       ├── AnalysisResult.tsx      # 분석 결과 표시
 │   │       └── ProfileAndMedication.tsx # 프로필 및 약물 관리
 │   ├── features/
-│   │   ├── analysis/           # 영양소 분석 엔진
-│   │   ├── auth/               # 인증 로직
-│   │   ├── nutrition/          # 영양소 데이터 및 기준값
+│   │   ├── analysis/           # 영양소 분석 엔진 (클라이언트/서버)
+│   │   │   ├── analysisEngine.ts     # 로컬 분석 엔진
+│   │   │   └── serverAnalysis.ts     # 서버 응답 변환
+│   │   ├── auth/               # 인증 로직 (useAuth 훅)
+│   │   ├── nutrition/          # 영양소 데이터, 기준값, 상호작용 규칙
 │   │   ├── profile/            # 프로필 관리 서비스
 │   │   ├── schedule/           # 복용 스케줄 엔진
 │   │   └── supplements/        # 영양제 서비스 (등록/수정/삭제)
 │   ├── lib/                    # 유틸리티 및 Supabase 클라이언트
 │   ├── pages/                  # 페이지 컴포넌트
 │   │   ├── LandingPage.tsx     # 랜딩 페이지
-│   │   ├── LoginPage.tsx       # 로그인 페이지
+│   │   ├── LoginPage.tsx       # 로그인 페이지 (Google/Kakao/Email)
 │   │   ├── SchedulePage.tsx    # 복용 스케줄 페이지
-│   │   └── ChatPage.tsx        # AI 채팅 페이지
+│   │   ├── ChatPage.tsx        # AI 채팅 페이지
+│   │   ├── PrivacyPolicyPage.tsx
+│   │   └── TermsOfServicePage.tsx
 │   ├── styles/                 # CSS 스타일
 │   └── types/                  # TypeScript 타입 정의
 ├── supabase/
-│   └── functions/              # Supabase Edge Functions
-│       ├── parse-label/        # AI 성분표 이미지 파싱
-│       ├── run-analysis/       # 영양소 분석 실행
-│       ├── generate-schedule/  # 복용 스케줄 생성
-│       ├── exa-search/         # Exa.ai 제품 검색
-│       └── chat-completion/    # AI 채팅 응답 생성
+│   ├── functions/              # Supabase Edge Functions
+│   │   ├── parse-label/        # AI 성분표 이미지 파싱 (GPT-5-mini Vision)
+│   │   ├── refine-ingredients/ # 성분명 정제 및 효능 정보 보강 (GPT-5-mini)
+│   │   ├── run-analysis/       # 영양소 종합 분석 및 리포트 저장
+│   │   ├── generate-schedule/  # 시간약리학 기반 복용 스케줄 생성
+│   │   ├── chat-completion/    # AI 채팅 응답 생성 (GPT-5-mini, SSE)
+│   │   └── exa-search/         # Exa.ai 제품 검색
+│   ├── migrations/             # DB 스키마 마이그레이션
+│   └── config.toml
 ├── docs/                       # 기술 문서
-├── design/                     # 디자인 리소스
-├── public/                     # 정적 에셋
-└── scripts/                    # 빌드/배포 스크립트
+├── scripts/                    # 빌드/배포/검증 스크립트
+└── design/                     # 디자인 리소스
 ```
 
 ---
@@ -157,19 +170,21 @@ tt-ni/
 
 ### 1. 회원가입 및 로그인
 
-Google 또는 GitHub 소셜 로그인으로 간편하게 가입할 수 있습니다.
+Google, Kakao 소셜 로그인 또는 이메일로 간편하게 가입할 수 있습니다.
 
 ### 2. 프로필 설정
 
-성별, 출생연도, 건강 상태, 복용 중인 약물 등을 입력하면 개인 맞춤형 분석 기준이 적용됩니다.
+성별, 출생연도, 키, 몸무게, 건강 상태(기저질환, 알레르기, 식이 제한), 복용 중인 약물을 입력하면 개인 맞춤형 분석 기준이 적용됩니다. 입력한 정보는 "저장" 버튼으로 Supabase에 저장되며, 이후 접속 시 자동으로 복원됩니다.
 
 ### 3. 영양제 등록
 
 세 가지 방법으로 영양제를 등록할 수 있습니다:
 
-- **사진 촬영/업로드**: 영양제 라벨 사진을 찍으면 AI가 성분을 자동 인식합니다.
+- **사진 촬영/업로드**: 영양제 라벨 사진을 찍으면 AI가 성분을 자동 인식합니다. 불완전한 데이터는 자동 보정됩니다.
 - **제품명 검색**: 제품명을 입력하면 웹 검색으로 성분 정보를 가져옵니다.
 - **수동 입력**: 성분명, 함량, 단위를 직접 입력합니다.
+
+등록 전 성분 검수 테이블에서 각 성분의 표준명, 함량, 단위, 신뢰도를 확인하고 수정할 수 있습니다. "검수 완료 및 저장" 버튼을 누르면 AI가 성분 정보를 추가로 정제(효능, 권장량, 주의사항)하여 저장합니다.
 
 ### 4. 영양제 관리
 
@@ -184,14 +199,17 @@ Google 또는 GitHub 소셜 로그인으로 간편하게 가입할 수 있습니
 - 약물-영양소 상호작용 경고
 - 중복 성분 탐지
 - 시너지 영양소 조합 추천
+- 길항 작용 경고
+
+분석 결과는 Supabase에 저장되어 이후 접속 시에도 확인할 수 있습니다.
 
 ### 6. 복용 스케줄 확인
 
-시간약리학 기반으로 영양제별 최적 복용 시간대를 제안합니다.
+시간약리학 기반으로 영양제별 최적 복용 시간대를 제안합니다. 날짜별로 스케줄을 조회할 수 있으며, 복용 시 주의사항과 팁도 함께 제공됩니다.
 
 ### 7. AI 상담
 
-궁금한 점이 있으면 AI 챗봇에게 질문할 수 있습니다. 사용자의 프로필과 분석 결과를 반영한 맞춤형 답변을 제공합니다.
+궁금한 점이 있으면 AI 챗봇에게 질문할 수 있습니다. 사용자의 프로필, 건강 상태, 복용 중인 약물, 등록된 영양제, 최신 분석 결과를 반영한 맞춤형 답변을 실시간 SSE 스트리밍으로 제공합니다. 대화 세션별로 관리되며, 자주 묻는 질문도 추천됩니다.
 
 ---
 
@@ -199,11 +217,14 @@ Google 또는 GitHub 소셜 로그인으로 간편하게 가입할 수 있습니
 
 | 문서 | 설명 |
 |------|------|
+| [프로젝트 개요](./PROJECT_OVERVIEW.md) | 서비스 전체 개요 및 설계 원칙 |
 | [아키텍처 및 기술 문서](./docs/ARCHITECTURE.md) | 시스템 아키텍처 설계 문서 |
 | [배포 가이드](./docs/DEPLOYMENT.md) | Vercel + Supabase 배포 절차 |
 | [OAuth 설정](./docs/OAUTH_SETUP.md) | 소셜 로그인 설정 가이드 |
+| [백엔드 가이드](./BACKEND_GUIDE.md) | 백엔드/DB 구현 참고 문서 |
 | [개인정보 처리방침](./docs/PRIVACY_POLICY.md) | 개인정보 수집·이용·보호 정책 |
 | [이용약관](./docs/TERMS_OF_SERVICE.md) | 서비스 이용 약관 |
+| [영양제 상호작용 보고서](./docs/영양제%20상호작용%20보고서.md) | 분석 엔진의 과학적 근거 |
 
 ---
 
@@ -221,6 +242,9 @@ npm run build
 
 # 전체 검증 (린트 + 테스트 + 빌드 + 배포 사전 점검)
 npm run verify
+
+# 원격 환경 검증
+npm run verify:remote
 ```
 
 ---
@@ -237,9 +261,9 @@ npm run verify
 
 ## 참고 사항
 
-- UI 전반의 디자인 일관성 및 사용자 경험 개선이 필요합니다. 현재 기능별로 스타일이 다소 산발적으로 적용되어 있으며, 반응형 레이아웃과 접근성 측면에서 보완할 부분이 있습니다.
-- 에러 상태와 로딩 상태에 대한 통일된 처리 방식이 아직 정립되지 않았습니다.
-- 모바일 환경에서의 레이아웃 최적화가 추가로 필요합니다.
+- 모든 분석 결과는 참고용이며, 의학적 진단이나 처방을 대체하지 않습니다.
+- 영양제 복용을 시작하거나 변경하기 전에 반드시 의사 또는 약사와 상담하세요.
+- Edge Function Secrets는 Supabase Dashboard에서 관리됩니다. 로컬 `.env.local`에는 유출되지 않도록 주의하세요.
 
 ---
 

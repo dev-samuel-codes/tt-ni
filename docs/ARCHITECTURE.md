@@ -27,6 +27,7 @@ graph TD
         EF3["Edge Function<br/>generate-schedule"]
         EF4["Edge Function<br/>chat-completion"]
         EF5["Edge Function<br/>exa-search"]
+        EF6["Edge Function<br/>refine-ingredients"]
     end
 
     subgraph External["외부 API"]
@@ -48,6 +49,7 @@ graph TD
     EF4 --> OpenAI
     EF5 --> Exa
     EF5 --> OpenAI
+    EF6 --> OpenAI
 ```
 
 ### 구성 요소 설명
@@ -58,7 +60,7 @@ graph TD
 | **Supabase Auth** | 이메일 로그인 + Google/Kakao OAuth. 세션은 `localStorage`에 자동 관리되며, DB 접근 시 JWT가 포함됨. |
 | **Supabase Database** | PostgreSQL. 모든 테이블에 RLS(Row Level Security)가 적용되어 `auth.uid()` 기준으로 행 단위 접근 제어. |
 | **Supabase Storage** | `labels` 프라이빗 버킷. 업로드된 영양제 라벨 이미지를 저장. 접근은 RLS 정책으로 제어. |
-| **Edge Functions** | Supabase Deno 런타임에서 실행되는 서버리스 함수. OpenAI, Exa.ai 등 서드파티 API 호출을 담당하며, secret 키를 안전하게 보관. |
+| **Edge Functions** | Supabase Deno 런타임에서 실행되는 서버리스 함수. OpenAI, Exa.ai 등 서드파티 API 호출을 담당하며, secret 키를 안전하게 보관. (parse-label, refine-ingredients, run-analysis, generate-schedule, chat-completion, exa-search) |
 | **Vercel** | `vite build` 결과물을 정적 호스팅. |
 | **OpenAI** | Vision API로 이미지 텍스트 인식, Chat API로 분석/검색/채팅, Embeddings API(미구현)로 의미 검색 지원. |
 | **Exa.ai** | 제품명 검색 시 웹에서 영양제 성분 정보를 검색하여 구조화된 데이터로 반환. |
