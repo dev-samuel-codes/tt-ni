@@ -182,7 +182,9 @@ export function useAuth({
         if (event === 'SIGNED_IN' && wasLoggedOut) {
           onSignedIn()
         }
-        void loadUserData(session.user.id)
+        if (event !== 'TOKEN_REFRESHED') {
+          void loadUserData(session.user.id)
+        }
       } else {
         setProfileIsSetup(false)
         onProfile(defaultProfile)
