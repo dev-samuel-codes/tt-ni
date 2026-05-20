@@ -552,7 +552,7 @@ Deno.serve(async (req) => {
       resultSlots.push(output)
     }
 
-    return jsonResponse({ slots: resultSlots })
+    return jsonResponse({ slots: resultSlots, timeline: resultSlots })
   } catch (error) {
     return jsonResponse({ error: error instanceof Error ? error.message : 'Unexpected error' }, 500)
   }

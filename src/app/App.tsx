@@ -118,6 +118,8 @@ function App() {
             onChat={() => navigateTo(routes.chat)}
             onProfile={() => navigateTo(routes.profile)}
             profileIsSetup={profileIsSetup}
+            profile={profile}
+            medications={medications}
           />
         )}
         {currentPath === routes.profile && (
@@ -130,7 +132,7 @@ function App() {
           <AnalysisResult report={report} syncMessage={analysisSyncMessage} onAnalyze={handleRunAnalysis} />
         )}
         {currentPath === routes.schedule && (
-          <SchedulePage supplements={supplements} />
+          <SchedulePage supplements={supplements} profile={profile} medications={medications} />
         )}
         {currentPath === routes.chat && (
           <ChatPage />

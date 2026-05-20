@@ -106,8 +106,8 @@ function getServiceKey(): string {
 }
 
 /** OpenAI Responses API 출력에서 구조화된 텍스트를 추출합니다. */
-function getOutputText(payload: { output?: Array<{ content?: Array<{ type: string; text?: string }> }> }): string {
-  const text = payload.output?.flatMap((item) => item.content ?? []).find((item) => item.type === 'output_text')?.text
+function getOutputText(payload: { choices?: Array<{ message?: { content?: string } }> }): string {
+  const text = payload.choices?.[0]?.message?.content
   if (!text) throw new Error('OpenAI response did not include structured output text')
   return text
 }
@@ -149,15 +149,15 @@ Deno.serve(async (req) => {
     const mimeType = imageBlob.type || 'image/jpeg'
 
     // --- OpenAI Vision API 호출 (JSON Schema 기반 구조화 출력) ---
-    const response = await fetch('https://api.openai.com/v1/responses', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${openaiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: Deno.env.get('OPENAI_VISION_MODEL') ?? Deno.env.get('OPENAI_MODEL') ?? 'gpt-5-mini',
-        input: [
+        model: Deno.env.get('OPENAI_VISION_MODEL') ?? Deno.env.get('OPENAI_MODEL') ?? 'gpt-4o-mini',
+        messages: [
           {
             role: 'system',
             content:
@@ -167,20 +167,22 @@ Deno.serve(async (req) => {
             role: 'user',
             content: [
               {
-                type: 'input_text',
+                type: 'text',
                 text:
                   'Read this supplement facts or nutrition label. Extract product name, serving size, daily serving recommendation, ingredient names, amounts, units, confidence, and raw text.',
               },
               {
-                type: 'input_image',
-                image_url: `data:${mimeType};base64,${base64}`,
+                type: 'image_url',
+                image_url: {
+                  url: `data:${mimeType};base64,${base64}`,
+                },
               },
             ],
           },
         ],
-        text: {
-          format: {
-            type: 'json_schema',
+        response_format: {
+          type: 'json_schema',
+          json_schema: {
             name: 'supplement_label_parse',
             strict: true,
             schema,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import type { Medication, Profile, SupplementProduct, AnalysisReport } from '../../types'
 import type { AuthNoticeState } from './authTypes'
@@ -67,6 +67,12 @@ export function useAuth({
   const [authNotice, setAuthNotice] = useState<AuthNoticeState>(initialAuthNotice)
   const [isAuthInitialized, setIsAuthInitialized] = useState(false)
   const [profileIsSetup, setProfileIsSetup] = useState(false)
+
+  const sessionEmailRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    sessionEmailRef.current = sessionEmail
+  }, [sessionEmail])
 
   const loadUserData = useCallback(async (userId: string) => {
     const [profileResult, conditionsResult, medicationsResult, userSupplementsResult] = await Promise.all([
@@ -169,9 +175,13 @@ export function useAuth({
 
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return
-      setSessionEmail(session?.user.email ?? null)
+      const newEmail = session?.user.email ?? null
+      const wasLoggedOut = !sessionEmailRef.current
+      setSessionEmail(newEmail)
       if (session?.user) {
-        if (event === 'SIGNED_IN') onSignedIn()
+        if (event === 'SIGNED_IN' && wasLoggedOut) {
+          onSignedIn()
+        }
         void loadUserData(session.user.id)
       } else {
         setProfileIsSetup(false)

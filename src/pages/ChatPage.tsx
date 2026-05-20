@@ -177,6 +177,75 @@ export function ChatPage() {
     // Placeholder for AI response while streaming
     setMessages((prev) => [...prev, { role: 'assistant', text: '' }])
 
+    // AI 개인화 컨텍스트 데이터 수집
+    let chatContext: Record<string, unknown> = {
+      profile: { gender: 'female', birthYear: 1998, conditions: [], medications: [] },
+      supplements: [],
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const [profileRes, conditionsRes, medicationsRes, userSupplementsRes, reportRes] = await Promise.all([
+          supabase.from('user_profiles').select('*').eq('user_id', user.id).maybeSingle(),
+          supabase.from('user_conditions').select('*').eq('user_id', user.id),
+          supabase.from('user_medications').select('*').eq('user_id', user.id),
+          supabase
+            .from('user_supplements')
+            .select('id, daily_servings, intake_time, active, supplement_products(id, product_name, brand_name, source_type, supplement_ingredients(*))')
+            .eq('user_id', user.id).eq('active', true),
+          supabase
+            .from('analysis_reports')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+        ])
+
+        const conditions = conditionsRes.data ?? []
+        const profileData = profileRes.data
+
+        chatContext = {
+          profile: {
+            gender: profileData?.gender || 'female',
+            birthYear: profileData?.birth_year || 1998,
+            conditions: conditions
+              .filter((item) => !item.condition_code.startsWith('allergy:') && !item.condition_code.startsWith('diet:'))
+              .map((item) => item.condition_name),
+            medications: (medicationsRes.data ?? []).map((med) => ({
+              name: med.medication_name,
+              memo: med.memo || undefined
+            }))
+          },
+          supplements: (userSupplementsRes.data ?? []).flatMap((row) => {
+            const product = Array.isArray(row.supplement_products) ? row.supplement_products[0] : row.supplement_products
+            if (!product) return []
+            return [{
+              productName: product.product_name,
+              confirmed: true,
+              ingredients: (product.supplement_ingredients ?? []).map((ing) => ({
+                standardName: ing.standard_name,
+                amount: ing.amount === null ? null : Number(ing.amount),
+                unit: ing.unit,
+              }))
+            }]
+          }),
+          report: reportRes.data ? {
+            statusSummary: reportRes.data.status_summary,
+            totals: reportRes.data.totals,
+            duplicateItems: reportRes.data.duplicate_items,
+            interactionWarnings: reportRes.data.interaction_warnings,
+            recommendations: reportRes.data.recommendations,
+            synergyRecommendations: reportRes.data.synergy_recommendations,
+            antagonismWarnings: reportRes.data.antagonism_warnings
+          } : undefined
+        }
+      }
+    } catch {
+      // best-effort context load
+    }
+
     try {
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-completion`,
@@ -187,8 +256,9 @@ export function ChatPage() {
             Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}`,
           },
           body: JSON.stringify({
-            query: msgText,
-            session_id: sessionId !== 'local' ? sessionId : undefined,
+            message: msgText,
+            sessionId: sessionId !== 'local' ? sessionId : undefined,
+            context: chatContext,
           }),
         }
       )
@@ -365,14 +435,11 @@ export function ChatPage() {
               <p style={{ fontSize: '13px', color: '#8a9a95', marginBottom: '10px', fontWeight: 700 }}>자주 묻는 질문</p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {faqSuggestions.map((q) => (
-                  <button key={q} type="button" onClick={() => handleSend(q)} style={{
+                  <button key={q} type="button" onClick={() => handleSend(q)} className="faq-chip" style={{
                     padding: '8px 14px', borderRadius: '20px', border: '1px solid #e1e8e5', background: '#fff',
                     color: '#173c3c', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
                     transition: 'all 0.2s',
-                  }}
-                  onMouseOver={(e) => (e.currentTarget.style.background = '#f0f4f2')}
-                  onMouseOut={(e) => (e.currentTarget.style.background = '#fff')}
-                  >
+                  }}>
                     {q}
                   </button>
                 ))}

@@ -25,6 +25,7 @@ const knownNutrientIds = new Set(nutrients.map((nutrient) => nutrient.id))
 export function Dashboard({
   report, supplements, onSupplements, onStart, onAnalyze, confirmedCount, needsReview,
   onSchedule, onChat, onProfile, profileIsSetup,
+  profile, medications,
 }: {
   report: AnalysisReport
   supplements: SupplementProduct[]
@@ -37,6 +38,8 @@ export function Dashboard({
   onChat?: () => void
   onProfile: () => void
   profileIsSetup: boolean
+  profile: Profile
+  medications: Medication[]
 }) {
   const hasData = report.totals.length > 0
   const [userName, setUserName] = useState('사용자')
@@ -53,13 +56,44 @@ export function Dashboard({
   }, [])
 
   useEffect(() => {
-    if (!hasData || supplements.length === 0) return
+    if (!hasData || supplements.length === 0 || !profile) return
+    const requestProfile = {
+      gender: profile.gender,
+      birthYear: profile.birthYear,
+      conditions: profile.conditions
+    }
+    const requestSupplements = supplements.map((s) => ({
+      id: s.id,
+      productName: s.productName,
+      dailyServings: s.dailyServings,
+      ingredients: s.ingredients.map((ing) => ({
+        nutrientId: ing.nutrientId,
+        standardName: ing.standardName,
+        amount: ing.amount,
+        unit: ing.unit
+      }))
+    }))
+    const requestMedications = medications.map((m) => ({
+      name: m.name,
+      memo: m.memo || undefined
+    }))
+    const requestPreferences = {
+      wakeTime: '08:00',
+      mealTimes: ['09:00', '13:00', '19:00']
+    }
+
     supabase.functions.invoke('generate-schedule', {
-      body: { supplementIds: supplements.map((s) => s.id) },
+      body: {
+        profile: requestProfile,
+        supplements: requestSupplements,
+        medications: requestMedications,
+        preferences: requestPreferences
+      },
     }).then(({ data }) => {
-      if (data?.timeline) setTodaySchedule(data.timeline)
+      const timelineData = data?.timeline || data?.slots
+      if (timelineData) setTodaySchedule(timelineData)
     }).catch(() => {}).finally(() => setScheduleLoading(false))
-  }, [hasData, supplements])
+  }, [hasData, supplements, profile, medications])
 
   const today = new Date()
   const dateStr = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일 ${'일월화수목금토'[today.getDay()]}요일`
@@ -86,15 +120,16 @@ export function Dashboard({
             </button>
           </section>
         ) : (
-          <section className="panel" style={{ padding: '32px 24px', marginBottom: '24px', background: '#f0f9f6', borderLeft: '4px solid #18ae90' }}>
-            <Sparkles size={32} color="#18ae90" style={{ marginBottom: '16px' }} />
-            <h3 style={{ fontSize: '20px', fontWeight: 850, color: '#0a6e58', margin: '0 0 10px' }}>프로필이 저장되었습니다</h3>
-            <p style={{ color: '#3d5550', fontSize: '15px', lineHeight: 1.7, margin: '0 0 20px' }}>
-              이제 영양제를 등록하고 분석을 시작할 수 있습니다. 사진, 검색, 수동 입력 중 편한 방법으로 등록하세요.
-            </p>
-            <button type="button" className="button primary" onClick={onStart} style={{ fontSize: '15px', padding: '12px 28px' }}>
-              영양제 등록하기
-            </button>
+          <section className="panel" style={{ padding: '24px', marginBottom: '24px', background: '#f0f9f6', borderLeft: '4px solid #18ae90', display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{ background: '#e0f2ed', width: '48px', height: '48px', borderRadius: '50%', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+              <Sparkles size={24} color="#18ae90" />
+            </div>
+            <div style={{ flex: 1 }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 850, color: '#0a6e58', margin: '0 0 4px' }}>프로필이 성공적으로 저장되었습니다</h3>
+              <p style={{ color: '#3d5550', fontSize: '14px', lineHeight: 1.5, margin: 0 }}>
+                이제 아래 단계를 따라 영양제를 등록하고 나만의 맞춤 영양 분석을 시작해보세요!
+              </p>
+            </div>
           </section>
         )}
 
@@ -534,13 +569,14 @@ export function SupplementWorkspace({
         body: { query: searchQuery },
       })
       if (error) throw new Error(error.message || '검색 중 오류가 발생했습니다.')
-      if (!data?.ingredients || data.ingredients.length === 0) {
+      const product = data?.products?.[0]
+      if (!product || !product.ingredients || product.ingredients.length === 0) {
         setParseWarnings(['검색 결과에서 성분 정보를 찾을 수 없습니다. 제품명을 다시 확인해주세요.'])
         return
       }
-      setProductName(data.productName || searchQuery)
-      setBrandName(data.brandName || '')
-      setDraftIngredients(data.ingredients.map((ing: ParsedIngredient & { id?: string }) => ({
+      setProductName(product.name || searchQuery)
+      setBrandName(product.brand || '')
+      setDraftIngredients(product.ingredients.map((ing: ParsedIngredient & { id?: string }) => ({
         ...ing,
         id: ing.id || createId('ing'),
         confidence: ing.confidence ?? 0.7,

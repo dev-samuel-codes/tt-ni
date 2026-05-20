@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Clock, AlertCircle, Coffee, Pill, Loader } from 'lucide-react'
-import type { SupplementProduct } from '../types'
+import type { Medication, Profile, SupplementProduct } from '../types'
 import { supabase } from '../lib/supabaseClient'
 
 interface TimelineSlot {
@@ -14,22 +14,63 @@ interface TimelineSlot {
 
 const TIMELINE_COLORS = ['#18ae90', '#30cdb0', '#d8a030', '#6b8aed', '#ea868f', '#9b5de5']
 
-export function SchedulePage({ supplements }: { supplements: SupplementProduct[] }) {
+export function SchedulePage({
+  supplements,
+  profile,
+  medications,
+}: {
+  supplements: SupplementProduct[]
+  profile: Profile
+  medications: Medication[]
+}) {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [timeline, setTimeline] = useState<TimelineSlot[]>([])
   const [isLoading, setIsLoading] = useState(supplements.length > 0)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (!(supplements.length > 0)) return
+    if (!(supplements.length > 0) || !profile) return
     let cancelled = false
+
+    const requestProfile = {
+      gender: profile.gender,
+      birthYear: profile.birthYear,
+      conditions: profile.conditions
+    }
+    const requestSupplements = supplements.map((s) => ({
+      id: s.id,
+      productName: s.productName,
+      dailyServings: s.dailyServings,
+      ingredients: s.ingredients.map((ing) => ({
+        nutrientId: ing.nutrientId,
+        standardName: ing.standardName,
+        amount: ing.amount,
+        unit: ing.unit
+      }))
+    }))
+    const requestMedications = medications.map((m) => ({
+      name: m.name,
+      memo: m.memo || undefined
+    }))
+    const requestPreferences = {
+      wakeTime: '08:00',
+      mealTimes: ['09:00', '13:00', '19:00']
+    }
+
     supabase.functions.invoke('generate-schedule', {
-      body: { supplementIds: supplements.map((s) => s.id), date: selectedDate },
+      body: {
+        profile: requestProfile,
+        supplements: requestSupplements,
+        medications: requestMedications,
+        preferences: requestPreferences,
+        date: selectedDate
+      },
     }).then(({ data, error: invokeError }) => {
       if (cancelled) return
       if (invokeError) throw new Error(invokeError.message || '스케줄 생성에 실패했습니다.')
-      if (data?.timeline) {
-        setTimeline(data.timeline.map((slot: Omit<TimelineSlot, 'color'>, idx: number) => ({
+      const timelineData = data?.timeline || data?.slots
+      if (timelineData) {
+        setTimeline(timelineData.map((slot: Omit<TimelineSlot, 'color'>, idx: number) => ({
           ...slot,
           color: TIMELINE_COLORS[idx % TIMELINE_COLORS.length],
         })))
@@ -43,7 +84,7 @@ export function SchedulePage({ supplements }: { supplements: SupplementProduct[]
       if (!cancelled) setIsLoading(false)
     })
     return () => { cancelled = true }
-  }, [supplements, selectedDate])
+  }, [supplements, selectedDate, profile, medications])
 
   // 보고서 4.3절 기반 복용 팁
   const dosageTips = [

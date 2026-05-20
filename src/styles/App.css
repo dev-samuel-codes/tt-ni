@@ -2251,4 +2251,116 @@ th {
   .mobile-overlay {
     display: block;
   }
+  
+  .workspace-page,
+  .login-page {
+    width: 100% !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
 }
+
+/* FAQ 추천 칩 호버 스타일 */
+.faq-chip {
+  transition: all 0.2s ease-in-out;
+}
+.faq-chip:hover {
+  background-color: #f0f4f2 !important;
+}
+
+/* ==========================================
+   프리미엄 마이크로 트랜지션 및 렉 없는 애니메이션
+   ========================================== */
+
+/* 1. 하드웨어 가속 기반 최상위 페이지 뷰 진입 애니메이션 (Fade & Rise-in) */
+.workspace-page,
+.login-page,
+.panel-grid,
+.chat-container {
+  animation: fade-in-up 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 2. 대시보드 카드(패널) 및 요약 카드 호버/플로팅 처리 */
+.panel,
+.metric-card {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
+              box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
+              border-color 0.25s ease !important;
+}
+
+.panel:hover,
+.metric-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 40px rgba(24, 174, 144, 0.1), 0 2px 8px rgba(0, 0, 0, 0.02) !important;
+  border-color: #bad3c8 !important;
+}
+
+/* 3. 영양제 목록 카드, 경고 주의 행 호버링 개선 (Fade & Slide) */
+.product-row,
+.analysis-item,
+.recommendation-panel article,
+.risk-row {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+              background-color 0.2s ease, 
+              box-shadow 0.2s ease, 
+              border-color 0.2s ease !important;
+}
+
+.product-row:hover,
+.analysis-item:hover,
+.recommendation-panel article:hover,
+.risk-row:hover {
+  transform: translateX(3px);
+  background-color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(24, 174, 144, 0.06) !important;
+  border-color: #c0d3c9 !important;
+}
+
+/* 4. 입력 폼 포커스 트랜지션 및 글로우 효과 */
+input,
+select,
+textarea {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none !important;
+  border-color: #18ae90 !important;
+  box-shadow: 0 0 0 3px rgba(24, 174, 144, 0.15) !important;
+}
+
+/* 5. 아이콘 버튼 호버 시 틸팅 및 리액티브 피드백 */
+.icon-button {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  background-color: #e2eae5 !important;
+  color: #18ae90 !important;
+  transform: scale(1.05);
+}
+
+/* 6. 복용 일정 세부 정보 카드 호버 처리 */
+.panel-grid .panel div[style*="background: #f9fbfb"] {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.panel-grid .panel div[style*="background: #f9fbfb"]:hover {
+  transform: translateX(3px);
+  box-shadow: 0 4px 12px rgba(24, 174, 144, 0.06);
+  border-color: #ccdcd3 !important;
+}
+
