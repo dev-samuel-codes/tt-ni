@@ -11,8 +11,17 @@ WHERE id NOT IN (
   ORDER BY user_id, condition_code, created_at DESC
 );
 
-ALTER TABLE public.user_conditions
-  ADD CONSTRAINT IF NOT EXISTS uq_user_conditions_user_condition UNIQUE (user_id, condition_code);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'uq_user_conditions_user_condition'
+      AND conrelid = 'public.user_conditions'::regclass
+  ) THEN
+    ALTER TABLE public.user_conditions
+      ADD CONSTRAINT uq_user_conditions_user_condition UNIQUE (user_id, condition_code);
+  END IF;
+END $$;
 
 DELETE FROM public.user_medications
 WHERE id NOT IN (
@@ -21,5 +30,14 @@ WHERE id NOT IN (
   ORDER BY user_id, medication_name, updated_at DESC NULLS LAST
 );
 
-ALTER TABLE public.user_medications
-  ADD CONSTRAINT IF NOT EXISTS uq_user_medications_user_med UNIQUE (user_id, medication_name);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'uq_user_medications_user_med'
+      AND conrelid = 'public.user_medications'::regclass
+  ) THEN
+    ALTER TABLE public.user_medications
+      ADD CONSTRAINT uq_user_medications_user_med UNIQUE (user_id, medication_name);
+  END IF;
+END $$;
