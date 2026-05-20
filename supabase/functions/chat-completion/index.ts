@@ -252,7 +252,7 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     if (!supabaseUrl) throw new Error('SUPABASE_URL is required')
 
-    const model = Deno.env.get('OPENAI_CHAT_MODEL') ?? 'gpt-4o-mini'
+    const model = Deno.env.get('OPENAI_CHAT_MODEL') ?? 'gpt-5-mini'
 
     const supabase = createClient(supabaseUrl, getServiceKey(), {
       global: { headers: { Authorization: authHeader } },

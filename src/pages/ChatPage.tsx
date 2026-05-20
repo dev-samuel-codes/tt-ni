@@ -87,7 +87,7 @@ export function ChatPage() {
       if (!user) return
 
       const [{ data: profiles }, { data: supplements }, { data: reports }] = await Promise.all([
-        supabase.from('profiles').select('id').limit(1),
+        supabase.from('user_profiles').select('id').limit(1),
         supabase.from('supplement_products').select('id'),
         supabase.from('analysis_reports').select('id').order('created_at', { ascending: false }).limit(1),
       ])
