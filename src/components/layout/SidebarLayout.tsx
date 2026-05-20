@@ -58,7 +58,13 @@ export function SidebarLayout({
           <img src="/tt-ni-logo.svg" alt="tt-ni" />
         </a>
         <div className="mobile-header-right">
-          <AuthPanel sessionEmail={sessionEmail} onSessionEmail={onSessionEmail} variant="dock" />
+          {sessionEmail ? (
+            <AuthPanel sessionEmail={sessionEmail} onSessionEmail={onSessionEmail} variant="dock" />
+          ) : (
+            <button type="button" className="button primary mint small" onClick={() => handleNavClick(routes.profile)}>
+              로그인
+            </button>
+          )}
         </div>
       </header>
 
