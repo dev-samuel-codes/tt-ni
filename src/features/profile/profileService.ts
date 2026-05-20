@@ -4,7 +4,7 @@ import type { Medication, Profile } from '../../types'
 /**
  * 프로필, 건강 상태, 알레르기, 식이 제한, 복용 약물을 한 번에 저장합니다.
  * user_profiles은 upsert(존재하면 갱신, 없으면 삽입),
- * user_conditions와 user_medications은 delete 후 insert로 전체 교체합니다.
+ * user_conditions와 user_medications은 insert 후 stale 항목만 delete하여 데이터 유실을 방지합니다.
  * condition_code prefix 규칙: 일반 질환(없음), allergy:(알레르기), diet:(식이 제한)
  */
 export async function saveProfileBundle(profile: Profile, medications: Medication[]): Promise<string> {
@@ -30,15 +30,34 @@ export async function saveProfileBundle(profile: Profile, medications: Medicatio
     ...profile.allergies.map((name) => ({ condition_code: `allergy:${name.toLowerCase()}`, condition_name: name, severity: 'caution' })),
     ...profile.dietaryRestrictions.map((name) => ({ condition_code: `diet:${name.toLowerCase()}`, condition_name: name, severity: 'notice' })),
   ]
-  await supabase.from('user_conditions').delete().eq('user_id', userId)
+
+  const newConditionCodes = new Set(conditionRows.map((r) => r.condition_code))
+
   if (conditionRows.length > 0) {
-    const conditionResult = await supabase.from('user_conditions').insert(conditionRows.map((row) => ({ ...row, user_id: userId })))
+    const conditionResult = await supabase.from('user_conditions').upsert(
+      conditionRows.map((row) => ({ ...row, user_id: userId })),
+      { onConflict: 'user_id, condition_code' }
+    )
     if (conditionResult.error) throw conditionResult.error
   }
 
-  await supabase.from('user_medications').delete().eq('user_id', userId)
+  const { data: existingConditions } = await supabase
+    .from('user_conditions')
+    .select('id, condition_code')
+    .eq('user_id', userId)
+
+  const staleConditionIds = (existingConditions ?? [])
+    .filter((row: { id: string; condition_code: string }) => !newConditionCodes.has(row.condition_code))
+    .map((row: { id: string }) => row.id)
+
+  if (staleConditionIds.length > 0) {
+    await supabase.from('user_conditions').delete().in('id', staleConditionIds)
+  }
+
+  const newMedicationNames = new Set(medications.map((m) => m.name.toLowerCase()))
+
   if (medications.length > 0) {
-    const medicationResult = await supabase.from('user_medications').insert(
+    const medicationResult = await supabase.from('user_medications').upsert(
       medications.map((medication) => ({
         user_id: userId,
         medication_name: medication.name,
@@ -46,8 +65,22 @@ export async function saveProfileBundle(profile: Profile, medications: Medicatio
         frequency: medication.frequency,
         memo: medication.memo,
       })),
+      { onConflict: 'user_id, medication_name' }
     )
     if (medicationResult.error) throw medicationResult.error
+  }
+
+  const { data: existingMedications } = await supabase
+    .from('user_medications')
+    .select('id, medication_name')
+    .eq('user_id', userId)
+
+  const staleMedicationIds = (existingMedications ?? [])
+    .filter((row: { id: string; medication_name: string }) => !newMedicationNames.has(row.medication_name.toLowerCase()))
+    .map((row: { id: string }) => row.id)
+
+  if (staleMedicationIds.length > 0) {
+    await supabase.from('user_medications').delete().in('id', staleMedicationIds)
   }
 
   return '프로필과 복용 정보를 저장했습니다.'

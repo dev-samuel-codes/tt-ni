@@ -55,6 +55,14 @@ const brandPatterns = [
   "Doctor's Best", 'Life Extension', 'Kirkland Signature', 'Centrum',
   'One A Day', 'Optimum Nutrition', 'MegaFood', 'New Chapter',
   'Source Naturals', 'Solaray', 'Swanson', 'Carlson Labs',
+  '종근당', '녹십자', '대웅제약', '유한양행', '한미약품',
+  '일동제약', '동아제약', '광동제약', '한독', '일양약품',
+  '안국건강', '뉴트리원', '내츄럴플러스', '에스더포뮬러',
+  '비타민하우스', 'GNM 자연의품격', '닥터스베스트', '뉴트리코어',
+  '고려은단', 'JW중외제약', '셀트리온', '삼성제약',
+  '솔가', '네이처메이드', '센트룸', '센트럼',
+  '스완슨', '닥터스 초이스', '라이프익스텐션', '뉴트라라이프',
+  '닥터에스더', '닥터린', '뉴트리코스트', '캘리포니아골드뉴트리션',
 ]
 
 /**

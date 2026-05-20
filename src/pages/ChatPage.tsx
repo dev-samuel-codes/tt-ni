@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabaseClient'
 
 interface ChatMessage {
   role: 'user' | 'assistant'
-  text: string
+  content: string
 }
 
 interface ChatSession {
@@ -19,7 +19,7 @@ export function ChatPage() {
   const [activeSessionId, setActiveSessionId] = useState<string>('')
   const [sessionsLoading, setSessionsLoading] = useState(true)
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'assistant', text: '안녕하세요! 등록하신 영양제와 건강 상태에 대해 궁금한 점을 물어보세요.' }
+    { role: 'assistant', content: '안녕하세요! 등록하신 영양제와 건강 상태에 대해 궁금한 점을 물어보세요.' }
   ])
   const [isLoading, setIsLoading] = useState(false)
   const [rateLimited, setRateLimited] = useState(false)
@@ -64,7 +64,7 @@ export function ChatPage() {
     try {
       const { data } = await supabase
         .from('chat_messages')
-        .select('role, text')
+        .select('role, content')
         .eq('session_id', sessionId)
         .order('created_at', { ascending: true })
 
@@ -72,7 +72,7 @@ export function ChatPage() {
         setMessages(data as ChatMessage[])
       } else {
         setMessages([
-          { role: 'assistant', text: '안녕하세요! 등록하신 영양제와 건강 상태에 대해 궁금한 점을 물어보세요.' }
+          { role: 'assistant', content: '안녕하세요! 등록하신 영양제와 건강 상태에 대해 궁금한 점을 물어보세요.' }
         ])
       }
     } catch {
@@ -127,7 +127,7 @@ export function ChatPage() {
       await supabase.from('chat_messages').insert({
         session_id: sessionId,
         role: msg.role,
-        text: msg.text,
+        content: msg.content,
       })
     } catch {
       // best-effort save
@@ -138,7 +138,7 @@ export function ChatPage() {
     const msgText = text || input
     if (!msgText.trim() || isLoading || rateLimited) return
 
-    const userMsg: ChatMessage = { role: 'user', text: msgText }
+    const userMsg: ChatMessage = { role: 'user', content: msgText }
     const newMessages = [...messages, userMsg]
     setMessages(newMessages)
     setInput('')
@@ -175,7 +175,7 @@ export function ChatPage() {
     }
 
     // Placeholder for AI response while streaming
-    setMessages((prev) => [...prev, { role: 'assistant', text: '' }])
+    setMessages((prev) => [...prev, { role: 'assistant', content: '' }])
 
     // AI 개인화 컨텍스트 데이터 수집
     let chatContext: Record<string, unknown> = {
@@ -269,7 +269,7 @@ export function ChatPage() {
           const updated = [...prev]
           updated[updated.length - 1] = {
             role: 'assistant',
-            text: '요청이 너무 많아 잠시 제한되었습니다. 1분 후에 다시 물어봐 주세요.',
+            content: '요청이 너무 많아 잠시 제한되었습니다. 1분 후에 다시 물어봐 주세요.',
           }
           return updated
         })
@@ -309,7 +309,7 @@ export function ChatPage() {
                 fullTextRef.current += content
                 setMessages((prev) => {
                   const updated = [...prev]
-                  updated[updated.length - 1] = { role: 'assistant', text: fullTextRef.current }
+                  updated[updated.length - 1] = { role: 'assistant', content: fullTextRef.current }
                   return updated
                 })
               }
@@ -322,14 +322,14 @@ export function ChatPage() {
 
       // Save final message
       if (sessionId !== 'local' && fullTextRef.current) {
-        await saveMessage(sessionId, { role: 'assistant', text: fullTextRef.current })
+        await saveMessage(sessionId, { role: 'assistant', content: fullTextRef.current })
       }
     } catch {
       setMessages((prev) => {
         const updated = [...prev]
         updated[updated.length - 1] = {
           role: 'assistant',
-          text: '죄송합니다. 응답을 받아오는 중 문제가 발생했어요. 다시 시도해주세요.',
+          content: '죄송합니다. 응답을 받아오는 중 문제가 발생했어요. 다시 시도해주세요.',
         }
           return updated
       })
@@ -358,7 +358,7 @@ export function ChatPage() {
             const updated = prev.map((s) => ({ ...s, active: false }))
             return [{ id: newId, title: '새 대화', active: true }, ...updated]
           })
-          setMessages([{ role: 'assistant', text: '안녕하세요! 등록하신 영양제와 건강 상태에 대해 궁금한 점을 물어보세요.' }])
+          setMessages([{ role: 'assistant', content: '안녕하세요! 등록하신 영양제와 건강 상태에 대해 궁금한 점을 물어보세요.' }])
           setRateLimited(false)
         }}>
           <Plus size={14} /> 새 대화
@@ -371,7 +371,7 @@ export function ChatPage() {
             setActiveSessionId(s.id)
             setRateLimited(false)
             if (s.id !== 'local') loadMessages(s.id)
-            else setMessages([{ role: 'assistant', text: '안녕하세요! 등록하신 영양제와 건강 상태에 대해 궁금한 점을 물어보세요.' }])
+            else setMessages([{ role: 'assistant', content: '안녕하세요! 등록하신 영양제와 건강 상태에 대해 궁금한 점을 물어보세요.' }])
           }} style={{
             width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '8px', border: 'none',
             background: s.active ? '#173c3c' : 'transparent', color: s.active ? '#fff' : '#52605b',
@@ -413,7 +413,7 @@ export function ChatPage() {
                 border: msg.role === 'user' ? 'none' : '1px solid #e1e8e5',
                 padding: '12px 16px', borderRadius: '12px', maxWidth: '75%', fontSize: '15px', lineHeight: '1.6', color: '#1a2c28'
               }}>
-                {msg.text}
+                {msg.content}
               </div>
             </div>
           ))}

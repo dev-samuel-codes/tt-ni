@@ -21,6 +21,18 @@ export interface RefineResponse {
 /** 라벨 이미지 업로드 시 허용되는 MIME 타입 */
 export const allowedLabelMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
+/** 최대 업로드 파일 크기 (10MB) */
+const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024
+
+/** 파일명에서 경로 탐색 문자를 제거하여 안전하게 만듭니다. */
+function sanitizeFileName(name: string): string {
+  return name
+    .replace(/\.\./g, '')
+    .replace(/[/\\]/g, '_')
+    .replace(/[^a-zA-Z0-9ㄱ-ㅎ가-힣._-]/g, '_')
+    .slice(0, 200)
+}
+
 /**
  * 성분명 정제를 위해 Supabase Edge Function(refine-ingredients)을 호출합니다.
  * DB 매칭 + LLM 분석을 통해 원재료명을 표준 영양소로 변환하고 효능 정보를 추가합니다.
@@ -72,6 +84,14 @@ export async function parseLabelImage(
   try {
     if (!file) throw new Error('성분표 이미지 파일을 선택해야 AI 파싱을 실행할 수 있습니다.')
 
+    if (file.size > MAX_UPLOAD_SIZE_BYTES) {
+      throw new Error(`파일 크기는 최대 10MB까지 업로드할 수 있습니다. 현재 파일 크기: ${(file.size / (1024 * 1024)).toFixed(1)}MB`)
+    }
+
+    if (file.size === 0) {
+      throw new Error('빈 파일은 업로드할 수 없습니다.')
+    }
+
     if (await isHeic(file)) {
       onStepChange?.('converting')
       const converted = await convertHeicToJpeg(file)
@@ -86,8 +106,9 @@ export async function parseLabelImage(
     const { data: authData, error: authError } = await supabase.auth.getUser()
     if (authError || !authData.user) throw new Error('로그인 후 성분표 이미지를 업로드할 수 있습니다.')
 
+    const safeName = sanitizeFileName(file.name)
     onStepChange?.('uploading')
-    const path = `${authData.user.id}/${crypto.randomUUID()}-${file.name}`
+    const path = `${authData.user.id}/${crypto.randomUUID()}-${safeName}`
     const upload = await supabase.storage.from('label-images').upload(path, file, {
       contentType: file.type || 'application/octet-stream',
       upsert: false,
@@ -168,14 +189,19 @@ export async function updateSupplementProduct(
 export async function updateSupplementIngredient(
   ingredientId: string,
   patch: Partial<Pick<ParsedIngredient, 'standardName' | 'amount' | 'unit'>>,
+  dailyServings?: number,
 ): Promise<string> {
+  const updatePayload: Record<string, unknown> = {}
+  if (patch.standardName !== undefined) updatePayload.standard_name = patch.standardName
+  if (patch.amount !== undefined) {
+    updatePayload.amount = patch.amount
+    updatePayload.amount_per_daily_serving = (dailyServings && dailyServings > 0) ? (patch.amount ?? 0) * dailyServings : patch.amount
+  }
+  if (patch.unit !== undefined) updatePayload.unit = patch.unit
+
   const { error } = await supabase
     .from('supplement_ingredients')
-    .update({
-      ...(patch.standardName !== undefined && { standard_name: patch.standardName }),
-      ...(patch.amount !== undefined && { amount: patch.amount, amount_per_daily_serving: patch.amount }),
-      ...(patch.unit !== undefined && { unit: patch.unit }),
-    })
+    .update(updatePayload)
     .eq('id', ingredientId)
   if (error) throw new Error('성분 수정에 실패했습니다: ' + error.message)
   return '성분 정보를 수정했습니다.'
@@ -221,7 +247,7 @@ export async function saveSupplementProduct(supplement: SupplementProduct, label
         standard_name: ingredient.standardName,
         amount: ingredient.amount,
         unit: ingredient.unit,
-        amount_per_daily_serving: ingredient.amount,
+        amount_per_daily_serving: ingredient.amount !== null ? ingredient.amount * (supplement.dailyServings || 1) : null,
         confidence: ingredient.confidence,
         review_required: ingredient.reviewRequired,
       })),

@@ -51,7 +51,7 @@ const SYNERGY_GROUPS = [
     reportReference: '보고서 2.1절',
   },
   {
-    nutrients: ['iron', 'vitamin_c'],
+    nutrients: ['iron', 'vitamin_c', 'selenium'],
     label: '철분 + 비타민 C + 셀레늄',
     benefit: '비타민 C가 철분 흡수를 돕고, 셀레늄이 흡수된 철분의 산화를 방지하여 조혈 기능과 조직 산소 공급을 강화합니다.',
     reportReference: '보고서 2.1절',

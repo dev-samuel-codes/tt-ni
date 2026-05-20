@@ -79,10 +79,18 @@ export const nutrients: Nutrient[] = [
     riskLevel: 'medium',
   },
   {
+    id: 'selenium',
+    standardName: '셀레늄',
+    category: '미네랄',
+    aliases: ['selenium', 'se', '셀레늄', '셀렌'],
+    defaultUnit: 'mcg',
+    riskLevel: 'high',
+  },
+  {
     id: 'magnesium',
     standardName: '마그네슘',
     category: '미네랄',
-    aliases: ['magnesium', 'mg ', '마그네슘'],
+    aliases: ['magnesium', '마그네슘'],
     defaultUnit: 'mg',
     riskLevel: 'medium',
   },
@@ -173,14 +181,16 @@ export const referenceValues: ReferenceValue[] = [
   { nutrientId: 'vitamin_k', gender: 'female', ageMin: 19, ageMax: 150, ai: 90, unit: 'mcg' },
   { nutrientId: 'calcium', gender: 'any', ageMin: 19, ageMax: 50, rda: 1000, ul: 2500, unit: 'mg' },
   { nutrientId: 'calcium', gender: 'any', ageMin: 51, ageMax: 150, rda: 1200, ul: 2000, unit: 'mg' },
-  { nutrientId: 'magnesium', gender: 'male', ageMin: 19, ageMax: 150, rda: 420, ul: 350, unit: 'mg' },
-  { nutrientId: 'magnesium', gender: 'female', ageMin: 19, ageMax: 150, rda: 320, ul: 350, unit: 'mg' },
+  { nutrientId: 'magnesium', gender: 'male', ageMin: 19, ageMax: 150, rda: 420, unit: 'mg' },
+  { nutrientId: 'magnesium', gender: 'female', ageMin: 19, ageMax: 150, rda: 320, unit: 'mg' },
   { nutrientId: 'zinc', gender: 'male', ageMin: 19, ageMax: 150, rda: 11, ul: 40, unit: 'mg' },
   { nutrientId: 'zinc', gender: 'female', ageMin: 19, ageMax: 150, rda: 8, ul: 40, unit: 'mg' },
   { nutrientId: 'iron', gender: 'male', ageMin: 19, ageMax: 150, rda: 8, ul: 45, unit: 'mg' },
   { nutrientId: 'iron', gender: 'female', ageMin: 19, ageMax: 50, rda: 18, ul: 45, unit: 'mg' },
   { nutrientId: 'iron', gender: 'female', ageMin: 51, ageMax: 150, rda: 8, ul: 45, unit: 'mg' },
   { nutrientId: 'omega3', gender: 'any', ageMin: 19, ageMax: 150, ai: 1100, unit: 'mg' },
+  { nutrientId: 'selenium', gender: 'male', ageMin: 19, ageMax: 150, rda: 85, ul: 400, unit: 'mcg' },
+  { nutrientId: 'selenium', gender: 'female', ageMin: 19, ageMax: 150, rda: 75, ul: 400, unit: 'mcg' },
 ]
 
 /**
