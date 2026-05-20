@@ -1,6 +1,6 @@
 import '@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
+import { corsHeaders, getCorsHeaders, jsonResponse } from '../_shared/cors.ts'
 
 interface Profile {
   gender?: string
@@ -237,16 +237,16 @@ async function checkRateLimit(
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
-  if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405)
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders(req) })
+  if (req.method !== 'POST') return jsonResponse(req, { error: 'Method not allowed' }, 405)
 
   try {
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) return jsonResponse({ error: '인증 헤더가 필요합니다.' }, 401)
+    if (!authHeader) return jsonResponse(req, { error: '인증 헤더가 필요합니다.' }, 401)
 
     const openaiKey = Deno.env.get('OPENAI_API_KEY')
     if (!openaiKey) {
-      return jsonResponse({ error: 'OPENAI_API_KEY가 설정되지 않았습니다. 서버 관리자에게 문의하세요.' }, 500)
+      return jsonResponse(req, { error: 'OPENAI_API_KEY가 설정되지 않았습니다. 서버 관리자에게 문의하세요.' }, 500)
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
@@ -262,23 +262,23 @@ Deno.serve(async (req) => {
       authHeader.replace('Bearer ', '')
     )
     if (userError || !userData.user) {
-      return jsonResponse({ error: '유효하지 않은 사용자 세션입니다.' }, 401)
+      return jsonResponse(req, { error: '유효하지 않은 사용자 세션입니다.' }, 401)
     }
 
     const body = (await req.json()) as ChatRequest
     const { sessionId, message, context } = body
 
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
-      return jsonResponse({ error: '메시지를 입력해주세요.' }, 400)
+      return jsonResponse(req, { error: '메시지를 입력해주세요.' }, 400)
     }
     if (!context || !context.profile) {
-      return jsonResponse({ error: '사용자 컨텍스트가 필요합니다.' }, 400)
+      return jsonResponse(req, { error: '사용자 컨텍스트가 필요합니다.' }, 400)
     }
 
     // Rate limiting
     const { allowed } = await checkRateLimit(supabase, userData.user.id)
     if (!allowed) {
-      return jsonResponse(
+      return jsonResponse(req,
         {
           error: `일일 메시지 한도(${MAX_MESSAGES_PER_DAY}개)를 초과했습니다. 내일 다시 이용해주세요.`,
         },
@@ -304,7 +304,7 @@ Deno.serve(async (req) => {
         .single()
 
       if (!existingSession) {
-        return jsonResponse({ error: '채팅 세션을 찾을 수 없습니다.' }, 404)
+        return jsonResponse(req, { error: '채팅 세션을 찾을 수 없습니다.' }, 404)
       }
 
       await supabase
@@ -356,11 +356,11 @@ Deno.serve(async (req) => {
     if (!openaiResponse.ok) {
       const errorText = await openaiResponse.text()
       console.error('OpenAI API error:', errorText)
-      return jsonResponse({ error: `AI 응답 생성 중 오류가 발생했습니다.` }, 502)
+      return jsonResponse(req, { error: `AI 응답 생성 중 오류가 발생했습니다.` }, 502)
     }
 
     if (!openaiResponse.body) {
-      return jsonResponse({ error: 'AI 응답 스트림을 열 수 없습니다.' }, 500)
+      return jsonResponse(req, { error: 'AI 응답 스트림을 열 수 없습니다.' }, 500)
     }
 
     const encoder = new TextEncoder()
@@ -432,7 +432,7 @@ Deno.serve(async (req) => {
 
     return new Response(stream, {
       headers: {
-        ...corsHeaders,
+        ...getCorsHeaders(req),
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
@@ -440,7 +440,7 @@ Deno.serve(async (req) => {
     })
   } catch (error) {
     console.error('Chat completion error:', error)
-    return jsonResponse(
+    return jsonResponse(req,
       {
         error:
           error instanceof Error ? error.message : '채팅 처리 중 오류가 발생했습니다.',

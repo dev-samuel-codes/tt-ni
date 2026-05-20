@@ -1,6 +1,6 @@
 import '@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
+import { corsHeaders, getCorsHeaders, jsonResponse } from '../_shared/cors.ts'
 
 /** Exa.ai 검색 요청 */
 interface ExaSearchRequest {
@@ -148,15 +148,15 @@ function getServiceKey(): string {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
-  if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405)
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders(req) })
+  if (req.method !== 'POST') return jsonResponse(req, { error: 'Method not allowed' }, 405)
 
   try {
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) return jsonResponse({ error: 'Authorization header is required' }, 401)
+    if (!authHeader) return jsonResponse(req, { error: 'Authorization header is required' }, 401)
 
     const { query } = await req.json() as ExaSearchRequest
-    if (!query || typeof query !== 'string') return jsonResponse({ error: 'query is required' }, 400)
+    if (!query || typeof query !== 'string') return jsonResponse(req, { error: 'query is required' }, 400)
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const exaApiKey = Deno.env.get('EXA_API_KEY')
@@ -167,7 +167,7 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     })
     const { data: userData, error: userError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
-    if (userError || !userData.user) return jsonResponse({ error: 'Invalid user session' }, 401)
+    if (userError || !userData.user) return jsonResponse(req, { error: 'Invalid user session' }, 401)
 
     const searchResponse = await fetch('https://api.exa.ai/search', {
       method: 'POST',
@@ -191,8 +191,8 @@ Deno.serve(async (req) => {
     const searchData = await searchResponse.json() as ExaSearchResponse
     const products = (searchData.results ?? []).map(mapResult)
 
-    return jsonResponse({ products })
+    return jsonResponse(req, { products })
   } catch (error) {
-    return jsonResponse({ error: error instanceof Error ? error.message : 'Unexpected search error' }, 500)
+    return jsonResponse(req, { error: error instanceof Error ? error.message : 'Unexpected search error' }, 500)
   }
 })

@@ -1,6 +1,6 @@
 import '@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
+import { corsHeaders, getCorsHeaders, jsonResponse } from '../_shared/cors.ts'
 
 interface RawIngredient {
   name: string
@@ -119,16 +119,16 @@ function getServiceKey(): string {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
-  if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405)
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders(req) })
+  if (req.method !== 'POST') return jsonResponse(req, { error: 'Method not allowed' }, 405)
 
   try {
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) return jsonResponse({ error: 'Authorization header is required' }, 401)
+    if (!authHeader) return jsonResponse(req, { error: 'Authorization header is required' }, 401)
 
     const { productName, brandName, ingredients } = await req.json() as RefineRequest
-    if (!productName) return jsonResponse({ error: 'productName is required' }, 400)
-    if (!ingredients || ingredients.length === 0) return jsonResponse({ error: 'ingredients array is required' }, 400)
+    if (!productName) return jsonResponse(req, { error: 'productName is required' }, 400)
+    if (!ingredients || ingredients.length === 0) return jsonResponse(req, { error: 'ingredients array is required' }, 400)
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const openaiKey = Deno.env.get('OPENAI_API_KEY')
@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
     })
 
     const { data: userData, error: userError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
-    if (userError || !userData.user) return jsonResponse({ error: 'Invalid user session' }, 401)
+    if (userError || !userData.user) return jsonResponse(req, { error: 'Invalid user session' }, 401)
 
     const usageDate = new Date().toISOString().split('T')[0]
     const { data: usageData } = await supabase
@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
 
     const dailyLimit = 50
     if (usageData && usageData.call_count >= dailyLimit) {
-      return jsonResponse({
+      return jsonResponse(req, {
         error: 'DAILY_LIMIT_EXCEEDED',
         message: '일일 API 호출 한도를 초과했습니다. 내일 다시 시도해주세요.',
         limit: dailyLimit,
@@ -292,8 +292,8 @@ Return JSON array only. Be precise with amounts and units.`
         : '영양성분을 찾을 수 없습니다.',
     }
 
-    return jsonResponse(response)
+    return jsonResponse(req, response)
   } catch (error) {
-    return jsonResponse({ error: error instanceof Error ? error.message : 'Unexpected error' }, 500)
+    return jsonResponse(req, { error: error instanceof Error ? error.message : 'Unexpected error' }, 500)
   }
 })

@@ -1,5 +1,5 @@
 import '@supabase/functions-js/edge-runtime.d.ts'
-import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
+import { corsHeaders, getCorsHeaders, jsonResponse } from '../_shared/cors.ts'
 
 interface Profile {
   gender: string
@@ -485,19 +485,19 @@ function generateSlotWarnings(
 // ---------------------------------------------------------------------------
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
-  if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405)
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders(req) })
+  if (req.method !== 'POST') return jsonResponse(req, { error: 'Method not allowed' }, 405)
 
   try {
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) return jsonResponse({ error: 'Authorization header is required' }, 401)
+    if (!authHeader) return jsonResponse(req, { error: 'Authorization header is required' }, 401)
 
     const body: RequestBody = await req.json()
     const { profile, supplements, medications = [], preferences } = body
 
-    if (!profile) return jsonResponse({ error: 'profile is required' }, 400)
+    if (!profile) return jsonResponse(req, { error: 'profile is required' }, 400)
     if (!supplements || !Array.isArray(supplements) || supplements.length === 0) {
-      return jsonResponse({ error: 'supplements is required and must be a non-empty array' }, 400)
+      return jsonResponse(req, { error: 'supplements is required and must be a non-empty array' }, 400)
     }
 
     const hasGI = hasGIissues(profile.conditions)
@@ -552,8 +552,8 @@ Deno.serve(async (req) => {
       resultSlots.push(output)
     }
 
-    return jsonResponse({ slots: resultSlots, timeline: resultSlots })
+    return jsonResponse(req, { slots: resultSlots, timeline: resultSlots })
   } catch (error) {
-    return jsonResponse({ error: error instanceof Error ? error.message : 'Unexpected error' }, 500)
+    return jsonResponse(req, { error: error instanceof Error ? error.message : 'Unexpected error' }, 500)
   }
 })

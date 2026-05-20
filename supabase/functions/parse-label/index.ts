@@ -1,6 +1,6 @@
 import '@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
+import { corsHeaders, getCorsHeaders, jsonResponse } from '../_shared/cors.ts'
 
 type Unit = 'mg' | 'mcg' | 'IU' | 'g' | 'CFU' | 'unknown'
 
@@ -113,16 +113,16 @@ function getOutputText(payload: { choices?: Array<{ message?: { content?: string
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
-  if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405)
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders(req) })
+  if (req.method !== 'POST') return jsonResponse(req, { error: 'Method not allowed' }, 405)
 
   try {
     // --- 인증 및 요청 검증 ---
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) return jsonResponse({ error: 'Authorization header is required' }, 401)
+    if (!authHeader) return jsonResponse(req, { error: 'Authorization header is required' }, 401)
 
     const { image_path } = await req.json() as { image_path?: string }
-    if (!image_path) return jsonResponse({ error: 'image_path is required' }, 400)
+    if (!image_path) return jsonResponse(req, { error: 'image_path is required' }, 400)
 
     // --- Supabase & OpenAI 클라이언트 초기화 ---
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
@@ -136,8 +136,8 @@ Deno.serve(async (req) => {
 
     // --- 사용자 인증 및 이미지 소유권 확인 ---
     const { data: userData, error: userError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
-    if (userError || !userData.user) return jsonResponse({ error: 'Invalid user session' }, 401)
-    if (!image_path.startsWith(`${userData.user.id}/`)) return jsonResponse({ error: 'Image path does not belong to this user' }, 403)
+    if (userError || !userData.user) return jsonResponse(req, { error: 'Invalid user session' }, 401)
+    if (!image_path.startsWith(`${userData.user.id}/`)) return jsonResponse(req, { error: 'Image path does not belong to this user' }, 403)
 
     // --- Storage에서 이미지 다운로드 및 Base64 인코딩 ---
     const { data: imageBlob, error: downloadError } = await supabase.storage.from('label-images').download(image_path)
@@ -228,8 +228,8 @@ Deno.serve(async (req) => {
       raw_gpt_json: parsed,
     })
 
-    return jsonResponse(normalized)
+    return jsonResponse(req, normalized)
   } catch (error) {
-    return jsonResponse({ error: error instanceof Error ? error.message : 'Unexpected parse error' }, 500)
+    return jsonResponse(req, { error: error instanceof Error ? error.message : 'Unexpected parse error' }, 500)
   }
 })
