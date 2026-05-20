@@ -153,7 +153,7 @@ try {
   if (!errors.some((error) => error.startsWith('Supabase secret'))) pass('required Supabase Edge Function secrets exist')
 
   const functions = runCli(['functions', 'list', '--project-ref', projectRef])
-  for (const name of ['parse-label', 'run-analysis']) {
+  for (const name of ['parse-label', 'run-analysis', 'refine-ingredients', 'exa-search', 'chat-completion', 'generate-schedule']) {
     if (!new RegExp(`${name}\\s+\\|\\s+ACTIVE`).test(functions)) fail(`Edge Function ${name} is not ACTIVE.`)
     const deployedAt = parseFunctionUpdatedAt(functions, name)
     const localChangedAt = maxMtime(join(root, 'supabase/functions', name))

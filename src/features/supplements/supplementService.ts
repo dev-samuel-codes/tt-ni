@@ -157,11 +157,16 @@ export function createManualIngredient(): ParsedIngredient {
  * 영양제 제품 정보와 복용 정보를 업데이트합니다.
  * 제품명/브랜드는 supplement_products 테이블에서,
  * 복용 횟수/시간은 user_supplements 테이블에서 각각 업데이트합니다.
+ * 인증 확인 후 user_id 필터를 추가하여 RLS와 무관하게 정확한 행만 갱신합니다.
  */
 export async function updateSupplementProduct(
   productId: string,
   patch: Partial<Pick<SupplementProduct, 'productName' | 'brandName' | 'dailyServings' | 'intakeTime'>>,
 ): Promise<string> {
+  const { data: authData, error: authError } = await supabase.auth.getUser()
+  if (authError) throw new Error('세션이 만료되었습니다. 다시 로그인해주세요.')
+  if (!authData.user) throw new Error('로그인 정보를 확인할 수 없습니다. 다시 로그인해주세요.')
+
   const { error } = await supabase
     .from('supplement_products')
     .update({
@@ -169,6 +174,7 @@ export async function updateSupplementProduct(
       ...(patch.brandName !== undefined && { brand_name: patch.brandName }),
     })
     .eq('id', productId)
+    .eq('owner_user_id', authData.user.id)
   if (error) throw new Error('제품 정보 수정에 실패했습니다: ' + error.message)
 
   if (patch.dailyServings !== undefined || patch.intakeTime !== undefined) {
@@ -179,6 +185,7 @@ export async function updateSupplementProduct(
         ...(patch.intakeTime !== undefined && { intake_time: patch.intakeTime }),
       })
       .eq('product_id', productId)
+      .eq('user_id', authData.user.id)
     if (usError) throw new Error('복용 정보 수정에 실패했습니다: ' + usError.message)
   }
 

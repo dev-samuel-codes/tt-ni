@@ -34,7 +34,7 @@ requireValue(process.env.TT_NI_QA_EMAIL ?? qa.email, 'TT_NI_QA_EMAIL')
 requireValue(process.env.TT_NI_QA_PASSWORD ?? qa.password, 'TT_NI_QA_PASSWORD')
 requireValue(process.env.TT_NI_LABEL_IMAGE ?? qa.labelImage, 'TT_NI_LABEL_IMAGE')
 
-for (const functionName of ['parse-label', 'run-analysis']) {
+for (const functionName of ['parse-label', 'run-analysis', 'refine-ingredients', 'exa-search', 'chat-completion', 'generate-schedule']) {
   run('supabase', ['functions', 'deploy', functionName, '--project-ref', projectRef, '--use-api'])
 }
 

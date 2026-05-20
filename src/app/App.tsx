@@ -78,7 +78,10 @@ function App() {
       const { data, error } = await supabase.functions.invoke('run-analysis', {
         body: { profile, medications, supplements },
       })
-      if (error) throw error
+      if (error) {
+        const errMsg = typeof error === 'string' ? error : (error as Error).message || '서버 분석 중 오류가 발생했습니다.'
+        throw new Error(errMsg)
+      }
       const serverReport = createAnalysisReportFromServer(data)
       setReport(serverReport)
       if (serverReport.totals.length > 0) {
@@ -90,11 +93,16 @@ function App() {
       const errMsg = error instanceof Error ? error.message : '서버 분석 저장에 실패했습니다.'
       setAnalysisSyncMessage(errMsg)
       if (previewReport.totals.length > 0) {
+        if (report) return
         setReport(previewReport)
-        setAnalysisSyncMessage('서버 연결 실패 - 로컬 분석 결과를 표시합니다.')
+        if (errMsg.includes('분석할 성분이 없습니다')) {
+          setAnalysisSyncMessage('분석할 영양제가 없습니다. 영양제를 먼저 등록해주세요.')
+        } else {
+          setAnalysisSyncMessage(errMsg + ' (로컬 분석 결과를 표시합니다.)')
+        }
       } else {
         setReport(null)
-        setAnalysisSyncMessage('분석할 영양제가 없습니다. 영양제를 먼저 등록해주세요.')
+        setAnalysisSyncMessage(errMsg + ' 분석할 영양제가 없습니다. 영양제를 먼저 등록해주세요.')
       }
     }
     navigateTo(routes.analysis)

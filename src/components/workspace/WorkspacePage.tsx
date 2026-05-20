@@ -569,7 +569,7 @@ export function SupplementWorkspace({
           standardName: ing.standardName,
           amount: ing.amount ?? 0,
           unit: ing.unit,
-        })
+        }, editDailyServings)
       }
       const updated = supplements.map((s) =>
         s.id === editingId

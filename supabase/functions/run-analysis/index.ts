@@ -1,6 +1,6 @@
 import '@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
+import { corsHeaders, getCorsHeaders, jsonResponse } from '../_shared/cors.ts'
 
 interface Ingredient {
   nutrientId: string
@@ -299,12 +299,12 @@ function summarizeStatus(total: number, reference?: Reference): RiskStatus {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
-  if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405)
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders(req) })
+  if (req.method !== 'POST') return jsonResponse(req, { error: 'Method not allowed' }, 405)
 
   try {
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) return jsonResponse({ error: 'Authorization header is required' }, 401)
+    if (!authHeader) return jsonResponse(req, { error: 'Authorization header is required' }, 401)
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     if (!supabaseUrl) throw new Error('SUPABASE_URL is required')
@@ -313,7 +313,7 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     })
     const { data: userData, error: userError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
-    if (userError || !userData.user) return jsonResponse({ error: 'Invalid user session' }, 401)
+    if (userError || !userData.user) return jsonResponse(req, { error: 'Invalid user session' }, 401)
 
     const { profile, medications = [], supplements } = await req.json() as { profile: Profile; medications?: Medication[]; supplements: Supplement[] }
     const totals = new Map<string, { nutrientId: string; standardName: string; totalAmount: number; unit: Ingredient['unit']; sources: string[] }>()
@@ -423,8 +423,8 @@ Deno.serve(async (req) => {
     }).select('id').single()
     if (error) throw error
 
-    return jsonResponse({ analysis_report_id: data.id, summary: statusSummary, totalNutrients, riskItems, interactionWarnings, recommendations, synergyRecommendations, antagonismWarnings })
+    return jsonResponse(req, { analysis_report_id: data.id, summary: statusSummary, totalNutrients, riskItems, interactionWarnings, recommendations, synergyRecommendations, antagonismWarnings })
   } catch (error) {
-    return jsonResponse({ error: error instanceof Error ? error.message : 'Unexpected analysis error' }, 500)
+    return jsonResponse(req, { error: error instanceof Error ? error.message : 'Unexpected analysis error' }, 500)
   }
 })
