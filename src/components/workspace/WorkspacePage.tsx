@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import {
-  Activity, AlertTriangle, Camera, Check, ChevronRight,
+  Activity, AlertTriangle, Calendar, Camera, Check, ChevronRight,
   FileImage, Lock, LogIn, Pill, Plus, ShieldCheck, Sparkles, Trash2
 } from 'lucide-react'
 import type { AnalysisReport, Medication, ParsedIngredient, Profile, SupplementProduct, Unit } from '../../types'
@@ -290,7 +290,13 @@ export function Dashboard({
       <div className="panel-grid two" style={{ marginTop: '24px' }}>
         <section className="panel">
           <div className="section-heading">
-            <div><h2>📅 오늘의 복용</h2><p>시간약리학 기반 타임라인</p></div>
+            <div>
+              <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Calendar size={20} color="#18ae90" />
+                오늘의 복용
+              </h2>
+              <p>시간약리학 기반 타임라인</p>
+            </div>
             {onSchedule && <button type="button" className="button ghost" onClick={onSchedule}>전체 보기<ChevronRight size={16} /></button>}
           </div>
           {scheduleLoading ? (

@@ -2188,7 +2188,7 @@ th {
 .main-content-inner {
   flex: 1;
   padding: 32px 48px;
-  max-width: 1400px;
+  max-width: 1680px; /* 기존 1400px에서 1680px로 넉넉하게 확장하여 넓은 화면에서 시원한 개방감 제공 */
   margin: 0 auto;
   width: 100%;
 }
@@ -2454,12 +2454,12 @@ textarea:focus {
 /* AI 상담 페이지 스타일 (ChatPage) */
 .chat-page-container {
   display: flex;
-  gap: 16px;
+  gap: 20px; /* 기존 16px에서 20px로 확대하여 더 쾌적하고 널널한 시각 효과 부여 */
   height: calc(100vh - 140px);
 }
 
 .chat-sidebar {
-  width: 200px;
+  width: 240px; /* 기존 200px에서 240px로 넓혀 데스크탑에서 세션명이 잘리지 않고 정갈하게 배치되도록 최적화 */
   flex-shrink: 0;
   background: #f9fbfb;
   border-radius: 12px;
