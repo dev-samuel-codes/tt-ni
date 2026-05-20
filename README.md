@@ -200,11 +200,8 @@ Google 또는 GitHub 소셜 로그인으로 간편하게 가입할 수 있습니
 | 문서 | 설명 |
 |------|------|
 | [아키텍처 및 기술 문서](./docs/ARCHITECTURE.md) | 시스템 아키텍처 설계 문서 |
-| [백엔드 구현 가이드](./docs/BACKEND_GUIDE.md) | Supabase DB 스키마 및 Edge Functions 구현 가이드 |
-| [영양제 상호작용 보고서](./docs/영양제%20상호작용%20보고서.md) | 영양제 간 상호작용 분석 보고서 |
 | [배포 가이드](./docs/DEPLOYMENT.md) | Vercel + Supabase 배포 절차 |
 | [OAuth 설정](./docs/OAUTH_SETUP.md) | 소셜 로그인 설정 가이드 |
-| [프로젝트 개요](./docs/PROJECT_OVERVIEW.md) | 프로젝트 전체 개요 |
 | [개인정보 처리방침](./docs/PRIVACY_POLICY.md) | 개인정보 수집·이용·보호 정책 |
 | [이용약관](./docs/TERMS_OF_SERVICE.md) | 서비스 이용 약관 |
 
