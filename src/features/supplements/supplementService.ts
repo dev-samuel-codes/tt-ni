@@ -229,46 +229,66 @@ export async function saveSupplementProduct(supplement: SupplementProduct, label
     if (authError) throw new Error('세션이 만료되었습니다. 다시 로그인해주세요.')
     if (!authData.user) throw new Error('로그인 정보를 확인할 수 없습니다. 다시 로그인해주세요.')
 
+    if (!supplement.productName?.trim()) throw new Error('제품명이 없습니다.')
+    if (!supplement.ingredients || supplement.ingredients.length === 0) throw new Error('저장할 성분이 없습니다.')
+
     const productInsert = await supabase.from('supplement_products').insert({
       owner_user_id: authData.user.id,
       product_name: supplement.productName,
-      brand_name: supplement.brandName,
+      brand_name: supplement.brandName || null,
       source_type: labelImagePath ? 'photo' : 'manual',
       label_image_path: labelImagePath || null,
     }).select('id').single()
-    if (productInsert.error) throw productInsert.error
+    if (productInsert.error) {
+      console.error('[saveSupplementProduct] 제품 INSERT 실패:', productInsert.error)
+      throw new Error(`제품 정보 저장 실패: ${productInsert.error.message || productInsert.error}`)
+    }
 
     productId = productInsert.data.id as string
-    const ingredientsInsert = await supabase.from('supplement_ingredients').insert(
-      supplement.ingredients.map((ingredient) => ({
+    const ingredientRows = supplement.ingredients.map((ingredient) => {
+      const rawId = ingredient.nutrientId || ''
+      const isValidId = rawId.length > 0 && /^[a-z0-9_]+$/.test(rawId)
+      return {
         product_id: productId,
-        nutrient_id: ingredient.nutrientId,
-        raw_name: ingredient.rawName || ingredient.standardName,
-        standard_name: ingredient.standardName,
+        nutrient_id: isValidId ? rawId : null,
+        raw_name: ingredient.rawName || ingredient.standardName || '',
+        standard_name: ingredient.standardName || '',
         amount: ingredient.amount,
-        unit: ingredient.unit,
+        unit: ingredient.unit || 'mg',
         amount_per_daily_serving: ingredient.amount !== null ? ingredient.amount * (supplement.dailyServings || 1) : null,
-        confidence: ingredient.confidence,
-        review_required: ingredient.reviewRequired,
-      })),
-    )
-    if (ingredientsInsert.error) throw ingredientsInsert.error
+        confidence: ingredient.confidence ?? 1,
+        review_required: ingredient.reviewRequired ?? false,
+      }
+    })
+
+    const ingredientsInsert = await supabase.from('supplement_ingredients').insert(ingredientRows)
+    if (ingredientsInsert.error) {
+      console.error('[saveSupplementProduct] 성분 INSERT 실패:', ingredientsInsert.error)
+      throw new Error(`성분 정보 저장 실패: ${ingredientsInsert.error.message || ingredientsInsert.error}`)
+    }
 
     const userSupplementInsert = await supabase.from('user_supplements').insert({
       user_id: authData.user.id,
       product_id: productId,
-      daily_servings: supplement.dailyServings,
-      intake_time: supplement.intakeTime,
+      daily_servings: supplement.dailyServings || 1,
+      intake_time: supplement.intakeTime || null,
       active: true,
     })
-    if (userSupplementInsert.error) throw userSupplementInsert.error
+    if (userSupplementInsert.error) {
+      console.error('[saveSupplementProduct] 사용자-영양제 연결 INSERT 실패:', userSupplementInsert.error)
+      throw new Error(`복용 정보 저장 실패: ${userSupplementInsert.error.message || userSupplementInsert.error}`)
+    }
 
     return { productId, message: '제품과 성분 정보를 저장했습니다.' }
   } catch (error) {
     let message = error instanceof Error ? error.message : '저장에 실패했습니다.'
+    console.error('[saveSupplementProduct] 저장 실패:', error)
     if (productId) {
       const cleanup = await supabase.from('supplement_products').delete().eq('id', productId)
-      if (cleanup.error) message = `${message} 제품 임시 데이터 정리도 실패했습니다: ${cleanup.error.message}`
+      if (cleanup.error) {
+        console.error('[saveSupplementProduct] cleanup 실패:', cleanup.error)
+        message = `${message} (임시 데이터 정리도 실패)`
+      }
     }
     throw new Error(message, { cause: error })
   }
