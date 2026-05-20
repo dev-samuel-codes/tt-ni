@@ -304,8 +304,9 @@ export function ChatPage() {
             if (data === '[DONE]') continue
             try {
               const parsed = JSON.parse(data)
-              if (parsed.content) {
-                fullTextRef.current += parsed.content
+              const content = parsed.choices?.[0]?.delta?.content
+              if (content) {
+                fullTextRef.current += content
                 setMessages((prev) => {
                   const updated = [...prev]
                   updated[updated.length - 1] = { role: 'assistant', text: fullTextRef.current }
