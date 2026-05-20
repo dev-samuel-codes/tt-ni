@@ -25,10 +25,10 @@ npm-debug.log*
 
 # Editor (keep .vscode/settings.json and extensions.json)
 
-# Local documents
-PROJECT_OVERVIEW.md
-영양제 상호작용 보고서.md
-BACKEND_GUIDE.md
+# Local documents (root-level only; docs/ versions are tracked)
+/PROJECT_OVERVIEW.md
+/영양제 상호작용 보고서.md
+/BACKEND_GUIDE.md
 sample img/
 
 # Playwright test artifacts

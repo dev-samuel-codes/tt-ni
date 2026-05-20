@@ -50,184 +50,151 @@ interface InteractionRule {
   sourceNote: string
 }
 
-/** 영양소별 기본 단위 (참조치가 없을 때 폴백) */
-const defaultUnits: Record<string, Ingredient['unit']> = {
-  vitamin_a: 'mcg',
-  vitamin_b1: 'mg',
-  vitamin_b6: 'mg',
-  vitamin_b12: 'mcg',
-  vitamin_c: 'mg',
-  vitamin_d: 'mcg',
-  vitamin_e: 'mg',
-  vitamin_k: 'mcg',
-  calcium: 'mg',
-  magnesium: 'mg',
-  zinc: 'mg',
-  iron: 'mg',
-  omega3: 'mg',
-  choline: 'mg',
-  ginseng: 'mg',
-  grapefruit: 'mg',
-  coq10: 'mg',
-  probiotics: 'CFU',
+/**
+ * 데이터베이스에서 nutrients.default_unit을 로드합니다.
+ * DB 조회 실패 시 하드코딩된 폴백 값을 사용합니다.
+ */
+async function loadDefaultUnits(supabase: ReturnType<typeof createClient>): Promise<Record<string, Ingredient['unit']>> {
+  const fallback: Record<string, Ingredient['unit']> = {
+    vitamin_a: 'mcg', vitamin_b1: 'mg', vitamin_b6: 'mg', vitamin_b12: 'mcg',
+    vitamin_c: 'mg', vitamin_d: 'mcg', vitamin_e: 'mg', vitamin_k: 'mcg',
+    calcium: 'mg', magnesium: 'mg', zinc: 'mg', iron: 'mg', omega3: 'mg',
+    choline: 'mg', ginseng: 'mg', grapefruit: 'mg', coq10: 'mg', probiotics: 'CFU',
+  }
+  try {
+    const { data } = await supabase.from('nutrients').select('id, default_unit')
+    if (!data?.length) return fallback
+    const units: Record<string, Ingredient['unit']> = { ...fallback }
+    for (const row of data) {
+      if (row.default_unit && !units[row.id]) {
+        units[row.id] = row.default_unit as Ingredient['unit']
+      }
+    }
+    return units
+  } catch {
+    return fallback
+  }
 }
 
-/** KDRIs 참조 섭취량 (프론트엔드 nutritionData.ts와 동기화 필요, 서버 측 독립 실행을 위해 복제) */
-const references: Reference[] = [
-  { nutrientId: 'vitamin_a', gender: 'male', ageMin: 19, ageMax: 150, target: 900, ul: 3000, unit: 'mcg' },
-  { nutrientId: 'vitamin_a', gender: 'female', ageMin: 19, ageMax: 150, target: 700, ul: 3000, unit: 'mcg' },
-  { nutrientId: 'vitamin_b1', gender: 'male', ageMin: 19, ageMax: 150, target: 1.2, unit: 'mg' },
-  { nutrientId: 'vitamin_b1', gender: 'female', ageMin: 19, ageMax: 150, target: 1.1, unit: 'mg' },
-  { nutrientId: 'vitamin_b6', gender: 'any', ageMin: 19, ageMax: 50, target: 1.3, ul: 100, unit: 'mg' },
-  { nutrientId: 'vitamin_b12', gender: 'any', ageMin: 19, ageMax: 150, target: 2.4, unit: 'mcg' },
-  { nutrientId: 'vitamin_c', gender: 'male', ageMin: 19, ageMax: 150, target: 90, ul: 2000, unit: 'mg' },
-  { nutrientId: 'vitamin_c', gender: 'female', ageMin: 19, ageMax: 150, target: 75, ul: 2000, unit: 'mg' },
-  { nutrientId: 'vitamin_d', gender: 'any', ageMin: 19, ageMax: 70, target: 15, ul: 100, unit: 'mcg' },
-  { nutrientId: 'vitamin_d', gender: 'any', ageMin: 71, ageMax: 150, target: 20, ul: 100, unit: 'mcg' },
-  { nutrientId: 'vitamin_e', gender: 'any', ageMin: 19, ageMax: 150, target: 15, ul: 1000, unit: 'mg' },
-  { nutrientId: 'vitamin_k', gender: 'male', ageMin: 19, ageMax: 150, target: 120, unit: 'mcg' },
-  { nutrientId: 'vitamin_k', gender: 'female', ageMin: 19, ageMax: 150, target: 90, unit: 'mcg' },
-  { nutrientId: 'calcium', gender: 'any', ageMin: 19, ageMax: 50, target: 1000, ul: 2500, unit: 'mg' },
-  { nutrientId: 'calcium', gender: 'any', ageMin: 51, ageMax: 150, target: 1200, ul: 2000, unit: 'mg' },
-  { nutrientId: 'magnesium', gender: 'male', ageMin: 19, ageMax: 150, target: 420, ul: 350, unit: 'mg' },
-  { nutrientId: 'magnesium', gender: 'female', ageMin: 19, ageMax: 150, target: 320, ul: 350, unit: 'mg' },
-  { nutrientId: 'zinc', gender: 'male', ageMin: 19, ageMax: 150, target: 11, ul: 40, unit: 'mg' },
-  { nutrientId: 'zinc', gender: 'female', ageMin: 19, ageMax: 150, target: 8, ul: 40, unit: 'mg' },
-  { nutrientId: 'iron', gender: 'male', ageMin: 19, ageMax: 150, target: 8, ul: 45, unit: 'mg' },
-  { nutrientId: 'iron', gender: 'female', ageMin: 19, ageMax: 50, target: 18, ul: 45, unit: 'mg' },
-  { nutrientId: 'iron', gender: 'female', ageMin: 51, ageMax: 150, target: 8, ul: 45, unit: 'mg' },
-  { nutrientId: 'omega3', gender: 'any', ageMin: 19, ageMax: 150, target: 1100, unit: 'mg' },
-  { nutrientId: 'choline', gender: 'male', ageMin: 19, ageMax: 150, target: 550, ul: 3500, unit: 'mg' },
-  { nutrientId: 'choline', gender: 'female', ageMin: 19, ageMax: 150, target: 425, ul: 3500, unit: 'mg' },
-  { nutrientId: 'ginseng', gender: 'any', ageMin: 19, ageMax: 150, unit: 'mg' },
-  { nutrientId: 'grapefruit', gender: 'any', ageMin: 19, ageMax: 150, unit: 'mg' },
-  { nutrientId: 'coq10', gender: 'any', ageMin: 19, ageMax: 150, unit: 'mg' },
-  { nutrientId: 'probiotics', gender: 'any', ageMin: 19, ageMax: 150, unit: 'CFU' },
-]
+/**
+ * 데이터베이스에서 nutrient_reference_values를 로드합니다.
+ * DB 조회 실패 시 하드코딩된 폴백 값을 사용합니다.
+ */
+async function loadReferences(supabase: ReturnType<typeof createClient>): Promise<Reference[]> {
+  const fallback: Reference[] = [
+    { nutrientId: 'vitamin_a', gender: 'male', ageMin: 19, ageMax: 150, target: 900, ul: 3000, unit: 'mcg' },
+    { nutrientId: 'vitamin_a', gender: 'female', ageMin: 19, ageMax: 150, target: 700, ul: 3000, unit: 'mcg' },
+    { nutrientId: 'vitamin_b1', gender: 'male', ageMin: 19, ageMax: 150, target: 1.2, unit: 'mg' },
+    { nutrientId: 'vitamin_b1', gender: 'female', ageMin: 19, ageMax: 150, target: 1.1, unit: 'mg' },
+    { nutrientId: 'vitamin_b6', gender: 'any', ageMin: 19, ageMax: 64, target: 1.3, ul: 100, unit: 'mg' },
+    { nutrientId: 'vitamin_b6', gender: 'any', ageMin: 65, ageMax: 150, target: 1.5, ul: 100, unit: 'mg' },
+    { nutrientId: 'vitamin_b12', gender: 'any', ageMin: 19, ageMax: 150, target: 2.4, unit: 'mcg' },
+    { nutrientId: 'vitamin_c', gender: 'male', ageMin: 19, ageMax: 150, target: 90, ul: 2000, unit: 'mg' },
+    { nutrientId: 'vitamin_c', gender: 'female', ageMin: 19, ageMax: 150, target: 75, ul: 2000, unit: 'mg' },
+    { nutrientId: 'vitamin_d', gender: 'any', ageMin: 19, ageMax: 70, target: 15, ul: 100, unit: 'mcg' },
+    { nutrientId: 'vitamin_d', gender: 'any', ageMin: 71, ageMax: 150, target: 20, ul: 100, unit: 'mcg' },
+    { nutrientId: 'vitamin_e', gender: 'any', ageMin: 19, ageMax: 150, target: 15, ul: 1000, unit: 'mg' },
+    { nutrientId: 'vitamin_k', gender: 'male', ageMin: 19, ageMax: 150, target: 120, unit: 'mcg' },
+    { nutrientId: 'vitamin_k', gender: 'female', ageMin: 19, ageMax: 150, target: 90, unit: 'mcg' },
+    { nutrientId: 'calcium', gender: 'any', ageMin: 19, ageMax: 50, target: 1000, ul: 2500, unit: 'mg' },
+    { nutrientId: 'calcium', gender: 'any', ageMin: 51, ageMax: 150, target: 1200, ul: 2000, unit: 'mg' },
+    { nutrientId: 'magnesium', gender: 'male', ageMin: 19, ageMax: 150, target: 420, ul: 350, unit: 'mg' },
+    { nutrientId: 'magnesium', gender: 'female', ageMin: 19, ageMax: 150, target: 320, ul: 350, unit: 'mg' },
+    { nutrientId: 'zinc', gender: 'male', ageMin: 19, ageMax: 150, target: 11, ul: 40, unit: 'mg' },
+    { nutrientId: 'zinc', gender: 'female', ageMin: 19, ageMax: 150, target: 8, ul: 40, unit: 'mg' },
+    { nutrientId: 'iron', gender: 'male', ageMin: 19, ageMax: 150, target: 8, ul: 45, unit: 'mg' },
+    { nutrientId: 'iron', gender: 'female', ageMin: 19, ageMax: 50, target: 18, ul: 45, unit: 'mg' },
+    { nutrientId: 'iron', gender: 'female', ageMin: 51, ageMax: 150, target: 8, ul: 45, unit: 'mg' },
+    { nutrientId: 'omega3', gender: 'any', ageMin: 19, ageMax: 150, target: 1100, unit: 'mg' },
+    { nutrientId: 'choline', gender: 'male', ageMin: 19, ageMax: 150, target: 550, ul: 3500, unit: 'mg' },
+    { nutrientId: 'choline', gender: 'female', ageMin: 19, ageMax: 150, target: 425, ul: 3500, unit: 'mg' },
+    { nutrientId: 'selenium', gender: 'male', ageMin: 19, ageMax: 150, target: 85, ul: 400, unit: 'mcg' },
+    { nutrientId: 'selenium', gender: 'female', ageMin: 19, ageMax: 150, target: 75, ul: 400, unit: 'mcg' },
+    { nutrientId: 'ginseng', gender: 'any', ageMin: 19, ageMax: 150, unit: 'mg' },
+    { nutrientId: 'grapefruit', gender: 'any', ageMin: 19, ageMax: 150, unit: 'mg' },
+    { nutrientId: 'coq10', gender: 'any', ageMin: 19, ageMax: 150, unit: 'mg' },
+    { nutrientId: 'probiotics', gender: 'any', ageMin: 19, ageMax: 150, unit: 'CFU' },
+  ]
+  try {
+    const { data } = await supabase.from('nutrient_reference_values').select('*')
+    if (!data?.length) return fallback
+    const dbReferences = data.map((row: Record<string, unknown>) => ({
+      nutrientId: row.nutrient_id as string,
+      gender: (row.gender as Profile['gender'] | 'any') || 'any',
+      ageMin: Number(row.age_min ?? 0),
+      ageMax: Number(row.age_max ?? 150),
+      target: row.rda != null ? Number(row.rda) : (row.ai != null ? Number(row.ai) : undefined),
+      ul: row.ul != null ? Number(row.ul) : undefined,
+      unit: (row.unit as Ingredient['unit']) || 'mg',
+    }))
+    if (dbReferences.length > 0) return [...fallback.filter((f) => !dbReferences.some((d: Reference) => d.nutrientId === f.nutrientId && d.gender === f.gender && d.ageMin === f.ageMin)), ...dbReferences]
+    return fallback
+  } catch {
+    return fallback
+  }
+}
 
-/** 상호작용 규칙 (프론트엔드 nutritionData.ts와 동기화 필요) */
-const interactionRules: InteractionRule[] = [
-  {
-    nutrientId: 'vitamin_k',
-    medicationKeyword: 'warfarin',
-    severity: 'high',
-    nutrientName: '비타민 K',
-    message: '와파린 계열 약 복용 중에는 비타민 K 섭취 변동을 전문가와 확인하세요.',
-    sourceNote: 'MVP rule: anticoagulant nutrient consistency warning',
-  },
-  {
-    nutrientId: 'omega3',
-    medicationKeyword: 'warfarin',
-    severity: 'caution',
-    nutrientName: '오메가3',
-    message: '항응고제 복용 중 고용량 오메가3는 출혈 위험 상담이 필요할 수 있습니다.',
-    sourceNote: 'MVP rule: anticoagulant high-dose omega-3 caution',
-  },
-  {
-    nutrientId: 'calcium',
-    medicationKeyword: 'levothyroxine',
-    severity: 'caution',
-    nutrientName: '칼슘',
-    message: '갑상선 호르몬제와 칼슘은 복용 간격을 확인하는 것이 좋습니다.',
-    sourceNote: 'MVP rule: thyroid medication spacing',
-  },
-  {
-    nutrientId: 'iron',
-    medicationKeyword: 'levothyroxine',
-    severity: 'caution',
-    nutrientName: '철분',
-    message: '갑상선 호르몬제와 철분은 흡수 간섭 가능성이 있어 복용 간격 확인이 필요합니다.',
-    sourceNote: 'MVP rule: thyroid medication spacing',
-  },
-  {
-    nutrientId: 'magnesium',
-    conditionCode: 'kidney',
-    severity: 'high',
-    nutrientName: '마그네슘',
-    message: '신장 질환이 있으면 마그네슘 보충제 복용 전 전문가 상담이 필요합니다.',
-    sourceNote: 'MVP rule: renal condition mineral caution',
-  },
-  {
-    nutrientId: 'ginseng',
-    medicationKeyword: 'insulin',
-    severity: 'high',
-    nutrientName: '홍삼',
-    message: '인슐린/당뇨약 복용 중 홍삼(진세노사이드) 고용량 섭취는 중증 저혈당 쇼크 위험이 있습니다.',
-    sourceNote: 'Report: Ginsenoside insulin sensitivity amplification',
-  },
-  {
-    nutrientId: 'grapefruit',
-    medicationKeyword: 'statin',
-    severity: 'high',
-    nutrientName: '자몽 추출물',
-    message: '스타틴 계열 고지혈증 약 복용 중 자몽 추출물 섭취는 절대 금기입니다 (횡문근융해증 위험).',
-    sourceNote: 'Report: CYP3A4 inhibition by furanocoumarin',
-  },
-  {
-    nutrientId: 'vitamin_b12',
-    medicationKeyword: 'metformin',
-    severity: 'caution',
-    nutrientName: '비타민 B12',
-    message: '메트포르민 장기 복용은 비타민 B12 고갈을 유발할 수 있으므로 보충이 권장됩니다.',
-    sourceNote: 'Report: Metformin induces B12 depletion',
-  },
-  {
-    nutrientId: 'coq10',
-    medicationKeyword: 'statin',
-    severity: 'caution',
-    nutrientName: '코엔자임 Q10',
-    message: '스타틴 계열 약물은 체내 코엔자임 Q10을 고갈시키므로 병용 섭취가 권장됩니다.',
-    sourceNote: 'Report: Statin induces CoQ10 depletion',
-  },
-  {
-    nutrientId: 'probiotics',
-    medicationKeyword: 'antibiotic',
-    severity: 'high',
-    nutrientName: '유산균',
-    message: '항생제 복용 시 유산균이 사멸하므로 최소 2시간 이상의 간격을 두고 섭취하세요.',
-    sourceNote: 'Report: Antibiotics destroy probiotics',
-  },
-  {
-    nutrientId: 'calcium',
-    medicationKeyword: 'bisphosphonate',
-    severity: 'high',
-    nutrientName: '칼슘',
-    message: '골다공증 약(비스포스포네이트)은 미네랄과 킬레이트를 형성하므로 최소 2~4시간 간격을 두세요.',
-    sourceNote: 'Report: Bisphosphonate chelation with minerals',
-  },
-  {
-    nutrientId: 'vitamin_c',
-    medicationKeyword: 'aspirin',
-    severity: 'high',
-    nutrientName: '비타민 C',
-    message: '아스피린 복용 중 고용량 비타민 C는 위장관 출혈 위험을 높일 수 있으므로 중성화된 비타민 C를 권장하거나 식후 복용하세요.',
-    sourceNote: 'Report: Aspirin + high-dose vitamin C GI bleeding risk',
-  },
-  {
-    nutrientId: 'ginseng',
-    medicationKeyword: 'warfarin',
-    severity: 'high',
-    nutrientName: '홍삼',
-    message: '와파린 복용 중 홍삼(진세노사이드) 섭취는 출혈 위험을 높일 수 있으므로 주의가 필요합니다.',
-    sourceNote: 'Report: Ginseng antiplatelet effect with warfarin',
-  },
-  {
-    nutrientId: 'vitamin_e',
-    medicationKeyword: 'warfarin',
-    severity: 'caution',
-    nutrientName: '비타민 E',
-    message: '와파린 복용 중 고용량 비타민 E는 혈소판 응집을 억제하여 출혈 위험을 증가시킬 수 있습니다.',
-    sourceNote: 'Report: Vitamin E antiplatelet with warfarin',
-  },
-  {
-    nutrientId: 'magnesium',
-    medicationKeyword: 'bisphosphonate',
-    severity: 'high',
-    nutrientName: '마그네슘',
-    message: '골다공증 약(비스포스포네이트)과 마그네슘은 킬레이트 형성을 방지하기 위해 2시간 이상 간격을 두세요.',
-    sourceNote: 'Report: Bisphosphonate chelation',
-  },
-]
+/**
+ * 데이터베이스에서 interaction_rules를 로드합니다.
+ * DB 조회 실패 시 하드코딩된 폴백 값을 사용합니다.
+ */
+async function loadInteractionRules(supabase: ReturnType<typeof createClient>): Promise<InteractionRule[]> {
+  const fallback: InteractionRule[] = [
+    { nutrientId: 'vitamin_k', medicationKeyword: 'warfarin', severity: 'high', nutrientName: '비타민 K', message: '와파린 계열 약 복용 중에는 비타민 K 섭취 변동을 전문가와 확인하세요.', sourceNote: 'MVP rule: anticoagulant nutrient consistency warning' },
+    { nutrientId: 'omega3', medicationKeyword: 'warfarin', severity: 'caution', nutrientName: '오메가3', message: '항응고제 복용 중 고용량 오메가3는 출혈 위험 상담이 필요할 수 있습니다.', sourceNote: 'MVP rule: anticoagulant high-dose omega-3 caution' },
+    { nutrientId: 'calcium', medicationKeyword: 'levothyroxine', severity: 'caution', nutrientName: '칼슘', message: '갑상선 호르몬제와 칼슘은 복용 간격을 확인하는 것이 좋습니다.', sourceNote: 'MVP rule: thyroid medication spacing' },
+    { nutrientId: 'iron', medicationKeyword: 'levothyroxine', severity: 'caution', nutrientName: '철분', message: '갑상선 호르몬제와 철분은 흡수 간섭 가능성이 있어 복용 간격 확인이 필요합니다.', sourceNote: 'MVP rule: thyroid medication spacing' },
+    { nutrientId: 'magnesium', conditionCode: 'kidney', severity: 'high', nutrientName: '마그네슘', message: '신장 질환이 있으면 마그네슘 보충제 복용 전 전문가 상담이 필요합니다.', sourceNote: 'MVP rule: renal condition mineral caution' },
+    { nutrientId: 'ginseng', medicationKeyword: 'insulin', severity: 'high', nutrientName: '홍삼', message: '인슐린/당뇨약 복용 중 홍삼(진세노사이드) 고용량 섭취는 중증 저혈당 쇼크 위험이 있습니다.', sourceNote: 'Report: Ginsenoside insulin sensitivity amplification' },
+    { nutrientId: 'grapefruit', medicationKeyword: 'statin', severity: 'high', nutrientName: '자몽 추출물', message: '스타틴 계열 고지혈증 약 복용 중 자몽 추출물 섭취는 절대 금기입니다 (횡문근융해증 위험).', sourceNote: 'Report: CYP3A4 inhibition by furanocoumarin' },
+    { nutrientId: 'vitamin_b12', medicationKeyword: 'metformin', severity: 'notice', nutrientName: '비타민 B12', message: '메트포르민 장기 복용자는 비타민 B12 결핍 위험이 있으므로 정기적 혈중 농도 확인과 보충을 권장합니다.', sourceNote: 'Report: Metformin induces B12 depletion' },
+    { nutrientId: 'coq10', medicationKeyword: 'statin', severity: 'notice', nutrientName: '코엔자임 Q10', message: '스타틴 계열 약물은 체내 코엔자임 Q10을 고갈시키므로 병용 섭취가 권장됩니다.', sourceNote: 'Report: Statin induces CoQ10 depletion' },
+    { nutrientId: 'probiotics', medicationKeyword: 'antibiotic', severity: 'high', nutrientName: '유산균', message: '항생제 복용 시 유산균이 사멸하므로 최소 2시간 이상의 간격을 두고 섭취하세요.', sourceNote: 'Report: Antibiotics destroy probiotics' },
+    { nutrientId: 'calcium', medicationKeyword: 'bisphosphonate', severity: 'high', nutrientName: '칼슘', message: '골다공증 약(비스포스포네이트)과 칼슘은 킬레이트를 형성하므로 최소 2시간 간격을 두고 복용하세요.', sourceNote: 'Report: Bisphosphonate chelation with calcium' },
+    { nutrientId: 'vitamin_c', medicationKeyword: 'aspirin', severity: 'high', nutrientName: '비타민 C', message: '아스피린 복용 중 고용량 비타민 C는 위장관 출혈 위험을 높일 수 있으므로 중성화된 비타민 C를 권장하거나 식후 복용하세요.', sourceNote: 'Report: Aspirin + high-dose vitamin C GI bleeding risk' },
+    { nutrientId: 'ginseng', medicationKeyword: 'warfarin', severity: 'high', nutrientName: '홍삼', message: '와파린 복용 중 홍삼(진세노사이드) 섭취는 출혈 위험을 높일 수 있으므로 주의가 필요합니다.', sourceNote: 'Report: Ginseng antiplatelet effect with warfarin' },
+    { nutrientId: 'vitamin_e', medicationKeyword: 'warfarin', severity: 'caution', nutrientName: '비타민 E', message: '와파린 복용 중 고용량 비타민 E는 혈소판 응집을 억제하여 출혈 위험을 증가시킬 수 있습니다.', sourceNote: 'Report: Vitamin E antiplatelet with warfarin' },
+    { nutrientId: 'magnesium', medicationKeyword: 'bisphosphonate', severity: 'high', nutrientName: '마그네슘', message: '골다공증 약(비스포스포네이트)과 마그네슘은 킬레이트 형성을 방지하기 위해 2시간 이상 간격을 두세요.', sourceNote: 'Report: Bisphosphonate chelation' },
+  ]
+  try {
+    const { data } = await supabase.from('interaction_rules').select('*')
+    if (!data?.length) return fallback
+    const dbRules = (data as Array<Record<string, unknown>>).map((row) => {
+      const nutrientRow = row.nutrient_id ? { standardName: '' } as { standard_name?: string } : null
+      let nutrientName = ''
+      if (nutrientRow?.standard_name) nutrientName = nutrientRow.standard_name
+      return {
+        nutrientId: (row.nutrient_id as string) || '',
+        medicationKeyword: (row.medication_keyword as string) || undefined,
+        conditionCode: (row.condition_code as string) || undefined,
+        severity: (row.severity as InteractionRule['severity']) || 'notice',
+        nutrientName,
+        message: (row.message as string) || '',
+        sourceNote: (row.source_note as string) || '',
+      }
+    })
+    const enriched = await enrichNutrientNames(supabase, dbRules)
+    if (enriched.length > 0) return enriched
+    return fallback
+  } catch {
+    return fallback
+  }
+}
+
+/** DB interation_rules의 nutrient_id를 기준으로 nutrients.standard_name을 조회하여 nutrientName을 채웁니다. */
+async function enrichNutrientNames(supabase: ReturnType<typeof createClient>, rules: InteractionRule[]): Promise<InteractionRule[]> {
+  try {
+    const { data } = await supabase.from('nutrients').select('id, standard_name')
+    if (!data?.length) return rules
+    const nameMap = new Map((data as Array<{ id: string; standard_name: string }>).map((r) => [r.id, r.standard_name]))
+    return rules.map((rule) => ({
+      ...rule,
+      nutrientName: rule.nutrientName || nameMap.get(rule.nutrientId) || rule.nutrientId,
+    }))
+  } catch {
+    return rules
+  }
+}
 
 /** 시너지 그룹 (프론트엔드 analysisEngine.ts와 동기화 필요) */
 const SYNERGY_GROUPS = [
@@ -282,7 +249,7 @@ function getAge(profile: Profile): number {
   return Math.max(0, new Date().getFullYear() - profile.birthYear)
 }
 
-function findReference(profile: Profile, nutrientId: string): Reference | undefined {
+function findReference(references: Reference[], profile: Profile, nutrientId: string): Reference | undefined {
   const age = getAge(profile)
   return references.find((reference) => {
     const genderMatches = reference.gender === 'any' || reference.gender === profile.gender
@@ -315,13 +282,19 @@ Deno.serve(async (req) => {
     const { data: userData, error: userError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
     if (userError || !userData.user) return jsonResponse(req, { error: 'Invalid user session' }, 401)
 
+    const [references, interactionRules, defaultUnits] = await Promise.all([
+      loadReferences(supabase),
+      loadInteractionRules(supabase),
+      loadDefaultUnits(supabase),
+    ])
+
     const { profile, medications = [], supplements } = await req.json() as { profile: Profile; medications?: Medication[]; supplements: Supplement[] }
     const totals = new Map<string, { nutrientId: string; standardName: string; totalAmount: number; unit: Ingredient['unit']; sources: string[] }>()
 
     supplements.filter((supplement) => supplement.confirmed).forEach((supplement) => {
       supplement.ingredients.forEach((ingredient) => {
         if (ingredient.amount === null) return
-        const reference = findReference(profile, ingredient.nutrientId)
+        const reference = findReference(references, profile, ingredient.nutrientId)
         const targetUnit = reference?.unit ?? defaultUnits[ingredient.nutrientId] ?? ingredient.unit
         const amount = convert(ingredient.amount * supplement.dailyServings, ingredient.unit, targetUnit, ingredient.nutrientId)
         if (amount === null) return
@@ -342,7 +315,7 @@ Deno.serve(async (req) => {
     })
 
     const totalNutrients = Array.from(totals.values()).map((item) => {
-      const status = summarizeStatus(item.totalAmount, findReference(profile, item.nutrientId))
+      const status = summarizeStatus(item.totalAmount, findReference(references, profile, item.nutrientId))
       return { ...item, status }
     })
 
