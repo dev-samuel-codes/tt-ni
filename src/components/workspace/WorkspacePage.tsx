@@ -755,7 +755,7 @@ export function SupplementWorkspace({
           <div><h2>영양제 등록</h2><p>세 가지 방식 중 하나를 선택해 영양제를 등록하세요.</p></div>
         </div>
         
-        <div className="registration-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '1px solid #e1e8e5', paddingBottom: '12px' }}>
+        <div className="registration-tabs">
           <button type="button" className={`button ${registrationMethod === 'photo' ? 'primary' : 'ghost'}`} onClick={() => setRegistrationMethod('photo')}>
             <FileImage size={16} /> 사진 촬영/업로드
           </button>

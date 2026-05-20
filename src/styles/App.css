@@ -2282,6 +2282,68 @@ th {
   .panel-grid.two {
     grid-template-columns: 1fr !important;
   }
+
+  /* 모바일 영양제 등록 탭: 부드러운 가로 스크롤 및 랩핑 붕괴 예방 */
+  .registration-tabs {
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    display: flex !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding-bottom: 8px !important;
+    gap: 6px !important;
+    scrollbar-width: none !important;
+  }
+  .registration-tabs::-webkit-scrollbar {
+    display: none !important;
+  }
+  .registration-tabs button {
+    flex: 0 0 auto !important;
+    font-size: 13px !important;
+    padding: 8px 12px !important;
+  }
+
+  /* 모바일 AI 상담 페이지 반응형: 세션을 가로 칩 리스트로 전환, 100% 대화 패널 */
+  .chat-page-container {
+    flex-direction: column !important;
+    height: auto !important;
+    gap: 12px !important;
+  }
+  .chat-sidebar {
+    width: 100% !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 10px !important;
+    gap: 6px !important;
+    border-radius: 8px !important;
+    scrollbar-width: none !important;
+  }
+  .chat-sidebar::-webkit-scrollbar {
+    display: none !important;
+  }
+  .chat-sidebar button {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    padding: 6px 12px !important;
+  }
+  .chat-main-panel {
+    width: 100% !important;
+    height: 520px !important;
+  }
+
+  /* 모바일 헤더 이메일 주소 말줄임표 처리 (찌그러짐 원천 차단) */
+  .mobile-header-right .auth-card.compact {
+    max-width: 180px !important;
+  }
+  .mobile-header-right .auth-card.compact span {
+    max-width: 90px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+  }
 }
 
 /* FAQ 추천 칩 호버 스타일 */
@@ -2387,4 +2449,40 @@ textarea:focus {
   box-shadow: 0 4px 12px rgba(24, 174, 144, 0.06);
   border-color: #ccdcd3 !important;
 }
+
+/* AI 상담 페이지 스타일 (ChatPage) */
+.chat-page-container {
+  display: flex;
+  gap: 16px;
+  height: calc(100vh - 140px);
+}
+
+.chat-sidebar {
+  width: 200px;
+  flex-shrink: 0;
+  background: #f9fbfb;
+  border-radius: 12px;
+  border: 1px solid #e1e8e5;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+.chat-main-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 영양제 등록 탭 스타일 */
+.registration-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #e1e8e5;
+  padding-bottom: 12px;
+}
+
 

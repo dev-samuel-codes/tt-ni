@@ -347,9 +347,9 @@ export function ChatPage() {
   const showFaq = messages.length <= 1 && !isLoading
 
   return (
-    <div style={{ display: 'flex', gap: '16px', height: 'calc(100vh - 140px)' }}>
+    <div className="chat-page-container">
       {/* 대화 세션 사이드바 */}
-      <div style={{ width: '200px', flexShrink: 0, background: '#f9fbfb', borderRadius: '12px', border: '1px solid #e1e8e5', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div className="chat-sidebar">
         <button type="button" className="button primary" style={{ width: '100%', fontSize: '13px' }} onClick={() => {
           const newId = 'local'
           setActiveSessionId(newId)
@@ -383,7 +383,7 @@ export function ChatPage() {
       </div>
 
       {/* 메인 채팅 영역 */}
-      <section className="panel" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <section className="panel chat-main-panel">
         <div className="section-heading">
           <div>
             <h2>맞춤형 AI 상담</h2>
