@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Send, Bot, User, Plus, MessageCircle, Info, Loader, AlertCircle } from 'lucide-react'
+import { Send, Bot, User, Plus, MessageCircle, Info, AlertCircle } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 
 interface ChatMessage {
@@ -351,7 +351,7 @@ export function ChatPage() {
     <div className="chat-page-container">
       {/* 대화 세션 사이드바 */}
       <div className="chat-sidebar">
-        <button type="button" className="button primary" style={{ width: '100%', fontSize: '13px' }} onClick={() => {
+        <button type="button" className="button primary" style={{ width: '100%', fontSize: '13px', marginBottom: '8px' }} onClick={() => {
           const newId = 'local'
           setActiveSessionId(newId)
           setSessions((prev) => {
@@ -366,19 +366,25 @@ export function ChatPage() {
         {sessionsLoading ? (
           <p style={{ color: '#8a9a95', fontSize: '13px', textAlign: 'center', padding: '8px 0' }}>불러오는 중...</p>
         ) : sessions.map((s) => (
-          <button key={s.id} type="button" onClick={() => {
-            setSessions((prev) => prev.map((item) => ({ ...item, active: item.id === s.id })))
-            setActiveSessionId(s.id)
-            setRateLimited(false)
-            if (s.id !== 'local') loadMessages(s.id)
-            else setMessages([{ role: 'assistant', content: '안녕하세요! 등록하신 영양제와 건강 상태에 대해 궁금한 점을 물어보세요.' }])
-          }} style={{
-            width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '8px', border: 'none',
-            background: s.active ? '#173c3c' : 'transparent', color: s.active ? '#fff' : '#52605b',
-            fontSize: '13px', fontWeight: 750, cursor: 'pointer',
-          }}>
-            <MessageCircle size={14} style={{ marginRight: '6px' }} />
-            {s.title}
+          <button 
+            key={s.id} 
+            type="button" 
+            className={s.active ? 'active-session' : 'inactive-session'}
+            onClick={() => {
+              setSessions((prev) => prev.map((item) => ({ ...item, active: item.id === s.id })))
+              setActiveSessionId(s.id)
+              setRateLimited(false)
+              if (s.id !== 'local') loadMessages(s.id)
+              else setMessages([{ role: 'assistant', content: '안녕하세요! 등록하신 영양제와 건강 상태에 대해 궁금한 점을 물어보세요.' }])
+            }} 
+            style={{
+              width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '8px', border: 'none',
+              fontSize: '13px', fontWeight: 750, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', transition: 'all 0.2s',
+            }}
+          >
+            <MessageCircle size={14} style={{ marginRight: '6px', flexShrink: 0 }} />
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</span>
           </button>
         ))}
       </div>
@@ -392,42 +398,76 @@ export function ChatPage() {
           </div>
         </div>
 
-        {/* 컨텍스트 배지 */}
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
-          <Info size={14} color="#8a9a95" />
+        {/* 컨텍스트 배지 영역 */}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px', alignItems: 'center' }}>
+          <span style={{ fontSize: '12px', fontWeight: 800, color: '#8a9a95', display: 'flex', alignItems: 'center', gap: '4px', marginRight: '4px' }}>
+            <Info size={14} />
+            연결된 정보:
+          </span>
           {contextBadges.map((badge) => (
-            <span key={badge} style={{ fontSize: '12px', color: '#52605b', background: '#f0f4f2', padding: '3px 10px', borderRadius: '12px', fontWeight: 700 }}>
-              🔗 {badge}
+            <span 
+              key={badge} 
+              style={{ 
+                fontSize: '11.5px', 
+                color: '#0a6e58', 
+                background: '#e6f9f4', 
+                border: '1px solid rgba(24, 174, 144, 0.15)',
+                padding: '4px 12px', 
+                borderRadius: '20px', 
+                fontWeight: 800,
+                boxShadow: '0 2px 6px rgba(24, 174, 144, 0.03)'
+              }}
+            >
+              ✓ {badge}
             </span>
           ))}
+          {contextBadges.length === 0 && (
+            <span style={{ fontSize: '12px', color: '#8a9a95' }}>없음 (수동 상담 모드)</span>
+          )}
         </div>
 
+        {/* 채팅 영역 본체 */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 0', display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {messages.map((msg, idx) => (
-            <div key={idx} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', flexDirection: msg.role === 'user' ? 'row-reverse' : 'row' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: msg.role === 'user' ? '#173c3c' : '#18ae90', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>
-                {msg.role === 'user' ? <User size={20} /> : <Bot size={20} />}
+            <div key={idx} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', flexDirection: msg.role === 'user' ? 'row-reverse' : 'row', margin: '6px 0' }}>
+              <div 
+                className="timeline-badge-glow"
+                style={{ 
+                  width: '38px', 
+                  height: '38px', 
+                  borderRadius: '50%', 
+                  background: msg.role === 'user' ? 'linear-gradient(135deg, #173c3c 0%, #0d2626 100%)' : 'linear-gradient(135deg, #18ae90 0%, #11846d 100%)', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  color: '#fff', 
+                  flexShrink: 0,
+                  boxShadow: msg.role === 'user' ? '0 4px 12px rgba(23, 60, 60, 0.2)' : '0 4px 12px rgba(24, 174, 144, 0.25)'
+                }}
+              >
+                {msg.role === 'user' ? <User size={18} /> : <Bot size={18} />}
               </div>
-              <div style={{
-                background: msg.role === 'user' ? '#f0f4f2' : '#ffffff',
-                border: msg.role === 'user' ? 'none' : '1px solid #e1e8e5',
-                padding: '12px 16px', borderRadius: '12px', maxWidth: '75%', fontSize: '15px', lineHeight: '1.6', color: '#1a2c28'
-              }}>
-                {msg.content}
+              <div 
+                className={msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-ai'}
+                style={{
+                  padding: '14px 18px', 
+                  maxWidth: '75%', 
+                  fontSize: '15px', 
+                  lineHeight: '1.65'
+                }}
+              >
+                {msg.content === '' ? (
+                  <div className="bouncing-dots" aria-label="답변을 작성하는 중">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                ) : (
+                  <MarkdownRenderer content={msg.content} />
+                )}
               </div>
             </div>
           ))}
-          {isLoading && (
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#18ae90', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>
-                <Bot size={20} />
-              </div>
-              <div style={{ padding: '12px 16px', color: '#697771' }}>
-                <Loader size={16} style={{ display: 'inline', marginRight: '8px', animation: 'spin 1s linear infinite' }} />
-                답변을 작성하고 있습니다...
-              </div>
-            </div>
-          )}
           <div ref={messagesEndRef} />
 
           {/* FAQ 추천 칩 */}
@@ -473,4 +513,76 @@ export function ChatPage() {
       </section>
     </div>
   )
+}
+
+/**
+ * AI 실시간 스트리밍 분석 답변을 수려하게 렌더링해주는 순수 React용 마크다운 파서 컴포넌트
+ */
+function MarkdownRenderer({ content }: { content: string }) {
+  if (!content) return null
+
+  // 줄 단위 분리
+  const lines = content.split('\n')
+
+  return (
+    <div className="markdown-body">
+      {lines.map((line, idx) => {
+        const trimmed = line.trim()
+
+        // 1. blockquote 인용구
+        if (trimmed.startsWith('>')) {
+          return (
+            <blockquote key={idx}>
+              {renderInline(trimmed.slice(1).trim())}
+            </blockquote>
+          )
+        }
+
+        // 2. 글머리 리스트 (- , * )
+        if (trimmed.startsWith('-') || trimmed.startsWith('*')) {
+          return (
+            <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', margin: '6px 0 6px 12px' }}>
+              <span style={{ color: '#18ae90', marginTop: '6px', fontSize: '8px', flexShrink: 0 }}>●</span>
+              <span>{renderInline(trimmed.slice(1).trim())}</span>
+            </div>
+          )
+        }
+
+        // 3. 숫자 리스트 (1. )
+        const numMatch = trimmed.match(/^(\d+)\.\s(.*)/)
+        if (numMatch) {
+          return (
+            <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', margin: '6px 0 6px 12px' }}>
+              <span style={{ color: '#18ae90', fontWeight: 'bold', flexShrink: 0 }}>{numMatch[1]}.</span>
+              <span>{renderInline(numMatch[2].trim())}</span>
+            </div>
+          )
+        }
+
+        // 4. 빈 줄 간격 조절
+        if (trimmed === '') {
+          return <div key={idx} style={{ height: '8px' }} />
+        }
+
+        // 5. 일반 단락
+        return <p key={idx} style={{ margin: '4px 0' }}>{renderInline(line)}</p>
+      })}
+    </div>
+  )
+}
+
+/**
+ * 인라인 마크다운 (굵은 글씨 및 인라인 코드) 렌더링 헬퍼 함수
+ */
+function renderInline(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*.*?\*\*|`.*?`)/g)
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>
+    }
+    if (part.startsWith('`') && part.endsWith('`')) {
+      return <code key={i}>{part.slice(1, -1)}</code>
+    }
+    return part
+  })
 }

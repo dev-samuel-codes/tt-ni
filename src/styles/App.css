@@ -2926,4 +2926,148 @@ textarea:focus {
   background: #f0fbf9;
 }
 
+/* ==========================================
+   신규 프리미엄 스케줄 & AI 상담 UI 스타일
+   ========================================== */
+
+/* 1. 바운싱 도트 애니메이션 */
+.bouncing-dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 12px;
+  min-height: 24px;
+}
+
+.bouncing-dots span {
+  width: 7px;
+  height: 7px;
+  background-color: #18ae90;
+  border-radius: 50%;
+  display: inline-block;
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.bouncing-dots span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.bouncing-dots span:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes bounce {
+  0%, 80%, 100% { 
+    transform: scale(0);
+    opacity: 0.3;
+  } 40% { 
+    transform: scale(1.0);
+    opacity: 1;
+  }
+}
+
+/* 2. 마크다운 본문 파싱 전용 스타일 */
+.markdown-body {
+  font-size: 15px;
+  line-height: 1.65;
+  color: #2c3a37;
+  word-break: break-word;
+}
+
+.markdown-body p {
+  margin: 6px 0;
+}
+
+.markdown-body strong {
+  color: #173c3c;
+  font-weight: 850;
+  background: linear-gradient(180deg, transparent 65%, rgba(44, 198, 167, 0.12) 0%);
+}
+
+.markdown-body blockquote {
+  border-left: 4px solid #18ae90;
+  padding: 10px 14px;
+  color: #4a5653;
+  margin: 14px 0;
+  font-style: italic;
+  background: rgba(24, 174, 144, 0.03);
+  border-radius: 0 10px 10px 0;
+}
+
+.markdown-body code {
+  background: #f0f4f2;
+  padding: 3px 6px;
+  border-radius: 5px;
+  font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+  font-size: 13.5px;
+  color: #0b7e65;
+  font-weight: 750;
+}
+
+/* 3. 복용 스케줄 타임라인 커스터마이징 */
+.timeline-connector {
+  width: 2.5px;
+  background: linear-gradient(180deg, var(--mint-dark) 0%, rgba(223, 236, 232, 0.4) 100%);
+  margin: 10px 0;
+  flex: 1;
+  border-radius: 99px;
+}
+
+.premium-timeline-card {
+  background: #ffffff !important;
+  border: 1px solid #e2ece8 !important;
+  border-radius: 18px !important;
+  box-shadow: 0 10px 30px rgba(18, 93, 82, 0.02) !important;
+  transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  padding: 22px !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.premium-timeline-card:hover {
+  transform: translateY(-2.5px);
+  box-shadow: 0 16px 40px rgba(24, 174, 144, 0.08) !important;
+  border-color: #bad3c8 !important;
+}
+
+.timeline-badge-glow {
+  box-shadow: 0 0 16px rgba(24, 174, 144, 0.35);
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+}
+
+.timeline-badge-glow:hover {
+  transform: scale(1.08) rotate(5deg);
+}
+
+/* 4. AI 상담 세션 사이드바 개편 */
+.chat-sidebar button.active-session {
+  background: linear-gradient(135deg, #e6f9f4 0%, #d4f5ec 100%) !important;
+  color: #0a6e58 !important;
+  border: 1px solid rgba(24, 174, 144, 0.22) !important;
+  box-shadow: 0 6px 14px rgba(24, 174, 144, 0.05) !important;
+}
+
+.chat-sidebar button.inactive-session:hover {
+  background-color: rgba(24, 174, 144, 0.05) !important;
+  color: #173c3c !important;
+}
+
+/* 5. 채팅 버블 메신저 형태 리뉴얼 */
+.chat-bubble-user {
+  background: linear-gradient(135deg, #e8f9f5 0%, #dbf6ee 100%) !important;
+  border-radius: 20px 4px 20px 20px !important;
+  box-shadow: 0 4px 14px rgba(24, 174, 144, 0.04) !important;
+  border: none !important;
+  color: #1a2c28 !important;
+}
+
+.chat-bubble-ai {
+  background: #ffffff !important;
+  border: 1px solid #e2ece8 !important;
+  border-radius: 4px 20px 20px 20px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.012) !important;
+  color: #21332f !important;
+}
+
+
 

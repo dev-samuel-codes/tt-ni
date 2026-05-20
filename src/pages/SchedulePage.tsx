@@ -136,34 +136,97 @@ export function SchedulePage({
               아직 생성된 스케줄이 없어요. 분석 리포트를 먼저 확인해보세요.
             </p>
           ) : timeline.map((slot, idx) => (
-            <div key={idx} style={{ display: 'flex', gap: '16px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '80px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: slot.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Clock size={18} color="#fff" />
+            <div key={idx} style={{ display: 'flex', gap: '20px' }}>
+              {/* 좌측 프리미엄 타임라인 커넥터 축 */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '60px' }}>
+                <div 
+                  className="timeline-badge-glow"
+                  style={{ 
+                    width: '40px', 
+                    height: '40px', 
+                    borderRadius: '50%', 
+                    background: slot.color, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    cursor: 'default'
+                  }}
+                >
+                  <Clock size={20} color="#fff" />
                 </div>
-                {idx < timeline.length - 1 && <div style={{ flex: 1, width: '2px', background: '#e1e8e5', margin: '8px 0' }} />}
+                {idx < timeline.length - 1 && <div className="timeline-connector" />}
               </div>
-              <div style={{ flex: 1, background: '#f9fbfb', padding: '16px', borderRadius: '12px', border: '1px solid #e1e8e5' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <strong style={{ fontSize: '16px', color: '#173c3c' }}>{slot.time}</strong>
-                  <span style={{ fontSize: '12px', color: '#8a9a95', background: '#f0f4f2', padding: '2px 8px', borderRadius: '4px' }}>{slot.label}</span>
+
+              {/* 프리미엄 타임라인 카드 */}
+              <div className="premium-timeline-card" style={{ flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                  <strong style={{ fontSize: '18px', color: '#173c3c', letterSpacing: '-0.3px' }}>{slot.time}</strong>
+                  <span 
+                    style={{ 
+                      fontSize: '12px', 
+                      color: '#0a6e58', 
+                      background: '#e6f9f4', 
+                      padding: '4px 10px', 
+                      borderRadius: '20px',
+                      fontWeight: 800
+                    }}
+                  >
+                    {slot.label}
+                  </span>
                 </div>
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                
+                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 14px 0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {slot.items.map((item, i) => (
-                    <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px' }}>
-                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: slot.color }} />
+                    <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '15px', fontWeight: 650, color: '#2c3a37' }}>
+                      <span 
+                        style={{ 
+                          width: '8px', 
+                          height: '8px', 
+                          borderRadius: '50%', 
+                          background: slot.color,
+                          boxShadow: `0 0 8px ${slot.color}`
+                        }} 
+                      />
                       {item}
                     </li>
                   ))}
                 </ul>
+
                 {slot.tip && (
-                  <div style={{ marginTop: '10px', fontSize: '13px', color: '#52605b', fontStyle: 'italic' }}>
-                    팁: {slot.tip}
+                  <div 
+                    style={{ 
+                      marginTop: '12px', 
+                      fontSize: '13px', 
+                      color: '#52605b', 
+                      background: '#f8fafa', 
+                      padding: '10px 14px', 
+                      borderRadius: '8px',
+                      borderLeft: `3px solid ${slot.color}`,
+                      lineHeight: 1.5
+                    }}
+                  >
+                    <span style={{ fontWeight: 800, color: '#173c3c', marginRight: '6px' }}>💡 복용 팁:</span>
+                    {slot.tip}
                   </div>
                 )}
+
                 {slot.warning && (
-                  <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px', color: '#b96b00', fontSize: '13px', background: '#fff8d9', padding: '8px 12px', borderRadius: '6px' }}>
-                    <AlertCircle size={14} />
+                  <div 
+                    style={{ 
+                      marginTop: '12px', 
+                      display: 'flex', 
+                      alignItems: 'flex-start', 
+                      gap: '8px', 
+                      color: '#b96b00', 
+                      fontSize: '13px', 
+                      background: '#fff8d9', 
+                      padding: '10px 14px', 
+                      borderRadius: '10px',
+                      border: '1px solid #f2dfb1',
+                      lineHeight: 1.5
+                    }}
+                  >
+                    <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
                     <span>{slot.warning}</span>
                   </div>
                 )}
