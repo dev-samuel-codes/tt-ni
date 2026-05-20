@@ -272,6 +272,7 @@
 .action-row {
   display: flex;
   align-items: center;
+  gap: 12px;
 }
 
 .logo-lockup {

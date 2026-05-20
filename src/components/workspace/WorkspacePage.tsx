@@ -691,7 +691,7 @@ export function SupplementWorkspace({
     try {
       const saved = await saveSupplementProduct(supplement, labelImagePath)
       supplement.id = saved.productId
-      setSyncMessage(`${saved.message} "분석 결과 보기"를 눌러 분석을 실행하세요.`)
+      setSyncMessage('저장되었습니다.')
     } catch (error) {
       setSyncMessage(error instanceof Error ? error.message : '저장에 실패했습니다.')
       return
@@ -902,7 +902,11 @@ export function SupplementWorkspace({
         </div>
         <div className="action-row">
           <button type="button" className="button primary" onClick={confirmSupplement} disabled={!canConfirm}><Check size={16} />검수 완료 및 저장</button>
+        </div>
+        <div style={{ borderTop: '1px solid #e1e8e5', margin: '16px 0 12px' }} />
+        <div className="action-row" style={{ justifyContent: 'flex-start' }}>
           <button type="button" className="button secondary" onClick={onAnalyze}>분석 결과 보기</button>
+          <span style={{ fontSize: '13px', color: '#8a9a95', marginLeft: '12px' }}>저장된 영양제를 분석합니다</span>
         </div>
       </section>
     </div>

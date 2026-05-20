@@ -82,19 +82,19 @@ function App() {
       const serverReport = createAnalysisReportFromServer(data)
       setReport(serverReport)
       if (serverReport.totals.length > 0) {
-        setAnalysisSyncMessage(`분석 결과 저장 완료: ${serverReport.id}`)
+        setAnalysisSyncMessage('분석 결과가 저장되었습니다.')
       } else {
-        setAnalysisSyncMessage(`분석 결과가 저장되었지만 분석할 성분이 없습니다. 영양제의 성분 정보를 확인해주세요. (ID: ${serverReport.id})`)
+        setAnalysisSyncMessage('분석 결과가 저장되었지만 분석할 성분이 없습니다. 영양제의 성분 정보를 확인해주세요.')
       }
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : '서버 분석 저장에 실패했습니다.'
       setAnalysisSyncMessage(errMsg)
       if (previewReport.totals.length > 0) {
         setReport(previewReport)
-        setAnalysisSyncMessage(`서버 연결 실패 - 로컬 분석 결과를 표시합니다: ${errMsg}`)
+        setAnalysisSyncMessage('서버 연결 실패 - 로컬 분석 결과를 표시합니다.')
       } else {
         setReport(null)
-        setAnalysisSyncMessage(`분석할 영양제가 없습니다. 영양제를 먼저 등록해주세요. (${errMsg})`)
+        setAnalysisSyncMessage('분석할 영양제가 없습니다. 영양제를 먼저 등록해주세요.')
       }
     }
     navigateTo(routes.analysis)
