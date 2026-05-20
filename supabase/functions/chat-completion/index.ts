@@ -216,10 +216,18 @@ async function checkRateLimit(
 ): Promise<{ allowed: boolean; count: number }> {
   const today = new Date().toISOString().split('T')[0]
 
+  const { data: userSessions } = await supabase
+    .from('chat_sessions')
+    .select('id')
+    .eq('user_id', userId)
+
+  const sessionIds = (userSessions ?? []).map((s: { id: string }) => s.id)
+  if (sessionIds.length === 0) return { allowed: true, count: 0 }
+
   const { count, error } = await supabase
     .from('chat_messages')
     .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
+    .in('session_id', sessionIds)
     .eq('role', 'user')
     .gte('created_at', `${today}T00:00:00`)
     .lte('created_at', `${today}T23:59:59`)
@@ -308,7 +316,6 @@ Deno.serve(async (req) => {
     // Save user message
     await supabase.from('chat_messages').insert({
       session_id: sessionIdToUse,
-      user_id: userData.user.id,
       role: 'user',
       content: message,
     })
@@ -406,7 +413,6 @@ Deno.serve(async (req) => {
             try {
               await supabase.from('chat_messages').insert({
                 session_id: sessionIdToUse,
-                user_id: userData.user.id,
                 role: 'assistant',
                 content: assistantContent,
               })
