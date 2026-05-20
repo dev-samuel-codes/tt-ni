@@ -173,6 +173,57 @@ export function Dashboard({
         <MetricCard label="약물/질환 주의" value={`${report.interactionWarnings.length}개`} tone="warning" icon={<ShieldCheck size={20} />} />
       </section>
 
+      {/* 프리미엄 영양 성분 섭취 시각화 그래프 */}
+      <section className="nutrient-dashboard-chart" style={{ marginBottom: '24px' }}>
+        <h3>
+          <Activity size={20} color="#18ae90" />
+          실시간 영양 성분 섭취 현황
+        </h3>
+        <div className="nutrient-chart-container">
+          {report.totals.map((total) => {
+            const targetVal = total.reference?.rda || total.reference?.ai
+            const percent = targetVal ? Math.round((total.totalAmount / targetVal) * 100) : 0
+            const displayPercent = Math.min(percent, 100) // 100% 게이지 한도
+
+            let statusClass = 'bar-normal'
+            if (total.status === 'deficient') statusClass = 'bar-deficient'
+            else if (total.status === 'caution') statusClass = 'bar-caution'
+            else if (total.status === 'excess') statusClass = 'bar-excess'
+
+            return (
+              <article className="nutrient-chart-card" key={total.nutrientId}>
+                <div className="nutrient-chart-header">
+                  <span className="nutrient-chart-name">{total.standardName}</span>
+                  <span className="nutrient-chart-value">
+                    {Math.round(total.totalAmount * 10) / 10}{total.unit}
+                    {percent > 0 && ` (${percent}%)`}
+                  </span>
+                </div>
+                <div className="nutrient-chart-bar-outer">
+                  <div
+                    className={`nutrient-chart-bar-inner ${statusClass}`}
+                    style={{ width: `${displayPercent}%` }}
+                  />
+                </div>
+                <div className="nutrient-chart-footer">
+                  <span>0%</span>
+                  {targetVal ? (
+                    <span>목표: {targetVal}{total.unit}</span>
+                  ) : (
+                    <span>-</span>
+                  )}
+                  {total.reference?.ul ? (
+                    <span style={{ color: '#ff7875' }}>상한: {total.reference.ul}{total.unit}</span>
+                  ) : (
+                    <span>-</span>
+                  )}
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      </section>
+
       <div className="panel-grid two">
         <section className="panel wide">
           <div className="section-heading">
@@ -900,13 +951,36 @@ export function SupplementWorkspace({
             </tbody>
           </table>
         </div>
-        <div className="action-row">
-          <button type="button" className="button primary" onClick={confirmSupplement} disabled={!canConfirm}><Check size={16} />검수 완료 및 저장</button>
-        </div>
-        <div style={{ borderTop: '1px solid #e1e8e5', margin: '16px 0 12px' }} />
-        <div className="action-row" style={{ justifyContent: 'flex-start' }}>
-          <button type="button" className="button secondary" onClick={onAnalyze}>분석 결과 보기</button>
-          <span style={{ fontSize: '13px', color: '#8a9a95', marginLeft: '12px' }}>저장된 영양제를 분석합니다</span>
+        {/* 통합 액션 허브 카드 */}
+        <div className="review-action-hub">
+          <div className="action-hub-header">
+            <h3>
+              <Sparkles size={18} color="#18ae90" />
+              영양제 검수 완료 및 맞춤 건강 분석
+            </h3>
+            <p>성분 검수가 완료되면 아래 버튼을 눌러 저장하고, 실시간 종합 분석 결과를 즉시 확인해보세요!</p>
+          </div>
+          <div className="action-hub-buttons">
+            <button
+              type="button"
+              className="button primary"
+              onClick={confirmSupplement}
+              disabled={!canConfirm}
+              style={{ fontSize: '14px', padding: '0 24px', minHeight: '44px' }}
+            >
+              <Check size={18} />
+              검수 완료 및 저장
+            </button>
+            <button
+              type="button"
+              className="button secondary-action"
+              onClick={onAnalyze}
+              style={{ fontSize: '14px', padding: '0 24px', minHeight: '44px' }}
+            >
+              <Activity size={18} />
+              실시간 분석 결과 보기
+            </button>
+          </div>
         </div>
       </section>
     </div>

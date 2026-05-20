@@ -2738,3 +2738,192 @@ textarea:focus {
   }
 }
 
+/* ==========================================
+   대시보드 프리미엄 SVG & CSS 차트 스타일
+   ========================================== */
+.nutrient-dashboard-chart {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(246, 251, 249, 0.95) 100%);
+  border: 1px solid rgba(24, 174, 144, 0.15);
+  border-radius: 18px;
+  box-shadow: 0 16px 48px rgba(18, 93, 82, 0.06);
+  padding: 24px;
+  margin-top: 24px;
+  backdrop-filter: blur(10px);
+}
+
+.nutrient-dashboard-chart h3 {
+  font-size: 18px;
+  font-weight: 850;
+  color: #173c3c;
+  margin: 0 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nutrient-chart-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.nutrient-chart-card {
+  background: #ffffff;
+  border: 1px solid #e2ece8;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.01);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.nutrient-chart-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(24, 174, 144, 0.08);
+  border-color: #bad3c8;
+}
+
+.nutrient-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.nutrient-chart-name {
+  font-weight: 800;
+  font-size: 14px;
+  color: #173c3c;
+}
+
+.nutrient-chart-value {
+  font-size: 13px;
+  color: #65726f;
+  font-weight: 700;
+}
+
+.nutrient-chart-bar-outer {
+  height: 10px;
+  background: #eef3f1;
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.nutrient-chart-bar-inner {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 1s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* 상태별 채우기 색상 - 프리미엄 그라디언트 */
+.bar-deficient {
+  background: linear-gradient(90deg, #ffc069 0%, #ffa940 100%);
+}
+
+.bar-normal {
+  background: linear-gradient(90deg, #5cdbd3 0%, #13c2c2 100%);
+}
+
+.bar-caution {
+  background: linear-gradient(90deg, #ff9c6e 0%, #ff7a45 100%);
+}
+
+.bar-excess {
+  background: linear-gradient(90deg, #ff7875 0%, #ff4d4f 100%);
+}
+
+.nutrient-chart-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #8a9a95;
+  font-weight: 700;
+}
+
+/* ==========================================
+   내 영양제 검수 & 분석 통합 액션 허브 스타일
+   ========================================== */
+.review-action-hub {
+  background: linear-gradient(135deg, #f0fdf9 0%, #e6f9f4 100%);
+  border: 1px dashed rgba(24, 174, 144, 0.35);
+  border-radius: 16px;
+  padding: 24px;
+  margin-top: 24px;
+  box-shadow: 0 12px 32px rgba(24, 174, 144, 0.04);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.review-action-hub::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(44, 198, 167, 0.05) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.action-hub-header {
+  margin-bottom: 18px;
+}
+
+.action-hub-header h3 {
+  font-size: 16px;
+  font-weight: 850;
+  color: #0a6e58;
+  margin: 0 0 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.action-hub-header p {
+  color: #4a665e;
+  font-size: 13px;
+  margin: 0;
+  font-weight: 650;
+}
+
+.action-hub-buttons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.action-hub-buttons .button {
+  font-size: 14px;
+  padding: 0 24px;
+  min-height: 46px;
+  box-shadow: 0 4px 14px rgba(24, 174, 144, 0.1);
+}
+
+.action-hub-buttons .button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(24, 174, 144, 0.16);
+}
+
+.action-hub-buttons .button.primary {
+  background: linear-gradient(135deg, #18ae90 0%, #138971 100%);
+  border: none;
+}
+
+.action-hub-buttons .button.secondary-action {
+  background: #ffffff;
+  border: 1px solid rgba(24, 174, 144, 0.4);
+  color: #0a6e58;
+}
+
+.action-hub-buttons .button.secondary-action:hover {
+  background: #f0fbf9;
+}
+
+
