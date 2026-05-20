@@ -41,7 +41,21 @@ interface RefineResponse {
  * DB에서 직접 매칭 가능한 영양소들의 표준 정보(별칭, 단위, 권장량, 효능)를 정의합니다.
  * 매칭되지 않은 성분은 LLM을 통해 보강 분석됩니다.
  */
-const nutrientDatabase = [
+interface NutrientDbEntry {
+  id: string
+  name: string
+  aliases: string[]
+  unit: string
+  rda: string
+  benefit: string
+}
+
+/**
+ * DB의 nutrients 테이블에서 전체 영양소 목록을 로드합니다.
+ * DB 조회 실패 시 하드코딩된 폴백을 사용합니다.
+ */
+async function loadNutrientDatabase(supabase: ReturnType<typeof createClient>): Promise<NutrientDbEntry[]> {
+  const fallback: NutrientDbEntry[] = [
   { id: 'vitamin_a', name: '비타민 A', aliases: ['vitamin a', 'retinol', '레티놀', '베타카로틴', 'beta carotene', '비타민a'], unit: 'mcg', rda: '700-900mcg', benefit: '시력 유지, 면역 기능, 피부 건강' },
   { id: 'vitamin_b1', name: '비타민 B1', aliases: ['b1', 'thiamine', '티아민', '비타민b1'], unit: 'mg', rda: '1.1-1.2mg', benefit: '에너지 대사, 신경 기능 유지' },
   { id: 'vitamin_b2', name: '비타민 B2', aliases: ['b2', 'riboflavin', '리보플라avin', '비타민b2'], unit: 'mg', rda: '1.1-1.3mg', benefit: '에너지 대사, 피부·점막 건강' },
@@ -88,15 +102,30 @@ const nutrientDatabase = [
   { id: 'glutathione', name: '글루타치온', aliases: ['glutathione', '글루타치온', 'gsh'], unit: 'mg', rda: '250-500mg', benefit: '강력한 항산화, 해독, 면역 기능' },
   { id: 'resveratrol', name: '레스베라트롤', aliases: ['resveratrol', '레스베라트롤'], unit: 'mg', rda: '150-500mg', benefit: '항산화, 심혈관 건강, 노화 방지' },
   { id: 'quercetin', name: '케르세틴', aliases: ['quercetin', '케르세틴'], unit: 'mg', rda: '500-1000mg', benefit: '항염, 항히스타민, 항산화' },
-]
+  ]
+  try {
+    const { data } = await supabase.from('nutrients').select('id, standard_name, aliases, default_unit, risk_level')
+    if (!data?.length) return fallback
+    return (data as Array<{ id: string; standard_name: string; aliases: string[]; default_unit: string }>).map((row) => ({
+      id: row.id,
+      name: row.standard_name,
+      aliases: row.aliases ?? [],
+      unit: row.default_unit ?? 'mg',
+      rda: '',
+      benefit: '',
+    }))
+  } catch {
+    return fallback
+  }
+}
 
 /**
  * 성분명을 정규화하여 내장 DB에서 매칭합니다.
  * 정확 일치 또는 별칭 포함 여부로 검색하며, 매칭 실패 시 원본명을 snake_case ID로 반환합니다.
  */
-function normalizeNutrient(name: string): { id: string; standardName: string; matched: boolean; benefit: string; recommendedDaily: string } {
+function normalizeNutrient(database: NutrientDbEntry[], name: string): { id: string; standardName: string; matched: boolean; benefit: string; recommendedDaily: string } {
   const normalized = name.trim().toLowerCase()
-  const nutrient = nutrientDatabase.find((item) =>
+  const nutrient = database.find((item) =>
     item.name.toLowerCase() === normalized || item.aliases.some((alias) => normalized.includes(alias.toLowerCase()))
   )
   if (!nutrient) {
@@ -141,6 +170,8 @@ Deno.serve(async (req) => {
     const { data: userData, error: userError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
     if (userError || !userData.user) return jsonResponse(req, { error: 'Invalid user session' }, 401)
 
+    const nutrientDatabase = await loadNutrientDatabase(supabase)
+
     const usageDate = new Date().toISOString().split('T')[0]
     const { data: usageData } = await supabase
       .from('api_usage')
@@ -165,7 +196,7 @@ Deno.serve(async (req) => {
     const needsLlmRefine: RawIngredient[] = []
 
     for (const ing of ingredients) {
-      const nutrient = normalizeNutrient(ing.name)
+      const nutrient = normalizeNutrient(nutrientDatabase, ing.name)
       if (nutrient.matched) {
         refinedFromDb.push({
           id: crypto.randomUUID(),

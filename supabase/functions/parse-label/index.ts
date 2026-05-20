@@ -58,30 +58,48 @@ const schema = {
   required: ['product_name', 'serving_size', 'daily_servings_recommended', 'ingredients', 'warnings'],
 }
 
-/** 정규화된 영양소 별칭 매칭을 위한 내부 DB (프론트엔드 nutritionData.ts와 동기화 필요) */
-const nutrientAliases = [
-  { id: 'vitamin_a', name: '비타민 A', aliases: ['vitamin a', 'retinol', '레티놀', '베타카로틴'] },
-  { id: 'vitamin_b1', name: '비타민 B1', aliases: ['b1', 'thiamine', '티아민'] },
-  { id: 'vitamin_b6', name: '비타민 B6', aliases: ['b6', 'pyridoxine', '피리독신'] },
-  { id: 'vitamin_b12', name: '비타민 B12', aliases: ['b12', 'cobalamin', '코발라민'] },
-  { id: 'vitamin_c', name: '비타민 C', aliases: ['vitamin c', 'ascorbic acid', '아스코르브산'] },
-  { id: 'vitamin_d', name: '비타민 D', aliases: ['vitamin d', 'd3', 'cholecalciferol', '콜레칼시페롤'] },
-  { id: 'vitamin_e', name: '비타민 E', aliases: ['vitamin e', 'tocopherol', '토코페롤'] },
-  { id: 'vitamin_k', name: '비타민 K', aliases: ['vitamin k', 'k1', 'k2', 'phylloquinone', 'menaquinone'] },
-  { id: 'calcium', name: '칼슘', aliases: ['calcium', 'ca', '칼슘'] },
-  { id: 'magnesium', name: '마그네슘', aliases: ['magnesium', '마그네슘'] },
-  { id: 'zinc', name: '아연', aliases: ['zinc', 'zn', '아연'] },
-  { id: 'iron', name: '철분', aliases: ['iron', 'fe', '철'] },
-  { id: 'omega3', name: '오메가3', aliases: ['omega 3', 'omega-3', 'epa', 'dha', '오메가'] },
-]
+/**
+ * DB의 nutrients 테이블에서 전체 영양소 목록을 로드합니다.
+ * DB 조회 실패 시 하드코딩된 폴백을 사용합니다.
+ */
+async function loadNutrientAliases(supabase: ReturnType<typeof createClient>): Promise<Array<{ id: string; name: string; aliases: string[] }>> {
+  const fallback = [
+    { id: 'vitamin_a', name: '비타민 A', aliases: ['vitamin a', 'retinol', '레티놀', '베타카로틴'] },
+    { id: 'vitamin_b1', name: '비타민 B1', aliases: ['b1', 'thiamine', '티아민'] },
+    { id: 'vitamin_b6', name: '비타민 B6', aliases: ['b6', 'pyridoxine', '피리독신'] },
+    { id: 'vitamin_b12', name: '비타민 B12', aliases: ['b12', 'cobalamin', '코발라민'] },
+    { id: 'vitamin_c', name: '비타민 C', aliases: ['vitamin c', 'ascorbic acid', '아스코르브산'] },
+    { id: 'vitamin_d', name: '비타민 D', aliases: ['vitamin d', 'd3', 'cholecalciferol', '콜레칼시페롤'] },
+    { id: 'vitamin_e', name: '비타민 E', aliases: ['vitamin e', 'tocopherol', '토코페롤'] },
+    { id: 'vitamin_k', name: '비타민 K', aliases: ['vitamin k', 'k1', 'k2', 'phylloquinone', 'menaquinone'] },
+    { id: 'calcium', name: '칼슘', aliases: ['calcium', 'ca', '칼슘'] },
+    { id: 'magnesium', name: '마그네슘', aliases: ['magnesium', '마그네슘'] },
+    { id: 'zinc', name: '아연', aliases: ['zinc', 'zn', '아연'] },
+    { id: 'iron', name: '철분', aliases: ['iron', 'fe', '철'] },
+    { id: 'omega3', name: '오메가3', aliases: ['omega 3', 'omega-3', 'epa', 'dha', '오메가'] },
+  ]
+  try {
+    const { data } = await supabase.from('nutrients').select('id, standard_name, aliases')
+    if (!data?.length) return fallback
+    return (data as Array<{ id: string; standard_name: string; aliases: string[] }>).map((row) => ({
+      id: row.id,
+      name: row.standard_name,
+      aliases: row.aliases ?? [],
+    }))
+  } catch {
+    return fallback
+  }
+}
+
+type NutrientAliasEntry = { id: string; name: string; aliases: string[] }
 
 /**
  * 성분명을 정규화하여 표준 영양소 ID와 이름으로 매핑합니다.
  * 미매칭 시 원본명을 snake_case ID로 변환하여 반환합니다.
  */
-function normalizeNutrient(name: string): { id: string; name: string; matched: boolean } {
+function normalizeNutrient(aliases: NutrientAliasEntry[], name: string): { id: string; name: string; matched: boolean } {
   const normalized = name.toLowerCase()
-  const nutrient = nutrientAliases.find((item) =>
+  const nutrient = aliases.find((item) =>
     item.name.toLowerCase() === normalized || item.aliases.some((alias) => normalized.includes(alias.toLowerCase()))
   )
   if (!nutrient) return { id: normalized.replaceAll(/\s+/g, '_'), name, matched: false }
@@ -138,6 +156,8 @@ Deno.serve(async (req) => {
     const { data: userData, error: userError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
     if (userError || !userData.user) return jsonResponse(req, { error: 'Invalid user session' }, 401)
     if (!image_path.startsWith(`${userData.user.id}/`)) return jsonResponse(req, { error: 'Image path does not belong to this user' }, 403)
+
+    const nutrientAliases = await loadNutrientAliases(supabase)
 
     // --- Storage에서 이미지 다운로드 및 Base64 인코딩 ---
     const { data: imageBlob, error: downloadError } = await supabase.storage.from('label-images').download(image_path)
@@ -205,7 +225,7 @@ Deno.serve(async (req) => {
       servingSize: parsed.serving_size,
       dailyServingsRecommended: parsed.daily_servings_recommended,
       ingredients: parsed.ingredients.map((ingredient) => {
-        const nutrient = normalizeNutrient(ingredient.name)
+        const nutrient = normalizeNutrient(nutrientAliases, ingredient.name)
         return {
           id: crypto.randomUUID(),
           rawName: ingredient.name,
