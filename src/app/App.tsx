@@ -81,7 +81,11 @@ function App() {
       if (error) throw error
       const serverReport = createAnalysisReportFromServer(data)
       setReport(serverReport)
-      setAnalysisSyncMessage(`분석 결과 저장 완료: ${serverReport.id}`)
+      if (serverReport.totals.length > 0) {
+        setAnalysisSyncMessage(`분석 결과 저장 완료: ${serverReport.id}`)
+      } else {
+        setAnalysisSyncMessage(`분석 결과가 저장되었지만 분석할 성분이 없습니다. 영양제의 성분 정보를 확인해주세요. (ID: ${serverReport.id})`)
+      }
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : '서버 분석 저장에 실패했습니다.'
       setAnalysisSyncMessage(errMsg)
