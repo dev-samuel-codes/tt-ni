@@ -2386,7 +2386,7 @@ th {
               border-color 0.25s ease !important;
 }
 
-.panel:hover,
+.panel:not(.chat-main-panel):hover,
 .metric-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 16px 40px rgba(24, 174, 144, 0.1), 0 2px 8px rgba(0, 0, 0, 0.02) !important;
@@ -3068,6 +3068,5 @@ textarea:focus {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.012) !important;
   color: #21332f !important;
 }
-
 
 
