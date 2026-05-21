@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import type { Medication, Profile, SupplementProduct, AnalysisReport } from '../../types'
 import type { AuthNoticeState } from './authTypes'
@@ -9,7 +9,6 @@ type UseAuthOptions = {
   onMedications: (medications: Medication[]) => void
   onSupplements: (supplements: SupplementProduct[]) => void
   onReport: (report: AnalysisReport | null) => void
-  onSignedIn: () => void
 }
 
 /**
@@ -60,19 +59,12 @@ export function useAuth({
   onMedications,
   onSupplements,
   onReport,
-  onSignedIn,
 }: UseAuthOptions) {
   const [{ hasAuthCallback, initialAuthNotice }] = useState(parseAuthCallbackNotice)
   const [sessionEmail, setSessionEmail] = useState<string | null>(null)
   const [authNotice, setAuthNotice] = useState<AuthNoticeState>(initialAuthNotice)
   const [isAuthInitialized, setIsAuthInitialized] = useState(false)
   const [profileIsSetup, setProfileIsSetup] = useState(false)
-
-  const sessionEmailRef = useRef<string | null>(null)
-
-  useEffect(() => {
-    sessionEmailRef.current = sessionEmail
-  }, [sessionEmail])
 
   const loadUserData = useCallback(async (userId: string) => {
     const [profileResult, conditionsResult, medicationsResult, userSupplementsResult] = await Promise.all([
@@ -164,7 +156,6 @@ export function useAuth({
 
       setSessionEmail(userData.user.email ?? null)
       if (hasAuthCallback) {
-        onSignedIn()
         clearAuthCallbackUrl()
       }
       void loadUserData(userData.user.id)
@@ -176,12 +167,8 @@ export function useAuth({
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return
       const newEmail = session?.user.email ?? null
-      const wasLoggedOut = !sessionEmailRef.current
       setSessionEmail(newEmail)
       if (session?.user) {
-        if (event === 'SIGNED_IN' && wasLoggedOut) {
-          onSignedIn()
-        }
         if (event !== 'TOKEN_REFRESHED') {
           void loadUserData(session.user.id)
         }
@@ -198,7 +185,7 @@ export function useAuth({
       cancelled = true
       data.subscription.unsubscribe()
     }
-  }, [defaultProfile, hasAuthCallback, initialAuthNotice, loadUserData, onMedications, onProfile, onReport, onSignedIn, onSupplements])
+  }, [defaultProfile, hasAuthCallback, initialAuthNotice, loadUserData, onMedications, onProfile, onReport, onSupplements])
 
   return {
     sessionEmail,

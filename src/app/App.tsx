@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import '../styles/App.css'
 import '../styles/auth.css'
 import '../styles/landing.css'
@@ -44,14 +44,12 @@ function App() {
   const [report, setReport] = useState<AnalysisReport | null>(null)
   const [analysisSyncMessage, setAnalysisSyncMessage] = useState('')
 
-  const openProfileAfterSignIn = useCallback(() => navigateTo(routes.profile), [navigateTo])
   const { sessionEmail, setSessionEmail, authNotice, setAuthNotice, isAuthInitialized, profileIsSetup } = useAuth({
     defaultProfile,
     onProfile: setProfile,
     onMedications: setMedications,
     onSupplements: setSupplements,
     onReport: setReport,
-    onSignedIn: openProfileAfterSignIn,
   })
 
   /** 로컬 분석 미리보기 (서버 저장 없이 즉시 표시용) */
@@ -225,4 +223,3 @@ function App() {
 }
 
 export default App
-
