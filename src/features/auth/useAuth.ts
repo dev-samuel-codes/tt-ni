@@ -143,20 +143,12 @@ export function useAuth({
         return
       }
 
-      const { data: userData, error: userError } = await supabase.auth.getUser()
-      if (cancelled) return
-
-      if (userError || !userData.user) {
-        setSessionEmail(null)
-        setIsAuthInitialized(true)
-        return
-      }
-
-      setSessionEmail(userData.user.email ?? null)
+      const user = sessionData.session.user
+      setSessionEmail(user.email ?? null)
       if (hasAuthCallback) {
         clearAuthCallbackUrl()
       }
-      void loadUserData(userData.user.id)
+      void loadUserData(user.id)
       setIsAuthInitialized(true)
     }
 

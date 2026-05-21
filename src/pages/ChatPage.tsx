@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Send, Bot, User, Plus, MessageCircle, Info, AlertCircle } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
+import type { AnalysisReport, Medication, Profile, SupplementProduct } from '../types'
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -13,7 +14,17 @@ interface ChatSession {
   active: boolean
 }
 
-export function ChatPage() {
+export function ChatPage({
+  profile,
+  medications,
+  supplements,
+  report,
+}: {
+  profile: Profile
+  medications: Medication[]
+  supplements: SupplementProduct[]
+  report: AnalysisReport | null
+}) {
   const [input, setInput] = useState('')
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [activeSessionId, setActiveSessionId] = useState<string>('')
@@ -23,9 +34,16 @@ export function ChatPage() {
   ])
   const [isLoading, setIsLoading] = useState(false)
   const [rateLimited, setRateLimited] = useState(false)
-  const [contextBadges, setContextBadges] = useState<string[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fullTextRef = useRef('')
+
+  const contextBadges = useMemo(() => {
+    const badges: string[] = []
+    if (profile.consentAccepted || profile.gender) badges.push('프로필 정보')
+    if (supplements.length > 0) badges.push(`영양제 ${supplements.length}개`)
+    if (report && report.totals.length > 0) badges.push('최근 분석 리포트')
+    return badges
+  }, [profile, supplements, report])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -80,32 +98,9 @@ export function ChatPage() {
     }
   }
 
-  const loadContextBadges = useCallback(async () => {
-    const badges: string[] = []
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const [{ data: profiles }, { data: supplements }, { data: reports }] = await Promise.all([
-        supabase.from('user_profiles').select('id').eq('user_id', user.id).limit(1),
-        supabase.from('supplement_products').select('id').eq('owner_user_id', user.id),
-        supabase.from('analysis_reports').select('id').eq('user_id', user.id).order('created_at', { ascending: false }).limit(1),
-      ])
-
-      if (profiles && profiles.length > 0) badges.push('프로필 정보')
-      if (supplements && supplements.length > 0) badges.push(`영양제 ${supplements.length}개`)
-      if (reports && reports.length > 0) badges.push('최근 분석 리포트')
-    } catch {
-      // context loading is best-effort
-    }
-    setContextBadges(badges)
-  }, [])
-
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadSessions()
-    loadContextBadges()
-  }, [loadSessions, loadContextBadges])
+    void loadSessions()
+  }, [loadSessions])
 
   async function createSession(title?: string): Promise<string | null> {
     try {
@@ -134,13 +129,42 @@ export function ChatPage() {
     }
   }
 
+  const chatContext = useMemo(() => ({
+    profile: {
+      gender: profile.gender,
+      birthYear: profile.birthYear,
+      conditions: profile.conditions,
+      medications: medications.map((m) => ({
+        name: m.name,
+        memo: m.memo || undefined,
+      })),
+    },
+    supplements: supplements.map((s) => ({
+      productName: s.productName,
+      confirmed: s.confirmed,
+      ingredients: s.ingredients.map((ing) => ({
+        standardName: ing.standardName,
+        amount: ing.amount,
+        unit: ing.unit,
+      })),
+    })),
+    report: report ? {
+      statusSummary: report.statusSummary,
+      totals: report.totals,
+      duplicateItems: report.duplicateItems,
+      interactionWarnings: report.interactionWarnings,
+      recommendations: report.recommendations,
+      synergyRecommendations: report.synergyRecommendations,
+      antagonismWarnings: report.antagonismWarnings,
+    } : undefined,
+  }), [profile, medications, supplements, report])
+
   const handleSend = async (text?: string) => {
     const msgText = text || input
     if (!msgText.trim() || isLoading || rateLimited) return
 
     const userMsg: ChatMessage = { role: 'user', content: msgText }
-    const newMessages = [...messages, userMsg]
-    setMessages(newMessages)
+    setMessages((prev) => [...prev, userMsg])
     setInput('')
     setIsLoading(true)
     setRateLimited(false)
@@ -159,7 +183,6 @@ export function ChatPage() {
         sessionId = 'local'
       }
     } else {
-      // Update session title on first message if it's still default
       if (sessions.find((s) => s.id === sessionId)?.title === '새 대화') {
         setSessions((prev) =>
           prev.map((s) => (s.id === sessionId ? { ...s, title: msgText.slice(0, 30) } : s))
@@ -174,86 +197,17 @@ export function ChatPage() {
       await saveMessage(sessionId, userMsg)
     }
 
-    // Placeholder for AI response while streaming
     setMessages((prev) => [...prev, { role: 'assistant', content: '' }])
 
-    // AI 개인화 컨텍스트 데이터 수집
-    let chatContext: Record<string, unknown> = {
-      profile: { conditions: [], medications: [] },
-      supplements: [],
-    }
-
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const [profileRes, conditionsRes, medicationsRes, userSupplementsRes, reportRes] = await Promise.all([
-          supabase.from('user_profiles').select('*').eq('user_id', user.id).maybeSingle(),
-          supabase.from('user_conditions').select('*').eq('user_id', user.id),
-          supabase.from('user_medications').select('*').eq('user_id', user.id),
-          supabase
-            .from('user_supplements')
-            .select('id, daily_servings, intake_time, active, supplement_products(id, product_name, brand_name, source_type, supplement_ingredients(*))')
-            .eq('user_id', user.id).eq('active', true),
-          supabase
-            .from('analysis_reports')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle()
-        ])
-
-        const conditions = conditionsRes.data ?? []
-        const profileData = profileRes.data
-
-        chatContext = {
-          profile: {
-            gender: profileData?.gender,
-            birthYear: profileData?.birth_year,
-            conditions: conditions
-              .filter((item) => !item.condition_code.startsWith('allergy:') && !item.condition_code.startsWith('diet:'))
-              .map((item) => item.condition_name),
-            medications: (medicationsRes.data ?? []).map((med) => ({
-              name: med.medication_name,
-              memo: med.memo || undefined
-            }))
-          },
-          supplements: (userSupplementsRes.data ?? []).flatMap((row) => {
-            const product = Array.isArray(row.supplement_products) ? row.supplement_products[0] : row.supplement_products
-            if (!product) return []
-            return [{
-              productName: product.product_name,
-              confirmed: true,
-              ingredients: (product.supplement_ingredients ?? []).map((ing) => ({
-                standardName: ing.standard_name,
-                amount: ing.amount === null ? null : Number(ing.amount),
-                unit: ing.unit,
-              }))
-            }]
-          }),
-          report: reportRes.data ? {
-            statusSummary: reportRes.data.status_summary,
-            totals: reportRes.data.totals,
-            duplicateItems: reportRes.data.duplicate_items,
-            interactionWarnings: reportRes.data.interaction_warnings,
-            recommendations: reportRes.data.recommendations,
-            synergyRecommendations: reportRes.data.synergy_recommendations,
-            antagonismWarnings: reportRes.data.antagonism_warnings
-          } : undefined
-        }
-      }
-    } catch {
-      // best-effort context load
-    }
-
-    try {
+      const { data: { session } } = await supabase.auth.getSession()
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-completion`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}`,
+            Authorization: `Bearer ${session?.access_token || ''}`,
           },
           body: JSON.stringify({
             message: msgText,
@@ -320,7 +274,6 @@ export function ChatPage() {
         }
       }
 
-      // Save final message
       if (sessionId !== 'local' && fullTextRef.current) {
         await saveMessage(sessionId, { role: 'assistant', content: fullTextRef.current })
       }

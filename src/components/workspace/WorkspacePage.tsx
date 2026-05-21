@@ -8,7 +8,7 @@ import { findNutrientByName } from '../../features/nutrition/nutritionData'
 import { statusLabel } from '../../features/analysis/analysisEngine'
 import { createId, getStatusTone, splitList } from '../../lib/utils'
 import { saveProfileBundle } from '../../features/profile/profileService'
-import { createManualIngredient, parseLabelImage, saveSupplementProduct, updateSupplementProduct, updateSupplementIngredient, deleteSupplementProduct, refineIngredients } from '../../features/supplements/supplementService'
+import { createManualIngredient, parseLabelImage, saveSupplementProduct, updateSupplementProduct, batchUpdateSupplementIngredients, deleteSupplementProduct, refineIngredients } from '../../features/supplements/supplementService'
 import { supabase } from '../../lib/supabaseClient'
 import { MetricCard } from './Shared'
 
@@ -53,9 +53,9 @@ export function Dashboard({
     }).catch((err) => console.warn('Failed to load user name:', err))
   }, [])
 
-  const profileJson = JSON.stringify(profile)
-  const supplementsJson = JSON.stringify(supplements)
-  const medicationsJson = JSON.stringify(medications)
+  const profileJson = useMemo(() => JSON.stringify(profile), [profile])
+  const supplementsJson = useMemo(() => JSON.stringify(supplements), [supplements])
+  const medicationsJson = useMemo(() => JSON.stringify(medications), [medications])
 
   useEffect(() => {
     if (!hasData || supplements.length === 0 || !profile) return
@@ -575,13 +575,15 @@ export function SupplementWorkspace({
         dailyServings: editDailyServings,
         intakeTime: editIntakeTime,
       })
-      for (const ing of editIngredients) {
-        await updateSupplementIngredient(ing.id, {
+      await batchUpdateSupplementIngredients(
+        editIngredients.map((ing) => ({
+          id: ing.id,
           standardName: ing.standardName,
           amount: ing.amount ?? 0,
           unit: ing.unit,
-        }, editDailyServings)
-      }
+        })),
+        editDailyServings,
+      )
 
       const { data: authData } = await supabase.auth.getUser()
       if (authData?.user) {

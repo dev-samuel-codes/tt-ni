@@ -223,6 +223,29 @@ export async function updateSupplementIngredient(
   return '성분 정보를 수정했습니다.'
 }
 
+/** 여러 성분을 한 번에 업데이트합니다 (개별 업데이트 대신 배치 upsert 사용). */
+export async function batchUpdateSupplementIngredients(
+  ingredients: Array<{ id: string; standardName?: string; amount?: number | null; unit?: string }>,
+  dailyServings?: number,
+): Promise<string> {
+  const rows = ingredients.map((ing) => {
+    const row: Record<string, unknown> = { id: ing.id }
+    if (ing.standardName !== undefined) row.standard_name = ing.standardName
+    if (ing.amount !== undefined) {
+      row.amount = ing.amount ?? 0
+      row.amount_per_daily_serving = (dailyServings && dailyServings > 0) ? (ing.amount ?? 0) * dailyServings : (ing.amount ?? 0)
+    }
+    if (ing.unit !== undefined) row.unit = ing.unit
+    return row
+  })
+
+  const { error } = await supabase
+    .from('supplement_ingredients')
+    .upsert(rows, { onConflict: 'id' })
+  if (error) throw new Error('성분 일괄 수정에 실패했습니다: ' + error.message)
+  return '성분 정보를 수정했습니다.'
+}
+
 /** 영양제 제품을 삭제합니다 (CASCADE로 연관 성분, user_supplements도 삭제됨). */
 export async function deleteSupplementProduct(productId: string): Promise<string> {
   const { data: authData, error: authError } = await supabase.auth.getUser()

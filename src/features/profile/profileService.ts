@@ -4,7 +4,7 @@ import type { Medication, Profile } from '../../types'
 /**
  * 프로필, 건강 상태, 알레르기, 식이 제한, 복용 약물을 한 번에 저장합니다.
  * user_profiles은 upsert(존재하면 갱신, 없으면 삽입),
- * user_conditions와 user_medications은 upsert 시도 → 실패 시 insert-only fallback으로 데이터 유실을 방지합니다.
+ * user_conditions와 user_medications은 기존 데이터와 비교하여 증분 삽입/삭제합니다.
  * condition_code prefix 규칙: 일반 질환(없음), allergy:(알레르기), diet:(식이 제한)
  */
 export async function saveProfileBundle(profile: Profile, medications: Medication[]): Promise<string> {
@@ -26,80 +26,66 @@ export async function saveProfileBundle(profile: Profile, medications: Medicatio
   if (profileResult.error) throw profileResult.error
 
   const conditionRows = [
-    ...profile.conditions.map((name) => ({ condition_code: name.toLowerCase(), condition_name: name, severity: 'notice' })),
-    ...profile.allergies.map((name) => ({ condition_code: `allergy:${name.toLowerCase()}`, condition_name: name, severity: 'caution' })),
-    ...profile.dietaryRestrictions.map((name) => ({ condition_code: `diet:${name.toLowerCase()}`, condition_name: name, severity: 'notice' })),
+    ...profile.conditions.map((name) => ({ condition_code: name.toLowerCase(), condition_name: name, severity: 'notice' as const })),
+    ...profile.allergies.map((name) => ({ condition_code: `allergy:${name.toLowerCase()}`, condition_name: name, severity: 'caution' as const })),
+    ...profile.dietaryRestrictions.map((name) => ({ condition_code: `diet:${name.toLowerCase()}`, condition_name: name, severity: 'notice' as const })),
   ]
 
   const newConditionCodes = new Set(conditionRows.map((r) => r.condition_code))
 
-  if (conditionRows.length > 0) {
-    const { data: existingConds } = await supabase
-      .from('user_conditions')
-      .select('condition_code')
-      .eq('user_id', userId)
-
-    const existingConditionCodes = new Set((existingConds ?? []).map((r: { condition_code: string }) => r.condition_code))
-    const newOnly = conditionRows.filter((r) => !existingConditionCodes.has(r.condition_code))
-
-    if (newOnly.length > 0) {
-      const conditionResult = await supabase.from('user_conditions').insert(
-        newOnly.map((row) => ({ ...row, user_id: userId }))
-      )
-      if (conditionResult.error) throw conditionResult.error
-    }
-  }
-
+  // 기존 상태를 한 번에 조회 (id + condition_code)
   const { data: existingConditions } = await supabase
     .from('user_conditions')
     .select('id, condition_code')
     .eq('user_id', userId)
 
+  const existingConditionCodes = new Set((existingConditions ?? []).map((r: { condition_code: string }) => r.condition_code))
+  const conditionsToInsert = conditionRows.filter((r) => !existingConditionCodes.has(r.condition_code))
   const staleConditionIds = (existingConditions ?? [])
     .filter((row: { id: string; condition_code: string }) => !newConditionCodes.has(row.condition_code))
     .map((row: { id: string }) => row.id)
 
-  if (staleConditionIds.length > 0) {
-    await supabase.from('user_conditions').delete().in('id', staleConditionIds)
+  // 병렬로 삽입 + 삭제
+  const conditionOps: Promise<unknown>[] = []
+  if (conditionsToInsert.length > 0) {
+    conditionOps.push(supabase.from('user_conditions').insert(conditionsToInsert.map((row) => ({ ...row, user_id: userId }))).then((r) => { if (r.error) throw r.error }))
   }
+  if (staleConditionIds.length > 0) {
+    conditionOps.push(supabase.from('user_conditions').delete().in('id', staleConditionIds).then((r) => { if (r.error) throw r.error }))
+  }
+  await Promise.all(conditionOps)
 
   const newMedicationNames = new Set(medications.map((m) => m.name.toLowerCase()))
 
-  if (medications.length > 0) {
-    const { data: existingMeds } = await supabase
-      .from('user_medications')
-      .select('medication_name')
-      .eq('user_id', userId)
-
-    const existingMedNames = new Set((existingMeds ?? []).map((r: { medication_name: string }) => r.medication_name.toLowerCase()))
-    const newOnly = medications.filter((m) => !existingMedNames.has(m.name.toLowerCase()))
-
-    if (newOnly.length > 0) {
-      const medicationResult = await supabase.from('user_medications').insert(
-        newOnly.map((medication) => ({
-          user_id: userId,
-          medication_name: medication.name,
-          dosage_text: medication.purpose,
-          frequency: medication.frequency,
-          memo: medication.memo,
-        })),
-      )
-      if (medicationResult.error) throw medicationResult.error
-    }
-  }
-
+  // 기존 약물을 한 번에 조회 (id + medication_name)
   const { data: existingMedications } = await supabase
     .from('user_medications')
     .select('id, medication_name')
     .eq('user_id', userId)
 
+  const existingMedNames = new Set((existingMedications ?? []).map((r: { medication_name: string }) => r.medication_name.toLowerCase()))
+  const medsToInsert = medications.filter((m) => !existingMedNames.has(m.name.toLowerCase()))
   const staleMedicationIds = (existingMedications ?? [])
     .filter((row: { id: string; medication_name: string }) => !newMedicationNames.has(row.medication_name.toLowerCase()))
     .map((row: { id: string }) => row.id)
 
-  if (staleMedicationIds.length > 0) {
-    await supabase.from('user_medications').delete().in('id', staleMedicationIds)
+  // 병렬로 삽입 + 삭제
+  const medicationOps: Promise<unknown>[] = []
+  if (medsToInsert.length > 0) {
+    medicationOps.push(supabase.from('user_medications').insert(
+      medsToInsert.map((medication) => ({
+        user_id: userId,
+        medication_name: medication.name,
+        dosage_text: medication.purpose,
+        frequency: medication.frequency,
+        memo: medication.memo,
+      })),
+    ).then((r) => { if (r.error) throw r.error }))
   }
+  if (staleMedicationIds.length > 0) {
+    medicationOps.push(supabase.from('user_medications').delete().in('id', staleMedicationIds).then((r) => { if (r.error) throw r.error }))
+  }
+  await Promise.all(medicationOps)
 
   return '프로필과 복용 정보를 저장했습니다.'
 }

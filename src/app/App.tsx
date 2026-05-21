@@ -158,7 +158,7 @@ function App() {
           <SchedulePage supplements={supplements} profile={profile} medications={medications} />
         )}
         {currentPath === routes.chat && (
-          <ChatPage />
+          <ChatPage profile={profile} medications={medications} supplements={supplements} report={report} />
         )}
       </SidebarLayout>
     )
