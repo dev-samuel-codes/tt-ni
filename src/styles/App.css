@@ -2415,6 +2415,23 @@ th {
   border-color: #bad3c8 !important;
 }
 
+.dashboard-workspace .panel,
+.dashboard-workspace .metric-card,
+.dashboard-workspace .nutrient-chart-card {
+  transition: none !important;
+}
+
+.dashboard-workspace .panel:hover,
+.dashboard-workspace .metric-card:hover,
+.dashboard-workspace .nutrient-chart-card:hover {
+  transform: none !important;
+}
+
+.dashboard-workspace .metric-card:hover {
+  box-shadow: 0 12px 36px rgba(20, 36, 38, 0.05) !important;
+  border-color: #dce9e5 !important;
+}
+
 /* 3. 영양제 목록 카드, 경고 주의 행 호버링 개선 (Fade & Slide) */
 .product-row,
 .analysis-item,
@@ -2806,6 +2823,11 @@ textarea:focus {
   border-color: #bad3c8;
 }
 
+.dashboard-workspace .nutrient-chart-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.01) !important;
+  border-color: #e2ece8 !important;
+}
+
 .nutrient-chart-header {
   display: flex;
   justify-content: space-between;
@@ -3090,4 +3112,3 @@ textarea:focus {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.012) !important;
   color: #21332f !important;
 }
-

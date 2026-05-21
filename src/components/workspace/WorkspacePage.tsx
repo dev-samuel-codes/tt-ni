@@ -56,7 +56,7 @@ export function Dashboard({
 
   if (!report || report.totals.length === 0) {
     return (
-      <>
+      <div className="dashboard-workspace">
         <div style={{ marginBottom: '32px' }}>
           <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#173c3c', margin: '0 0 6px' }}>안녕하세요, {userName}님</h2>
           <p style={{ color: '#697771', fontSize: '15px', margin: 0 }}>{dateStr}</p>
@@ -111,12 +111,12 @@ export function Dashboard({
             {profileIsSetup ? '영양제 등록하기' : '프로필 입력하기'}
           </button>
         </section>
-      </>
+      </div>
     )
   }
 
   return (
-    <>
+    <div className="dashboard-workspace">
       <div style={{ marginBottom: '24px' }}>
         <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#173c3c', margin: '0 0 6px' }}>안녕하세요, {userName}님</h2>
         <p style={{ color: '#697771', fontSize: '15px', margin: 0 }}>{dateStr}</p>
@@ -295,7 +295,7 @@ export function Dashboard({
           ))}
         </section>
       </div>
-    </>
+    </div>
   )
 }
 
