@@ -198,31 +198,6 @@ export async function updateSupplementProduct(
   return '제품 정보를 수정했습니다.'
 }
 
-/** 개별 성분 정보를 업데이트합니다. amount_per_daily_serving도 함께 갱신합니다. */
-export async function updateSupplementIngredient(
-  ingredientId: string,
-  patch: Partial<Pick<ParsedIngredient, 'standardName' | 'amount' | 'unit'>>,
-  dailyServings?: number,
-): Promise<string> {
-  const updatePayload: Record<string, unknown> = {}
-  if (patch.standardName !== undefined) updatePayload.standard_name = patch.standardName
-  if (patch.amount !== undefined) {
-    updatePayload.amount = patch.amount
-    updatePayload.amount_per_daily_serving = (dailyServings && dailyServings > 0) ? (patch.amount ?? 0) * dailyServings : patch.amount
-  }
-  if (patch.unit !== undefined) updatePayload.unit = patch.unit
-
-  const { data, error } = await supabase
-    .from('supplement_ingredients')
-    .update(updatePayload)
-    .eq('id', ingredientId)
-    .select('id')
-    .single()
-  if (error) throw new Error('성분 수정에 실패했습니다: ' + error.message)
-  if (!data) throw new Error('성분 수정에 실패했습니다: 업데이트된 행이 없습니다.')
-  return '성분 정보를 수정했습니다.'
-}
-
 /** 여러 성분을 한 번에 업데이트합니다 (개별 업데이트 대신 배치 upsert 사용). */
 export async function batchUpdateSupplementIngredients(
   ingredients: Array<{ id: string; standardName?: string; amount?: number | null; unit?: string }>,

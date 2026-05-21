@@ -107,7 +107,7 @@ export function Dashboard({
 
   const synergies = report.synergyRecommendations.map((s) => ({ combo: s.label, benefit: s.benefit }))
 
-  if (!hasData) {
+  if (!report || report.totals.length === 0) {
     return (
       <>
         <div style={{ marginBottom: '32px' }}>
@@ -289,6 +289,20 @@ export function Dashboard({
             {report.interactionWarnings.slice(0, 3).map((w) => (
               <article className={`risk-row ${getStatusTone(w.severity)}`} key={`${w.nutrientName}-${w.message}`}>
                 <div><strong>{w.nutrientName}</strong><span className="status-pill">{w.severity === 'high' ? '[금기]' : '[주의]'}</span></div>
+                <p>{w.message}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {report.antagonismWarnings && report.antagonismWarnings.length > 0 && (
+        <section className="panel" style={{ marginTop: '24px' }}>
+          <div className="section-heading"><div><h2>복용 간격 안내</h2><p>동시 복용 시 흡수 경쟁이 발생하는 조합</p></div></div>
+          <div className="risk-board">
+            {report.antagonismWarnings.map((w, idx) => (
+              <article className="risk-row warning" key={idx}>
+                <div><strong>{w.label}</strong><span className="status-pill">{w.severity === 'high' ? '[주의]' : '[참고]'}</span></div>
                 <p>{w.message}</p>
               </article>
             ))}
@@ -1054,7 +1068,7 @@ export function AnalysisResult({ report, syncMessage, onAnalyze, isLocalFallback
     return (
       <section className="panel">
         <div className="section-heading">
-            <div><h2>분석 결과</h2><p>저장된 분석 결과를 표시합니다.</p></div>
+            <div><h2>분석 결과</h2><p>영양소별 섭취 상태를 분석합니다.</p></div>
           <button type="button" className="button primary" onClick={onAnalyze}>분석 실행</button>
         </div>
         {syncMessage ? (
@@ -1062,7 +1076,7 @@ export function AnalysisResult({ report, syncMessage, onAnalyze, isLocalFallback
         ) : (
           <div style={{ textAlign: 'center', padding: '32px 0' }}>
             <p style={{ color: '#697771', fontSize: '15px', marginBottom: '12px' }}>
-              {!report ? '분석을 실행하면 결과가 여기에 표시됩니다.' : '등록된 영양제의 성분 정보를 분석한 결과입니다.'}
+              {!report ? '확정된 영양제가 있으면 분석을 실행하세요.' : '등록된 영양제에서 분석 가능한 성분이 없습니다. 영양제 성분 정보를 확인해주세요.'}
             </p>
             <button type="button" className="button primary" onClick={onAnalyze}>분석 실행하기</button>
           </div>
@@ -1077,6 +1091,8 @@ export function AnalysisResult({ report, syncMessage, onAnalyze, isLocalFallback
     if (filter === 'medication') return false
     return total.status === filter || (filter === 'excess' && total.status === 'caution')
   })
+
+  const hasAntagonism = report.antagonismWarnings && report.antagonismWarnings.length > 0
 
   return (
     <section className="panel">
@@ -1110,16 +1126,16 @@ export function AnalysisResult({ report, syncMessage, onAnalyze, isLocalFallback
       </div>
       {filter === 'medication' ? (
         <div className="risk-board">
-          {report.interactionWarnings.length === 0 && <p className="muted">등록된 약/질환 기준 주의 메시지가 없습니다.</p>}
-          {report.interactionWarnings.map((warning) => (
-            <article className={`risk-row ${getStatusTone(warning.severity)}`} key={`${warning.nutrientName}-${warning.message}`}>
-              <div><strong>{warning.nutrientName}</strong><span>{warning.severity}</span></div>
-              <p>{warning.message}</p>
-            </article>
-          ))}
-        </div>
-      ) : (
-        <div className="analysis-list">
+{report.interactionWarnings.length === 0 && <p className="muted">등록된 약/질환 기준 주의 메시지가 없습니다.</p>}
+           {report.interactionWarnings.map((warning) => (
+             <article className={`risk-row ${getStatusTone(warning.severity)}`} key={`${warning.nutrientName}-${warning.message}`}>
+               <div><strong>{warning.nutrientName}</strong><span className="status-pill">{warning.severity === 'high' ? '[금기]' : '[주의]'}</span></div>
+               <p>{warning.message}</p>
+             </article>
+           ))}
+         </div>
+       ) : (
+         <div className="analysis-list">
           {filteredTotals.length === 0 && <p className="muted">해당하는 성분이 없습니다.</p>}
           {filteredTotals.map((total) => (
             <article className={`analysis-item ${getStatusTone(total.status)}`} key={total.nutrientId}>
@@ -1148,6 +1164,18 @@ export function AnalysisResult({ report, syncMessage, onAnalyze, isLocalFallback
           </article>
         ))}
       </div>
+      {hasAntagonism && (
+        <div className="recommendation-panel" style={{ marginTop: '24px' }}>
+          <h3 style={{ color: '#b96b00' }}>복용 간격 안내</h3>
+          <p style={{ color: '#52605b', fontSize: '14px', marginBottom: '12px' }}>동시 복용 시 흡수 경쟁이 발생하는 영양소 조합입니다. 최소 2시간 간격을 두세요.</p>
+          {report.antagonismWarnings!.map((warning, idx) => (
+            <article key={idx} className="risk-row warning">
+              <div><strong>{warning.label}</strong></div>
+              <p>{warning.message}</p>
+            </article>
+          ))}
+        </div>
+      )}
     </section>
   )
 }

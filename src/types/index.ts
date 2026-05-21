@@ -1,5 +1,5 @@
 /** 성별 */
-export type Gender = 'female' | 'male' | 'other'
+type Gender = 'female' | 'male' | 'other'
 
 /** 영양소 위험 상태 */
 export type RiskStatus = 'normal' | 'deficient' | 'caution' | 'excess' | 'review'

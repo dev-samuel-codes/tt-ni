@@ -11,7 +11,7 @@ export function splitList(value: string): string[] {
 /** 상태값(excess, caution 등)을 UI 톤(danger, warning, success)으로 매핑합니다. */
 export function getStatusTone(status: string): string {
   if (status === 'excess' || status === 'high') return 'danger'
-  if (status === 'caution' || status === 'deficient' || status === 'review') return 'warning'
+  if (status === 'caution' || status === 'deficient' || status === 'review' || status === 'notice') return 'warning'
   if (status === 'normal') return 'success'
   return 'neutral'
 }
