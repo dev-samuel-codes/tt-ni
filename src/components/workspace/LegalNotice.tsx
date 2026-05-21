@@ -1,1 +1,0 @@
-export { LegalNotice } from './Shared'

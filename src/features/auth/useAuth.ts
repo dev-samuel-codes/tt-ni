@@ -129,6 +129,7 @@ export function useAuth({
 
   useEffect(() => {
     let cancelled = false
+    let loadedByInit = false
 
     async function initSession() {
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
@@ -148,6 +149,7 @@ export function useAuth({
       if (hasAuthCallback) {
         clearAuthCallbackUrl()
       }
+      loadedByInit = true
       void loadUserData(user.id)
       setIsAuthInitialized(true)
     }
@@ -156,6 +158,7 @@ export function useAuth({
 
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return
+      if (event === 'INITIAL_SESSION' && loadedByInit) return
       const newEmail = session?.user.email ?? null
       setSessionEmail(newEmail)
       if (session?.user) {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Activity, AlertTriangle, Calendar, Camera, Check, ChevronRight,
   FileImage, Lock, LogIn, Pill, Plus, ShieldCheck, Sparkles, Trash2
@@ -23,7 +23,7 @@ import { MetricCard } from './Shared'
 export function Dashboard({
   report, supplements, onSupplements, onStart, onAnalyze, confirmedCount, needsReview,
   onSchedule, onChat, onProfile, profileIsSetup,
-  profile, medications,
+  profile, medications, sessionEmail,
 }: {
   report: AnalysisReport
   supplements: SupplementProduct[]
@@ -38,6 +38,7 @@ export function Dashboard({
   profileIsSetup: boolean
   profile: Profile
   medications: Medication[]
+  sessionEmail: string | null
 }) {
   const hasData = report.totals.length > 0
   const [userName, setUserName] = useState('사용자')
@@ -45,13 +46,10 @@ export function Dashboard({
   const [scheduleLoading, setScheduleLoading] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        const name = data.user.user_metadata?.name || data.user.email?.split('@')[0] || '사용자'
-        setUserName(name)
-      }
-    }).catch((err) => console.warn('Failed to load user name:', err))
-  }, [])
+    if (sessionEmail) {
+      setUserName(sessionEmail.split('@')[0])
+    }
+  }, [sessionEmail])
 
   const profileJson = useMemo(() => JSON.stringify(profile), [profile])
   const supplementsJson = useMemo(() => JSON.stringify(supplements), [supplements])

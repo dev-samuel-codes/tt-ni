@@ -4,14 +4,14 @@ import type { ParsedIngredient, SupplementProduct } from '../../types'
 import { heicTo, isHeic } from 'heic-to'
 
 /** LLM 정제 후 확장된 성분 정보 (효능, 권장량, 주의사항 포함) */
-export interface RefinedIngredient extends ParsedIngredient {
+interface RefinedIngredient extends ParsedIngredient {
   benefit: string
   recommendedDaily: string
   caution: string
 }
 
 /** refine-ingredients Edge Function의 응답 타입 */
-export interface RefineResponse {
+interface RefineResponse {
   productName: string
   brandName: string
   ingredients: RefinedIngredient[]
@@ -19,7 +19,7 @@ export interface RefineResponse {
 }
 
 /** 라벨 이미지 업로드 시 허용되는 MIME 타입 */
-export const allowedLabelMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
+const allowedLabelMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
 /** 최대 업로드 파일 크기 (10MB) */
 const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024

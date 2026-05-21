@@ -24,37 +24,31 @@ const SYNERGY_GROUPS = [
     nutrients: ['coq10', 'omega3'],
     label: 'CoQ10 + 오메가3',
     benefit: '혈관 내피세포 건강과 항산화 네트워크가 강화되어 심혈관 보호 효과가 배가됩니다. CoQ10이 미토콘드리아 ATP 생성을, 오메가3가 혈류를 개선합니다.',
-    reportReference: '보고서 2.1절',
   },
   {
     nutrients: ['vitamin_c', 'iron'],
     label: '비타민 C + 철분',
     benefit: '비타민 C가 비헴철(식물성 철분)을 흡수되기 쉬운 환원 상태(Fe²⁺)로 유지시켜 철분 흡수율을 극대화합니다. 빈혈 예방에 탁월한 조합입니다.',
-    reportReference: '보고서 2.1절',
   },
   {
     nutrients: ['vitamin_e', 'omega3'],
     label: '비타민 E + 오메가3',
     benefit: '오메가3의 이중 결합이 활성산소에 의해 산화되는 것을 비타민 E가 방어합니다. 오메가3의 구조적 온전성을 보존하여 노화 방지 효능을 유지합니다.',
-    reportReference: '보고서 2.1절',
   },
   {
     nutrients: ['vitamin_c', 'collagen'],
     label: '비타민 C + 콜라겐',
     benefit: '비타민 C는 콜라겐 합성의 필수 조효소로, 프롤린과 라이신의 수산화 반응을 촉진하여 피부 탄력과 관절 건강을 개선합니다.',
-    reportReference: '보고서 2.1절',
   },
   {
     nutrients: ['vitamin_e', 'coq10'],
     label: '비타민 E + CoQ10',
     benefit: '지용성 항산화제인 비타민 E와 미토콘드리아 항산화제인 CoQ10이 이중 항산화 방어벽을 형성하여 세포막을 보호합니다.',
-    reportReference: '보고서 2.1절',
   },
   {
     nutrients: ['iron', 'vitamin_c', 'selenium'],
     label: '철분 + 비타민 C + 셀레늄',
     benefit: '비타민 C가 철분 흡수를 돕고, 셀레늄이 흡수된 철분의 산화를 방지하여 조혈 기능과 조직 산소 공급을 강화합니다.',
-    reportReference: '보고서 2.1절',
   },
 ]
 
@@ -109,35 +103,6 @@ const ANTAGONISM_GROUPS = [
 /** 출생연도로부터 현재 만 나이를 계산합니다. */
 export function getAge(profile: Pick<Profile, 'birthYear'>, now = new Date()): number {
   return Math.max(0, now.getFullYear() - profile.birthYear)
-}
-
-/** 65세 이상 여부를 확인합니다. */
-export function isElderly(profile: Pick<Profile, 'birthYear'>): boolean {
-  return getAge(profile) >= 65
-}
-
-/** 12세 이하 아동 여부를 확인합니다. */
-export function isChild(profile: Pick<Profile, 'birthYear'>): boolean {
-  const age = getAge(profile)
-  return age >= 0 && age <= 12
-}
-
-/**
- * 성인 UL(상한섭취량)을 아동 체중 기준으로 비례 외삽합니다.
- * 성인 기준 체중 65kg 대비 비율로 환산합니다.
- */
-export function extrapolateUlChild(ulAdult: number, weightChildKg: number): number {
-  const WEIGHT_ADULT = 65
-  return ulAdult * (weightChildKg / WEIGHT_ADULT)
-}
-
-/**
- * 성인 EAR(평균필요량)을 노년층 체중 기준으로 대사율 가중 외삽합니다.
- * 체중의 0.75승 비율로 환산하여 기초대사량 차이를 반영합니다.
- */
-export function extrapolateEarElderly(earAdult: number, weightElderlyKg: number): number {
-  const WEIGHT_ADULT = 65
-  return earAdult * Math.pow(weightElderlyKg / WEIGHT_ADULT, 0.75)
 }
 
 /**

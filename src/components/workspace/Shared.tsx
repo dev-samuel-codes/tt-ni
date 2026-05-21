@@ -30,14 +30,3 @@ export function MetricCard({ label, value, tone, icon }: { label: string; value:
     </article>
   )
 }
-
-export function LegalNotice() {
-  return (
-    <section className="legal-strip">
-      <span>
-        개인정보와 성분표 이미지는 최소 수집 원칙, RLS, 비공개 Storage 정책을 전제로 설계했습니다. 결과는 의료 진단이나 처방이 아니며
-        복용 변경 전 전문가 상담이 필요합니다.
-      </span>
-    </section>
-  )
-}

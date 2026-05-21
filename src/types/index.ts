@@ -151,14 +151,4 @@ export interface AnalysisReport {
   }>
 }
 
-/** 라벨 파싱 결과 (이미지 인식/검색 공통) */
-export interface ParseResult {
-  productName: string | null
-  servingSize: {
-    amount: number | null
-    unit: string | null
-  }
-  dailyServingsRecommended: number | null
-  ingredients: ParsedIngredient[]
-  warnings: string[]
-}
+

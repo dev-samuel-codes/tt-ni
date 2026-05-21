@@ -69,8 +69,7 @@ function App() {
     setAnalysisSyncMessage('')
     setReport(null)
     try {
-      const { data: authData, error: authError } = await supabase.auth.getUser()
-      if (authError || !authData.user) throw new Error('로그인 후 분석 리포트를 서버에 저장할 수 있습니다.')
+      if (!sessionEmail) throw new Error('로그인 후 분석 리포트를 서버에 저장할 수 있습니다.')
       const { data, error } = await supabase.functions.invoke('run-analysis', {
         body: { profile, medications, supplements },
       })
@@ -136,6 +135,7 @@ function App() {
             profileIsSetup={profileIsSetup}
             profile={profile}
             medications={medications}
+            sessionEmail={sessionEmail}
           />
         )}
         {currentPath === routes.profile && (
