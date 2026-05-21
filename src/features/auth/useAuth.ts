@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
-import { auth } from '../../lib/firebase'
+import { auth, firebaseConfigError } from '../../lib/firebase'
 import { apiRequest } from '../../lib/apiClient'
 import type { Medication, Profile, SupplementProduct, AnalysisReport } from '../../types'
 import type { AuthNoticeState } from './authTypes'
@@ -71,6 +71,18 @@ export function useAuth({
   }, [defaultProfile, onMedications, onProfile, onReport, onSupplements])
 
   useEffect(() => {
+    if (!auth) {
+      queueMicrotask(() => {
+        resetUserData()
+        setAuthNotice({
+          tone: 'warning',
+          message: firebaseConfigError ?? 'Firebase 인증 설정을 확인할 수 없습니다.',
+        })
+        setIsAuthInitialized(true)
+      })
+      return
+    }
+
     let cancelled = false
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (cancelled) return

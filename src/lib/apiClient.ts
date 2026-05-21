@@ -12,7 +12,7 @@ export class ApiError extends Error {
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? ''
 
 export async function getAuthToken(): Promise<string> {
-  const user = auth.currentUser
+  const user = auth?.currentUser
   if (!user) throw new ApiError('로그인 후 이용할 수 있습니다.', 401)
   return user.getIdToken()
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Loader2, Lock } from 'lucide-react'
-import { signInWithEmail, signInWithGoogle, signInWithKakao, signOutCurrentUser, signUpWithEmail } from '../../lib/firebase'
+import { firebaseConfigError, signInWithEmail, signInWithGoogle, signInWithKakao, signOutCurrentUser, signUpWithEmail } from '../../lib/firebase'
 import type { SocialProvider } from '../../features/auth/authTypes'
 import { socialProviderLabels } from '../../features/auth/authTypes'
 
@@ -18,8 +18,13 @@ export function AuthPanel({
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [oauthLoading, setOauthLoading] = useState<SocialProvider | null>(null)
+  const authDisabled = firebaseConfigError !== null
 
   async function signIn(mode: 'login' | 'signup') {
+    if (authDisabled) {
+      setMessage(firebaseConfigError ?? 'Firebase 인증 설정을 확인할 수 없습니다.')
+      return
+    }
     if (!email) return
     setLoading(true)
     setMessage('')
@@ -37,6 +42,10 @@ export function AuthPanel({
   }
 
   async function signInWithSocial(provider: SocialProvider) {
+    if (authDisabled) {
+      setMessage(firebaseConfigError ?? 'Firebase 인증 설정을 확인할 수 없습니다.')
+      return
+    }
     setOauthLoading(provider)
     setMessage('')
     try {
@@ -51,8 +60,12 @@ export function AuthPanel({
   }
 
   async function signOut() {
-    await signOutCurrentUser()
-    onSessionEmail(null)
+    try {
+      await signOutCurrentUser()
+      onSessionEmail(null)
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '로그아웃 중 문제가 발생했습니다.')
+    }
   }
 
   if (sessionEmail) {
@@ -76,7 +89,7 @@ export function AuthPanel({
           type="button"
           className="social-auth-button google"
           onClick={() => signInWithSocial('google')}
-          disabled={loading || oauthLoading !== null}
+          disabled={authDisabled || loading || oauthLoading !== null}
         >
           {oauthLoading === 'google' ? <Loader2 size={16} className="spin" /> : <span>G</span>}
           구글로 로그인
@@ -85,7 +98,7 @@ export function AuthPanel({
           type="button"
           className="social-auth-button kakao"
           onClick={() => signInWithSocial('kakao')}
-          disabled={loading || oauthLoading !== null}
+          disabled={authDisabled || loading || oauthLoading !== null}
         >
           {oauthLoading === 'kakao' ? <Loader2 size={16} className="spin" /> : <span>K</span>}
           카카오로 로그인
@@ -109,13 +122,14 @@ export function AuthPanel({
         onChange={(event) => setPassword(event.target.value)}
       />
       <div className="auth-actions">
-        <button type="button" className="button ghost" onClick={() => signIn('signup')} disabled={loading}>
+        <button type="button" className="button ghost" onClick={() => signIn('signup')} disabled={authDisabled || loading}>
           가입
         </button>
-        <button type="button" className="button primary" onClick={() => signIn('login')} disabled={loading}>
+        <button type="button" className="button primary" onClick={() => signIn('login')} disabled={authDisabled || loading}>
           {loading ? <Loader2 size={16} className="spin" /> : '로그인'}
         </button>
       </div>
+      {authDisabled && <small>{firebaseConfigError}</small>}
       {message && <small>{message}</small>}
     </form>
   )

@@ -735,19 +735,27 @@ app.post('/api/chat/completion', asyncRoute(async (req, res) => {
   }
 }))
 
+app.use('/api', (_req, res) => {
+  res.status(404).json({ error: 'API 경로를 찾을 수 없습니다.' })
+})
+
 app.use((error: Error, _req: Request, res: Response, _next: NextFunction) => {
   void _next
   res.status(500).json({ error: error.message || '서버 오류가 발생했습니다.' })
 })
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const distDir = path.resolve(__dirname, '../dist')
-app.use(express.static(distDir))
-app.get(/.*/, (_req, res) => {
-  res.sendFile(path.join(distDir, 'index.html'))
-})
+if (process.env.VERCEL !== '1') {
+  const __dirname = path.dirname(fileURLToPath(import.meta.url))
+  const distDir = path.resolve(__dirname, '../dist')
+  app.use(express.static(distDir))
+  app.get(/.*/, (_req, res) => {
+    res.sendFile(path.join(distDir, 'index.html'))
+  })
 
-const port = Number(process.env.PORT ?? 8787)
-app.listen(port, () => {
-  console.log(`tt-ni API server listening on http://localhost:${port}`)
-})
+  const port = Number(process.env.PORT ?? 8787)
+  app.listen(port, () => {
+    console.log(`tt-ni API server listening on http://localhost:${port}`)
+  })
+}
+
+export default app

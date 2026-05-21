@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase/app'
+import { initializeApp, type FirebaseOptions } from 'firebase/app'
 import {
   createUserWithEmailAndPassword,
   getAuth,
@@ -17,31 +17,51 @@ const firebaseConfig = {
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET as string | undefined,
 }
 
-if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.projectId || !firebaseConfig.appId) {
-  throw new Error('Firebase 환경 변수가 필요합니다. VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, VITE_FIREBASE_PROJECT_ID, VITE_FIREBASE_APP_ID를 설정해주세요.')
+const requiredFirebaseKeys = [
+  ['VITE_FIREBASE_API_KEY', firebaseConfig.apiKey],
+  ['VITE_FIREBASE_AUTH_DOMAIN', firebaseConfig.authDomain],
+  ['VITE_FIREBASE_PROJECT_ID', firebaseConfig.projectId],
+  ['VITE_FIREBASE_APP_ID', firebaseConfig.appId],
+] as const
+
+const missingFirebaseKeys = requiredFirebaseKeys
+  .filter(([, value]) => !value)
+  .map(([key]) => key)
+
+export const firebaseConfigError = missingFirebaseKeys.length > 0
+  ? `Firebase 환경 변수가 필요합니다. 누락: ${missingFirebaseKeys.join(', ')}`
+  : null
+
+export const isFirebaseConfigured = firebaseConfigError === null
+
+const app = isFirebaseConfigured ? initializeApp(firebaseConfig as FirebaseOptions) : null
+
+export const auth = app ? getAuth(app) : null
+
+function requireFirebaseAuth() {
+  if (!auth) {
+    throw new Error(firebaseConfigError ?? 'Firebase 인증을 초기화할 수 없습니다.')
+  }
+  return auth
 }
 
-const app = initializeApp(firebaseConfig)
-
-export const auth = getAuth(app)
-
 export async function signUpWithEmail(email: string, password: string) {
-  return createUserWithEmailAndPassword(auth, email, password)
+  return createUserWithEmailAndPassword(requireFirebaseAuth(), email, password)
 }
 
 export async function signInWithEmail(email: string, password: string) {
-  return signInWithEmailAndPassword(auth, email, password)
+  return signInWithEmailAndPassword(requireFirebaseAuth(), email, password)
 }
 
 export async function signInWithGoogle() {
-  return signInWithPopup(auth, new GoogleAuthProvider())
+  return signInWithPopup(requireFirebaseAuth(), new GoogleAuthProvider())
 }
 
 export async function signInWithKakao() {
   const provider = new OAuthProvider(import.meta.env.VITE_FIREBASE_KAKAO_PROVIDER_ID ?? 'oidc.kakao')
-  return signInWithPopup(auth, provider)
+  return signInWithPopup(requireFirebaseAuth(), provider)
 }
 
 export async function signOutCurrentUser() {
-  return signOut(auth)
+  return signOut(requireFirebaseAuth())
 }
