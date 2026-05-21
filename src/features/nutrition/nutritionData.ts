@@ -390,48 +390,113 @@ export const nutrients: Nutrient[] = [
  * gender가 'any'면 모든 성별에 적용됩니다.
  */
 export const referenceValues: ReferenceValue[] = [
-  { nutrientId: 'vitamin_a', gender: 'male', ageMin: 19, ageMax: 150, rda: 900, ul: 3000, unit: 'mcg' },
-  { nutrientId: 'vitamin_a', gender: 'female', ageMin: 19, ageMax: 150, rda: 700, ul: 3000, unit: 'mcg' },
+  // 1. 비타민 A (2020 KDRIs)
+  { nutrientId: 'vitamin_a', gender: 'male', ageMin: 19, ageMax: 29, rda: 800, ul: 3000, unit: 'mcg' },
+  { nutrientId: 'vitamin_a', gender: 'female', ageMin: 19, ageMax: 29, rda: 650, ul: 3000, unit: 'mcg' },
+  { nutrientId: 'vitamin_a', gender: 'male', ageMin: 30, ageMax: 150, rda: 750, ul: 3000, unit: 'mcg' },
+  { nutrientId: 'vitamin_a', gender: 'female', ageMin: 30, ageMax: 150, rda: 650, ul: 3000, unit: 'mcg' },
+
+  // 2. 비타민 B1 (2020 KDRIs)
   { nutrientId: 'vitamin_b1', gender: 'male', ageMin: 19, ageMax: 150, rda: 1.2, unit: 'mg' },
   { nutrientId: 'vitamin_b1', gender: 'female', ageMin: 19, ageMax: 150, rda: 1.1, unit: 'mg' },
-  { nutrientId: 'vitamin_b6', gender: 'any', ageMin: 19, ageMax: 50, rda: 1.3, ul: 100, unit: 'mg' },
+
+  // 3. 비타민 B6 (2020 KDRIs)
+  { nutrientId: 'vitamin_b6', gender: 'male', ageMin: 19, ageMax: 49, rda: 1.5, ul: 100, unit: 'mg' },
+  { nutrientId: 'vitamin_b6', gender: 'female', ageMin: 19, ageMax: 49, rda: 1.4, ul: 100, unit: 'mg' },
+  { nutrientId: 'vitamin_b6', gender: 'any', ageMin: 50, ageMax: 150, rda: 1.5, ul: 100, unit: 'mg' },
+
+  // 4. 비타민 B12 (2020 KDRIs)
   { nutrientId: 'vitamin_b12', gender: 'any', ageMin: 19, ageMax: 150, rda: 2.4, unit: 'mcg' },
-  { nutrientId: 'vitamin_c', gender: 'male', ageMin: 19, ageMax: 150, rda: 90, ul: 2000, unit: 'mg' },
-  { nutrientId: 'vitamin_c', gender: 'female', ageMin: 19, ageMax: 150, rda: 75, ul: 2000, unit: 'mg' },
-  { nutrientId: 'vitamin_d', gender: 'any', ageMin: 19, ageMax: 70, rda: 15, ul: 100, unit: 'mcg' },
-  { nutrientId: 'vitamin_d', gender: 'any', ageMin: 71, ageMax: 150, rda: 20, ul: 100, unit: 'mcg' },
-  { nutrientId: 'vitamin_e', gender: 'any', ageMin: 19, ageMax: 150, rda: 15, ul: 1000, unit: 'mg' },
-  { nutrientId: 'vitamin_k', gender: 'male', ageMin: 19, ageMax: 150, ai: 120, unit: 'mcg' },
-  { nutrientId: 'vitamin_k', gender: 'female', ageMin: 19, ageMax: 150, ai: 90, unit: 'mcg' },
-  { nutrientId: 'calcium', gender: 'any', ageMin: 19, ageMax: 50, rda: 1000, ul: 2500, unit: 'mg' },
-  { nutrientId: 'calcium', gender: 'any', ageMin: 51, ageMax: 150, rda: 1200, ul: 2000, unit: 'mg' },
-  { nutrientId: 'magnesium', gender: 'male', ageMin: 19, ageMax: 150, rda: 420, unit: 'mg' },
-  { nutrientId: 'magnesium', gender: 'female', ageMin: 19, ageMax: 150, rda: 320, unit: 'mg' },
-  { nutrientId: 'zinc', gender: 'male', ageMin: 19, ageMax: 150, rda: 11, ul: 40, unit: 'mg' },
-  { nutrientId: 'zinc', gender: 'female', ageMin: 19, ageMax: 150, rda: 8, ul: 40, unit: 'mg' },
-  { nutrientId: 'iron', gender: 'male', ageMin: 19, ageMax: 150, rda: 8, ul: 45, unit: 'mg' },
-  { nutrientId: 'iron', gender: 'female', ageMin: 19, ageMax: 50, rda: 18, ul: 45, unit: 'mg' },
-  { nutrientId: 'iron', gender: 'female', ageMin: 51, ageMax: 150, rda: 8, ul: 45, unit: 'mg' },
+
+  // 5. 비타민 C (2020 KDRIs - 미국 FNB 남90/여75에서 한국 기준 공통 100mg으로 전면 교정)
+  { nutrientId: 'vitamin_c', gender: 'any', ageMin: 19, ageMax: 150, rda: 100, ul: 2000, unit: 'mg' },
+
+  // 6. 비타민 D (2020 KDRIs - 미국 FNB RDA 기준 오표기에서 한국 충분섭취량(AI) 및 65세 기준 세분화 교정)
+  { nutrientId: 'vitamin_d', gender: 'any', ageMin: 19, ageMax: 64, ai: 10, ul: 100, unit: 'mcg' },
+  { nutrientId: 'vitamin_d', gender: 'any', ageMin: 65, ageMax: 150, ai: 15, ul: 100, unit: 'mcg' },
+
+  // 7. 비타민 E (2020 KDRIs - 미국 FNB 기준 RDA에서 한국 충분섭취량(AI) 12mg 및 상한 540mg 전면 교정)
+  { nutrientId: 'vitamin_e', gender: 'any', ageMin: 19, ageMax: 150, ai: 12, ul: 540, unit: 'mg' },
+
+  // 8. 비타민 K (2020 KDRIs)
+  { nutrientId: 'vitamin_k', gender: 'male', ageMin: 19, ageMax: 150, ai: 75, unit: 'mcg' },
+  { nutrientId: 'vitamin_k', gender: 'female', ageMin: 19, ageMax: 150, ai: 65, unit: 'mcg' },
+
+  // 9. 칼슘 (2020 KDRIs - 성인 남녀 700~800mg 연령대별 정교화 및 상한 2500mg 교정)
+  { nutrientId: 'calcium', gender: 'any', ageMin: 19, ageMax: 29, rda: 800, ul: 2500, unit: 'mg' },
+  { nutrientId: 'calcium', gender: 'any', ageMin: 30, ageMax: 49, rda: 700, ul: 2500, unit: 'mg' },
+  { nutrientId: 'calcium', gender: 'male', ageMin: 50, ageMax: 64, rda: 700, ul: 2500, unit: 'mg' },
+  { nutrientId: 'calcium', gender: 'female', ageMin: 50, ageMax: 64, rda: 800, ul: 2500, unit: 'mg' },
+  { nutrientId: 'calcium', gender: 'male', ageMin: 65, ageMax: 150, rda: 750, ul: 2500, unit: 'mg' },
+  { nutrientId: 'calcium', gender: 'female', ageMin: 65, ageMax: 150, rda: 800, ul: 2500, unit: 'mg' },
+
+  // 10. 마그네슘 (2020 KDRIs - 19~64세 남350/여280, 65세이상 남370/여280으로 정교화 및 식품외상한 350mg 지정)
+  { nutrientId: 'magnesium', gender: 'male', ageMin: 19, ageMax: 64, rda: 350, ul: 350, unit: 'mg' },
+  { nutrientId: 'magnesium', gender: 'female', ageMin: 19, ageMax: 64, rda: 280, ul: 350, unit: 'mg' },
+  { nutrientId: 'magnesium', gender: 'male', ageMin: 65, ageMax: 150, rda: 370, ul: 350, unit: 'mg' },
+  { nutrientId: 'magnesium', gender: 'female', ageMin: 65, ageMax: 150, rda: 280, ul: 350, unit: 'mg' },
+
+  // 11. 아연 (2020 KDRIs)
+  { nutrientId: 'zinc', gender: 'male', ageMin: 19, ageMax: 150, rda: 10, ul: 35, unit: 'mg' },
+  { nutrientId: 'zinc', gender: 'female', ageMin: 19, ageMax: 150, rda: 8, ul: 35, unit: 'mg' },
+
+  // 12. 철분 (2020 KDRIs - 남성 10mg, 가임기 여성 14mg, 폐경기 여성 8mg 교정)
+  { nutrientId: 'iron', gender: 'male', ageMin: 19, ageMax: 150, rda: 10, ul: 45, unit: 'mg' },
+  { nutrientId: 'iron', gender: 'female', ageMin: 19, ageMax: 49, rda: 14, ul: 45, unit: 'mg' },
+  { nutrientId: 'iron', gender: 'female', ageMin: 50, ageMax: 150, rda: 8, ul: 45, unit: 'mg' },
+
+  // 13. 오메가3 (2020 KDRIs)
   { nutrientId: 'omega3', gender: 'any', ageMin: 19, ageMax: 150, ai: 1100, unit: 'mg' },
-  { nutrientId: 'selenium', gender: 'male', ageMin: 19, ageMax: 150, rda: 85, ul: 400, unit: 'mcg' },
-  { nutrientId: 'selenium', gender: 'female', ageMin: 19, ageMax: 150, rda: 75, ul: 400, unit: 'mcg' },
-  { nutrientId: 'choline', gender: 'male', ageMin: 19, ageMax: 150, rda: 550, ul: 3500, unit: 'mg' },
-  { nutrientId: 'choline', gender: 'female', ageMin: 19, ageMax: 150, rda: 425, ul: 3500, unit: 'mg' },
+
+  // 14. 셀레늄 (2020 KDRIs - 기존 FNB 기준 남85/여75에서 한국 기준 공통 60mcg로 교정)
+  { nutrientId: 'selenium', gender: 'any', ageMin: 19, ageMax: 150, rda: 60, ul: 400, unit: 'mcg' },
+
+  // 15. 콜린 (2025 KDRIs 신규 편입 반영 - rda가 아닌 ai 충분섭취량 속성으로 정교화)
+  { nutrientId: 'choline', gender: 'male', ageMin: 19, ageMax: 150, ai: 550, ul: 3500, unit: 'mg' },
+  { nutrientId: 'choline', gender: 'female', ageMin: 19, ageMax: 150, ai: 425, ul: 3500, unit: 'mg' },
+
+  // 16. 비타민 B2 (2020 KDRIs)
   { nutrientId: 'vitamin_b2', gender: 'male', ageMin: 19, ageMax: 150, rda: 1.5, unit: 'mg' },
   { nutrientId: 'vitamin_b2', gender: 'female', ageMin: 19, ageMax: 150, rda: 1.2, unit: 'mg' },
+
+  // 17. 나이아신 (2020 KDRIs)
   { nutrientId: 'niacin', gender: 'male', ageMin: 19, ageMax: 150, rda: 16, ul: 35, unit: 'mg' },
   { nutrientId: 'niacin', gender: 'female', ageMin: 19, ageMax: 150, rda: 14, ul: 35, unit: 'mg' },
+
+  // 18. 엽산 (2020 KDRIs)
   { nutrientId: 'folate', gender: 'any', ageMin: 19, ageMax: 150, rda: 400, ul: 1000, unit: 'mcg' },
+
+  // 19. 비오틴 (2020 KDRIs)
   { nutrientId: 'biotin', gender: 'any', ageMin: 19, ageMax: 150, ai: 30, unit: 'mcg' },
+
+  // 20. 판토텐산 (2020 KDRIs)
   { nutrientId: 'pantothenic_acid', gender: 'any', ageMin: 19, ageMax: 150, ai: 5, unit: 'mg' },
-  { nutrientId: 'iodine', gender: 'any', ageMin: 19, ageMax: 150, rda: 150, ul: 500, unit: 'mcg' },
+
+  // 21. 요오드 (2020 KDRIs - 상한섭취량 기존 오류치 500mcg에서 한국인 공식 기준인 2400mcg로 교정)
+  { nutrientId: 'iodine', gender: 'any', ageMin: 19, ageMax: 150, rda: 150, ul: 2400, unit: 'mcg' },
+
+  // 22. 구리 (2020 KDRIs)
   { nutrientId: 'copper', gender: 'any', ageMin: 19, ageMax: 150, rda: 0.8, ul: 10, unit: 'mg' },
+
+  // 23. 망간 (2020 KDRIs)
   { nutrientId: 'manganese', gender: 'male', ageMin: 19, ageMax: 150, ai: 4.0, ul: 11, unit: 'mg' },
   { nutrientId: 'manganese', gender: 'female', ageMin: 19, ageMax: 150, ai: 3.5, ul: 11, unit: 'mg' },
-  { nutrientId: 'chromium', gender: 'male', ageMin: 19, ageMax: 50, ai: 35, unit: 'mcg' },
-  { nutrientId: 'chromium', gender: 'female', ageMin: 19, ageMax: 50, ai: 25, unit: 'mcg' },
+
+  // 24. 크롬 (2020 KDRIs - 50세 이상 노령층 누락 수치 전면 보완 교정)
+  { nutrientId: 'chromium', gender: 'male', ageMin: 19, ageMax: 49, ai: 35, unit: 'mcg' },
+  { nutrientId: 'chromium', gender: 'female', ageMin: 19, ageMax: 49, ai: 25, unit: 'mcg' },
+  { nutrientId: 'chromium', gender: 'male', ageMin: 50, ageMax: 64, ai: 30, unit: 'mcg' },
+  { nutrientId: 'chromium', gender: 'female', ageMin: 50, ageMax: 64, ai: 20, unit: 'mcg' },
+  { nutrientId: 'chromium', gender: 'male', ageMin: 65, ageMax: 150, ai: 25, unit: 'mcg' },
+  { nutrientId: 'chromium', gender: 'female', ageMin: 65, ageMax: 150, ai: 20, unit: 'mcg' },
+
+  // 25. 인 (2020 KDRIs)
   { nutrientId: 'phosphorus', gender: 'any', ageMin: 19, ageMax: 150, rda: 700, ul: 3500, unit: 'mg' },
+
+  // 26. 칼륨 (2020 KDRIs)
   { nutrientId: 'potassium', gender: 'any', ageMin: 19, ageMax: 150, ai: 3500, unit: 'mg' },
+
+  // 27. 나트륨 (2020 KDRIs)
   { nutrientId: 'sodium', gender: 'any', ageMin: 19, ageMax: 150, ai: 1500, ul: 2300, unit: 'mg' },
 ]
 
