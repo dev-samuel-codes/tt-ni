@@ -36,6 +36,7 @@ export function ChatPage({
   const [rateLimited, setRateLimited] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fullTextRef = useRef('')
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   const contextBadges = useMemo(() => {
     const badges: string[] = []
@@ -48,6 +49,10 @@ export function ChatPage({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  useEffect(() => {
+    return () => { abortControllerRef.current?.abort() }
+  }, [])
 
   const loadSessions = useCallback(async () => {
     try {
@@ -201,6 +206,9 @@ export function ChatPage({
 
     try {
       const { data: { session } } = await supabase.auth.getSession()
+      abortControllerRef.current?.abort()
+      const controller = new AbortController()
+      abortControllerRef.current = controller
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-completion`,
         {
@@ -214,6 +222,7 @@ export function ChatPage({
             sessionId: sessionId !== 'local' ? sessionId : undefined,
             context: chatContext,
           }),
+          signal: controller.signal,
         }
       )
 

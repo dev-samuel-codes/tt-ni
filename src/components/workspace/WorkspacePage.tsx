@@ -24,6 +24,7 @@ export function Dashboard({
   report, supplements, onSupplements, onStart, onAnalyze, confirmedCount, needsReview,
   onSchedule, onChat, onProfile, profileIsSetup,
   profile, medications, sessionEmail,
+  todaySchedule, scheduleLoading,
 }: {
   report: AnalysisReport
   supplements: SupplementProduct[]
@@ -39,11 +40,11 @@ export function Dashboard({
   profile: Profile
   medications: Medication[]
   sessionEmail: string | null
+  todaySchedule: Array<{ time: string; items: string[] }>
+  scheduleLoading: boolean
 }) {
   const hasData = report.totals.length > 0
   const [userName, setUserName] = useState('사용자')
-  const [todaySchedule, setTodaySchedule] = useState<Array<{ time: string; items: string[] }>>([])
-  const [scheduleLoading, setScheduleLoading] = useState(true)
 
   useEffect(() => {
     if (sessionEmail) {
@@ -51,59 +52,7 @@ export function Dashboard({
     }
   }, [sessionEmail])
 
-  const profileJson = useMemo(() => JSON.stringify(profile), [profile])
-  const supplementsJson = useMemo(() => JSON.stringify(supplements), [supplements])
-  const medicationsJson = useMemo(() => JSON.stringify(medications), [medications])
-
-  useEffect(() => {
-    if (!hasData || supplements.length === 0 || !profile) return
-    let cancelled = false
-    setScheduleLoading(true)
-
-    const requestProfile = {
-      gender: profile.gender,
-      birthYear: profile.birthYear,
-      conditions: profile.conditions
-    }
-    const requestSupplements = supplements.map((s) => ({
-      id: s.id,
-      productName: s.productName,
-      dailyServings: s.dailyServings,
-      ingredients: s.ingredients.map((ing) => ({
-        nutrientId: ing.nutrientId,
-        standardName: ing.standardName,
-        amount: ing.amount,
-        unit: ing.unit
-      }))
-    }))
-    const requestMedications = medications.map((m) => ({
-      name: m.name,
-      memo: m.memo || undefined
-    }))
-    const requestPreferences = {
-      wakeTime: '08:00',
-      mealTimes: ['09:00', '13:00', '19:00']
-    }
-
-    supabase.functions.invoke('generate-schedule', {
-      body: {
-        profile: requestProfile,
-        supplements: requestSupplements,
-        medications: requestMedications,
-        preferences: requestPreferences
-      },
-    }).then(({ data }) => {
-      if (cancelled) return
-      const timelineData = data?.timeline || data?.slots
-      if (timelineData) setTodaySchedule(timelineData)
-    }).catch(() => {}).finally(() => {
-      if (!cancelled) setScheduleLoading(false)
-    })
-    return () => { cancelled = true }
-  }, [hasData, supplementsJson, profileJson, medicationsJson])
-
   const today = new Date()
-  const dateStr = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일 ${'일월화수목금토'[today.getDay()]}요일`
 
   const synergies = report.synergyRecommendations.map((s) => ({ combo: s.label, benefit: s.benefit }))
 
@@ -581,12 +530,15 @@ export function SupplementWorkspace({
     if (!editingId) return
     setEditMessage('')
     try {
+      const { data: authData } = await supabase.auth.getUser()
+      const userId = authData?.user?.id
+
       await updateSupplementProduct(editingId, {
         productName: editProductName,
         brandName: editBrandName,
         dailyServings: editDailyServings,
         intakeTime: editIntakeTime,
-      })
+      }, userId)
       await batchUpdateSupplementIngredients(
         editIngredients.map((ing) => ({
           id: ing.id,
@@ -597,13 +549,12 @@ export function SupplementWorkspace({
         editDailyServings,
       )
 
-      const { data: authData } = await supabase.auth.getUser()
-      if (authData?.user) {
+      if (userId) {
         const { data: row } = await supabase
           .from('user_supplements')
           .select('daily_servings, intake_time, supplement_products(id, product_name, brand_name, source_type, label_image_path, supplement_ingredients(*))')
           .eq('product_id', editingId)
-          .eq('user_id', authData.user.id)
+          .eq('user_id', userId)
           .eq('active', true)
           .maybeSingle()
 
@@ -644,7 +595,8 @@ export function SupplementWorkspace({
   async function handleDeleteSupplement(productId: string, name: string) {
     if (!window.confirm(`'${name}'을(를) 정말 삭제하시겠습니까?`)) return
     try {
-      await deleteSupplementProduct(productId)
+      const { data: authData } = await supabase.auth.getUser()
+      await deleteSupplementProduct(productId, authData?.user?.id)
       onSupplements(supplements.filter((s) => s.id !== productId))
     } catch (error) {
       alert(error instanceof Error ? error.message : '삭제에 실패했습니다.')
@@ -803,7 +755,8 @@ export function SupplementWorkspace({
       ingredients: finalIngredients, confirmed: true,
     }
     try {
-      const saved = await saveSupplementProduct(supplement, labelImagePath)
+      const { data: authData } = await supabase.auth.getUser()
+      const saved = await saveSupplementProduct(supplement, labelImagePath, authData?.user?.id)
       supplement.id = saved.productId
       setSyncMessage('저장되었습니다.')
     } catch (error) {

@@ -78,7 +78,8 @@ async function convertHeicToJpeg(file: File): Promise<File | null> {
  */
 export async function parseLabelImage(
   file?: File,
-  onStepChange?: (step: 'converting' | 'uploading' | 'parsing') => void
+  onStepChange?: (step: 'converting' | 'uploading' | 'parsing') => void,
+  userId?: string,
 ) {
   let uploadedPath = ''
   try {
@@ -103,12 +104,12 @@ export async function parseLabelImage(
       throw new Error('JPG, PNG, WEBP 형식의 성분표 이미지를 업로드해주세요.')
     }
 
-    const { data: authData, error: authError } = await supabase.auth.getUser()
-    if (authError || !authData.user) throw new Error('로그인 후 성분표 이미지를 업로드할 수 있습니다.')
+    const userId_ = userId ?? (await supabase.auth.getUser()).data.user?.id
+    if (!userId_) throw new Error('로그인 후 성분표 이미지를 업로드할 수 있습니다.')
 
     const safeName = sanitizeFileName(file.name)
     onStepChange?.('uploading')
-    const path = `${authData.user.id}/${crypto.randomUUID()}-${safeName}`
+    const path = `${userId_}/${crypto.randomUUID()}-${safeName}`
     const upload = await supabase.storage.from('label-images').upload(path, file, {
       contentType: file.type || 'application/octet-stream',
       upsert: false,
@@ -162,10 +163,10 @@ export function createManualIngredient(): ParsedIngredient {
 export async function updateSupplementProduct(
   productId: string,
   patch: Partial<Pick<SupplementProduct, 'productName' | 'brandName' | 'dailyServings' | 'intakeTime'>>,
+  userId?: string,
 ): Promise<string> {
-  const { data: authData, error: authError } = await supabase.auth.getUser()
-  if (authError) throw new Error('세션이 만료되었습니다. 다시 로그인해주세요.')
-  if (!authData.user) throw new Error('로그인 정보를 확인할 수 없습니다. 다시 로그인해주세요.')
+  const userId_ = userId ?? (await supabase.auth.getUser()).data.user?.id
+  if (!userId_) throw new Error('로그인 정보를 확인할 수 없습니다. 다시 로그인해주세요.')
 
   const { data: productData, error } = await supabase
     .from('supplement_products')
@@ -174,7 +175,7 @@ export async function updateSupplementProduct(
       ...(patch.brandName !== undefined && { brand_name: patch.brandName }),
     })
     .eq('id', productId)
-    .eq('owner_user_id', authData.user.id)
+    .eq('owner_user_id', userId_)
     .select('id')
     .maybeSingle()
   if (error) throw new Error('제품 정보 수정에 실패했습니다: ' + error.message)
@@ -188,7 +189,7 @@ export async function updateSupplementProduct(
         ...(patch.intakeTime !== undefined && { intake_time: patch.intakeTime }),
       })
       .eq('product_id', productId)
-      .eq('user_id', authData.user.id)
+      .eq('user_id', userId_)
       .select('id')
       .maybeSingle()
     if (usError) throw new Error('복용 정보 수정에 실패했습니다: ' + usError.message)
@@ -222,16 +223,15 @@ export async function batchUpdateSupplementIngredients(
 }
 
 /** 영양제 제품을 삭제합니다 (CASCADE로 연관 성분, user_supplements도 삭제됨). */
-export async function deleteSupplementProduct(productId: string): Promise<string> {
-  const { data: authData, error: authError } = await supabase.auth.getUser()
-  if (authError) throw new Error('세션이 만료되었습니다. 다시 로그인해주세요.')
-  if (!authData.user) throw new Error('로그인 정보를 확인할 수 없습니다. 다시 로그인해주세요.')
+export async function deleteSupplementProduct(productId: string, userId?: string): Promise<string> {
+  const userId_ = userId ?? (await supabase.auth.getUser()).data.user?.id
+  if (!userId_) throw new Error('로그인 정보를 확인할 수 없습니다. 다시 로그인해주세요.')
 
   const { data, error } = await supabase
     .from('supplement_products')
     .delete()
     .eq('id', productId)
-    .eq('owner_user_id', authData.user.id)
+    .eq('owner_user_id', userId_)
     .select('id')
     .maybeSingle()
   if (error) throw new Error('제품 삭제에 실패했습니다: ' + error.message)
@@ -244,18 +244,17 @@ export async function deleteSupplementProduct(productId: string): Promise<string
  * supplement_products → supplement_ingredients → user_supplements 순으로 삽입합니다.
  * 중간에 실패하면 이미 삽입된 제품을 정리(cleanup)합니다.
  */
-export async function saveSupplementProduct(supplement: SupplementProduct, labelImagePath: string): Promise<{ productId: string; message: string }> {
+export async function saveSupplementProduct(supplement: SupplementProduct, labelImagePath: string, userId?: string): Promise<{ productId: string; message: string }> {
   let productId = ''
   try {
-    const { data: authData, error: authError } = await supabase.auth.getUser()
-    if (authError) throw new Error('세션이 만료되었습니다. 다시 로그인해주세요.')
-    if (!authData.user) throw new Error('로그인 정보를 확인할 수 없습니다. 다시 로그인해주세요.')
+    const userId_ = userId ?? (await supabase.auth.getUser()).data.user?.id
+    if (!userId_) throw new Error('로그인 정보를 확인할 수 없습니다. 다시 로그인해주세요.')
 
     if (!supplement.productName?.trim()) throw new Error('제품명이 없습니다.')
     if (!supplement.ingredients || supplement.ingredients.length === 0) throw new Error('저장할 성분이 없습니다.')
 
     const productInsert = await supabase.from('supplement_products').insert({
-      owner_user_id: authData.user.id,
+      owner_user_id: userId_,
       product_name: supplement.productName,
       brand_name: supplement.brandName || null,
       source_type: labelImagePath ? 'photo' : 'manual',
@@ -290,7 +289,7 @@ export async function saveSupplementProduct(supplement: SupplementProduct, label
     }
 
     const userSupplementInsert = await supabase.from('user_supplements').insert({
-      user_id: authData.user.id,
+      user_id: userId_,
       product_id: productId,
       daily_servings: supplement.dailyServings || 1,
       intake_time: supplement.intakeTime || null,

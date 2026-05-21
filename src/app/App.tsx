@@ -18,6 +18,7 @@ import { SidebarLayout } from '../components/layout/SidebarLayout'
 import { Dashboard, ProfileAndMedication, SupplementWorkspace, AnalysisResult } from '../components/workspace/WorkspacePage'
 import { SchedulePage } from '../pages/SchedulePage'
 import { ChatPage } from '../pages/ChatPage'
+import { useTodaySchedule } from '../features/schedule/useTodaySchedule'
 
 const DEFAULT_PROFILE: Profile = {
   gender: 'female', birthYear: 1998, heightCm: 165, weightKg: 55,
@@ -54,6 +55,12 @@ function App() {
   const previewReport = useMemo(() => runAnalysis(profile, medications, supplements), [profile, medications, supplements])
   const confirmedCount = useMemo(() => supplements.filter((s) => s.confirmed).length, [supplements])
   const needsReview = useMemo(() => supplements.flatMap((s) => s.ingredients).filter((i) => i.reviewRequired).length, [supplements])
+  const { todaySchedule, scheduleLoading } = useTodaySchedule({
+    supplements,
+    profile,
+    medications,
+    enabled: !!(previewReport.totals.length > 0 && supplements.length > 0 && profile),
+  })
 
   /** 비로그인 상태에서 워크스페이스 접근 시 로그인 페이지로 리다이렉트 */
   useEffect(() => {
@@ -136,6 +143,8 @@ function App() {
             profile={profile}
             medications={medications}
             sessionEmail={sessionEmail}
+            todaySchedule={todaySchedule}
+            scheduleLoading={scheduleLoading}
           />
         )}
         {currentPath === routes.profile && (
