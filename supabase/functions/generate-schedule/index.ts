@@ -54,6 +54,13 @@ interface SlotItem {
 
 type TimeCategory = 'empty_stomach' | 'after_meal' | 'evening' | 'evening_or_after'
 
+interface AntagonismRule {
+  a: string
+  b: string
+  hours: number
+  reason: string
+}
+
 async function loadTimingCategories(supabase: ReturnType<typeof createClient>): Promise<Map<string, TimeCategory>> {
   const fallback = new Map<string, TimeCategory>([
     ['probiotics', 'empty_stomach'], ['vitamin_b1', 'empty_stomach'], ['vitamin_b6', 'empty_stomach'],
@@ -355,11 +362,12 @@ function resolveSlotConflicts(
   supplements: Supplement[],
   conflicts: Conflict[],
   hasGI: boolean,
+  antRules: AntagonismRule[],
 ): Map<string, string> {
   const resolved = new Map(assignments)
   const slotTimes = new Map(slots.map((s) => [s.key, s.time]))
 
-  for (const rule of ANTAGONISM_RULES) {
+  for (const rule of antRules) {
     const suppsWithA = supplements.filter((s) => s.ingredients.some((ing) => ing.nutrientId === rule.a))
     const suppsWithB = supplements.filter((s) => s.ingredients.some((ing) => ing.nutrientId === rule.b))
 
@@ -506,7 +514,7 @@ Deno.serve(async (req) => {
 
     const allConflicts = [...dniConflicts, ...antagonismConflicts]
 
-    const resolved = resolveSlotConflicts(assignments, slots, supplements, allConflicts, hasGI)
+    const resolved = resolveSlotConflicts(assignments, slots, supplements, allConflicts, hasGI, antRules)
 
     const slotItems = new Map<string, Supplement[]>()
     for (const supplement of supplements) {
