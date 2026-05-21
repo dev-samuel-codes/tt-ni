@@ -14,16 +14,18 @@ export interface TimeSlot {
  */
 export function cleanProductName(name: string): string {
   if (!name) return ''
-  // 1. "상품 상세보기 : " 또는 "상품 상세보기 :" 제거
-  let cleaned = name.replace(/상품\s*상세보기\s*:\s*/g, '')
-  // 2. 앞뒤의 대시나 불필요한 기호 제거
-  cleaned = cleaned.replace(/^\s*[-~+=>↔]\s*/, '')
-  // 3. 쉼표(,)로 구분된 경우 첫 번째 항목이 제품명일 확률이 높으므로 첫 번째 항목 선택
+  // 1. "영양제1 ↔ " 또는 "영양제[숫자] ↔ " 같은 머리글 제거
+  let cleaned = name.replace(/^영양제\d+\s*↔\s*/, '')
+  // 2. "상품 상세보기 : " 또는 "상품 상세보기 :" 등 제거
+  cleaned = cleaned.replace(/상품\s*상세보기\s*:\s*/g, '')
+  // 3. 앞뒤 공백 및 기호 제거
+  cleaned = cleaned.trim().replace(/^[-~+=>↔:\s]+/g, '').replace(/[-~+=>↔:\s]+$/g, '')
+  // 4. 쉼표(,)로 구분된 세부 정보가 있으면 첫 번째 핵심 이름만 추출
   if (cleaned.includes(',')) {
     cleaned = cleaned.split(',')[0].trim()
   }
-  // 4. "영양제1 ↔ " 같은 접두어가 붙어있는 경우 처리
-  cleaned = cleaned.replace(/^영양제\d+\s*↔\s*/, '')
+  // 5. 다시 한 번 앞뒤 공백 및 기호 최종 정리
+  cleaned = cleaned.replace(/^[-~+=>↔:\s]+/g, '').replace(/[-~+=>↔:\s]+$/g, '')
   return cleaned.trim()
 }
 
