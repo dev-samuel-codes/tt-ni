@@ -281,8 +281,18 @@ export function runAnalysis(profile: Profile, medications: Medication[], supplem
   const interactionWarnings = interactionRules
     .filter((rule) => totals.some((total) => total.nutrientId === rule.nutrientId))
     .filter((rule) => {
-      const medicationMatch = rule.medicationKeyword ? medicationText.includes(rule.medicationKeyword.toLowerCase()) : false
-      const conditionMatch = rule.conditionCode ? conditionText.includes(rule.conditionCode.toLowerCase()) || conditionText.includes('신장') : false
+      const medicationMatch = rule.medicationAliases && rule.medicationAliases.length > 0
+        ? rule.medicationAliases.some((alias) => medicationText.includes(alias.toLowerCase()))
+        : rule.medicationKeyword
+        ? medicationText.includes(rule.medicationKeyword.toLowerCase())
+        : false
+
+      const conditionMatch = rule.conditionAliases && rule.conditionAliases.length > 0
+        ? rule.conditionAliases.some((alias) => conditionText.includes(alias.toLowerCase()))
+        : rule.conditionCode
+        ? conditionText.includes(rule.conditionCode.toLowerCase())
+        : false
+
       return medicationMatch || conditionMatch
     })
     .map((rule) => {

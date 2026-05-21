@@ -1,3 +1,6 @@
+import type { InteractionRule } from '../../types/index.js'
+import { interactionRules } from '../nutrition/nutritionData.js'
+
 /** 하루 중 특정 시간대의 복용 정보 */
 export interface TimeSlot {
   time: string
@@ -90,119 +93,7 @@ const EVENING = new Set([
 // 아연은 저녁-식후 모두 가능: 저녁에 Ca/Mg와 겹치면 식후로 분리 배치
 const EVENING_OR_AFTER = new Set(['zinc'])
 
-interface DNIRule {
-  medicationKeyword: string
-  nutrientId: string
-  severity: 'warning' | 'block'
-  message: string
-  tip?: string
-}
 
-/**
- * DNI (약물-영양소 상호작용) 규칙
- * 특정 약물과 영양소의 병용 시 주의사항 또는 금기사항을 정의합니다.
- * severity: 'warning'(주의) 또는 'block'(병용 금지)
- */
-const DNI_RULES: DNIRule[] = [
-  {
-    medicationKeyword: 'warfarin',
-    nutrientId: 'vitamin_k',
-    severity: 'block',
-    message: '와파린 복용 중에는 비타민 K 섭취가 금지됩니다. 비타민 K는 혈액 응고 인자 합성에 관여하여 약효를 무력화시킵니다.',
-  },
-  {
-    medicationKeyword: 'warfarin',
-    nutrientId: 'omega3',
-    severity: 'warning',
-    message: '항응고제와 오메가3를 함께 복용 시 출혈 위험이 있을 수 있습니다. 담당 의사와 상담하세요.',
-  },
-  {
-    medicationKeyword: 'warfarin',
-    nutrientId: 'vitamin_e',
-    severity: 'warning',
-    message: '항응고제와 고용량 비타민 E 병용 시 출혈 위험 증가 가능성이 있으므로 주의가 필요합니다.',
-  },
-  {
-    medicationKeyword: 'warfarin',
-    nutrientId: 'ginseng',
-    severity: 'warning',
-    message: '와파린과 홍삼(진세노사이드) 병용 시 INR 변동 위험이 있어 주의가 필요합니다.',
-  },
-  {
-    medicationKeyword: 'metformin',
-    nutrientId: 'vitamin_b12',
-    severity: 'warning',
-    tip: '메트포르민 장기 복용 시 비타민 B12 결핍 위험이 있으므로 B12 보충을 권장합니다.',
-    message: '',
-  },
-  {
-    medicationKeyword: 'insulin',
-    nutrientId: 'ginseng',
-    severity: 'warning',
-    message: '인슐린과 홍삼을 함께 복용 시 저혈당 위험이 있으므로 용량을 줄이거나 담당 의사와 상담하세요.',
-  },
-  {
-    medicationKeyword: 'statin',
-    nutrientId: 'grapefruit',
-    severity: 'block',
-    message: '스타틴 계열 약물과 자몽(추출물)은 절대 함께 복용할 수 없습니다. CYP3A4 효소 억제로 인한 횡문근융해증 위험이 있습니다.',
-  },
-  {
-    medicationKeyword: 'statin',
-    nutrientId: 'coq10',
-    severity: 'warning',
-    tip: '스타틴 복용 시 코엔자임 Q10을 함께 섭취하면 근육 부작용 완화에 도움이 될 수 있습니다.',
-    message: '',
-  },
-  {
-    medicationKeyword: 'antibiotic',
-    nutrientId: 'probiotics',
-    severity: 'warning',
-    message: '항생제와 유산균은 2시간 이상 간격을 두고 복용하세요.',
-  },
-  {
-    medicationKeyword: 'bisphosphonate',
-    nutrientId: 'calcium',
-    severity: 'warning',
-    message: '골다공증약(비스포스포네이트)과 칼슘은 2~4시간 간격을 두고 복용하세요.',
-  },
-  {
-    medicationKeyword: 'bisphosphonate',
-    nutrientId: 'magnesium',
-    severity: 'warning',
-    message: '골다공증약(비스포스포네이트)과 마그네슘은 2~4시간 간격을 두고 복용하세요.',
-  },
-  {
-    medicationKeyword: 'bisphosphonate',
-    nutrientId: 'iron',
-    severity: 'warning',
-    message: '골다공증약(비스포스포네이트)과 철분은 2~4시간 간격을 두고 복용하세요.',
-  },
-  {
-    medicationKeyword: 'levothyroxine',
-    nutrientId: 'calcium',
-    severity: 'warning',
-    message: '갑상선약(레보티록신)과 칼슘은 2시간 이상 간격을 두고 복용하세요.',
-  },
-  {
-    medicationKeyword: 'levothyroxine',
-    nutrientId: 'magnesium',
-    severity: 'warning',
-    message: '갑상선약(레보티록신)과 마그네슘은 4시간 이상 간격을 두고 복용하세요.',
-  },
-  {
-    medicationKeyword: 'levothyroxine',
-    nutrientId: 'iron',
-    severity: 'warning',
-    message: '갑상선약(레보티록신)과 철분은 4시간 이상 간격을 두고 복용하세요.',
-  },
-  {
-    medicationKeyword: 'aspirin',
-    nutrientId: 'vitamin_c',
-    severity: 'warning',
-    message: '아스피린과 고용량 비타민 C 병용 시 위장 장애 및 신장 결석 위험이 증가할 수 있습니다.',
-  },
-]
 
 /** 길항작용 쌍: 동시 복용 시 a와 b가 흡수 경쟁하여 최소 hours 시간 간격이 필요합니다. */
 interface AntagonismRule {
@@ -262,19 +153,17 @@ function timeDiffMinutes(a: string, b: string): number {
 }
 
 /**
- * 약물명 텍스트가 주어진 키워드와 매칭되는지 확인합니다.
- * 영문/한글 약물명, 브랜드명, 계열명을 종합적으로 검사합니다.
+ * 약물명 텍스트가 주어진 상호작용 규칙의 약물명 및 별칭(Aliases)과 매칭되는지 확인합니다.
+ * 마스터 interactionRules의 medicationAliases 정보와 medicationKeyword를 활용하여 동적 매칭을 수행합니다.
  */
-function medicationMatchesName(text: string, keyword: string): boolean {
+function medicationMatchesRule(text: string, rule: InteractionRule): boolean {
   const lower = text.toLowerCase()
-  if (keyword === 'warfarin') return lower.includes('warfarin') || lower.includes('와파린') || lower.includes('쿠마딘') || lower.includes('항응고')
-  if (keyword === 'metformin') return lower.includes('metformin') || lower.includes('메트포르민') || lower.includes('글루코파지')
-  if (keyword === 'insulin') return lower.includes('insulin') || lower.includes('인슐린')
-  if (keyword === 'statin') return lower.includes('statin') || lower.includes('스타틴') || lower.includes('로수바스타틴') || lower.includes('아토르바스타틴') || lower.includes('심바스타틴') || lower.includes('프라바스타틴') || lower.includes('피타바스타틴')
-  if (keyword === 'antibiotic') return lower.includes('antibiotic') || lower.includes('항생제') || lower.includes('세파') || lower.includes('페니실린') || lower.includes('아목시실린') || lower.includes('독시사이클린') || lower.includes('아지트로마이신') || lower.includes('클래리스로마이신')
-  if (keyword === 'bisphosphonate') return lower.includes('bisphosphonate') || lower.includes('비스포스포네이트') || lower.includes('알렌드로네이트') || lower.includes('리세드로네이트') || lower.includes('골다공증약')
-  if (keyword === 'levothyroxine') return lower.includes('levothyroxine') || lower.includes('레보티록신') || lower.includes('씬지로이드') || lower.includes('갑상선')
-  if (keyword === 'aspirin') return lower.includes('aspirin') || lower.includes('아스피린') || lower.includes('바이엘')
+  if (rule.medicationAliases && rule.medicationAliases.length > 0) {
+    return rule.medicationAliases.some((alias) => lower.includes(alias.toLowerCase()))
+  }
+  if (rule.medicationKeyword) {
+    return lower.includes(rule.medicationKeyword.toLowerCase())
+  }
   return false
 }
 
@@ -333,36 +222,68 @@ interface Conflict {
 }
 
 /**
- * 약물-영양소 상호작용(DNI)을 분석하여 충돌 목록을 반환합니다.
- * 각 약물-규칙-영양소 조합에 대해 매칭되는 영양제 성분이 있으면 충돌로 기록합니다.
+ * 약물-영양소 및 질환-영양소 상호작용(DNI)을 분석하여 충돌 목록을 반환합니다.
+ * 각 약물/질환 규칙에 대해 매칭되는 영양제 성분이 있으면 충돌로 기록합니다.
  */
 function analyzeDNI(
   supplements: ScheduleInput['supplements'],
   medications: ScheduleInput['medications'],
+  conditions: string[],
 ): Conflict[] {
   const conflicts: Conflict[] = []
+  const conditionText = conditions.join(' ').toLowerCase()
 
-  for (const med of medications) {
-    const medText = `${med.name} ${med.memo}`
-
-    for (const rule of DNI_RULES) {
-      if (!medicationMatchesName(medText, rule.medicationKeyword)) continue
-
-      for (const supp of supplements) {
-        const matched = supp.ingredients.find((ing) => ing.nutrientId === rule.nutrientId)
-        if (!matched) continue
-
-        conflicts.push({
-          type: rule.severity === 'block' ? 'dni_block' : 'dni_warning',
-          supplementId: supp.id,
-          supplementName: cleanProductName(supp.productName),
-          nutrientId: matched.nutrientId,
-          nutrientName: matched.standardName,
-          message: rule.message,
-          tip: rule.tip,
-          severity: rule.severity,
-        })
+  for (const rule of interactionRules) {
+    let matchedRule = false
+    
+    // 1. 약물 매칭 검사
+    for (const med of medications) {
+      const medText = `${med.name} ${med.memo}`
+      if (medicationMatchesRule(medText, rule)) {
+        matchedRule = true
+        break
       }
+    }
+
+    // 2. 질환 매칭 검사
+    if (!matchedRule) {
+      if (rule.conditionAliases && rule.conditionAliases.length > 0) {
+        if (rule.conditionAliases.some((alias) => conditionText.includes(alias.toLowerCase()))) {
+          matchedRule = true
+        }
+      } else if (rule.conditionCode) {
+        if (conditionText.includes(rule.conditionCode.toLowerCase())) {
+          matchedRule = true
+        }
+      }
+    }
+
+    if (!matchedRule) continue
+
+    for (const supp of supplements) {
+      const matched = supp.ingredients.find((ing) => ing.nutrientId === rule.nutrientId)
+      if (!matched) continue
+
+      const severity: 'warning' | 'block' = rule.severity === 'high' ? 'block' : 'warning'
+      
+      let tip: string | undefined = undefined
+      let message = rule.message
+
+      if (rule.id === 'metformin-b12' || rule.id === 'statin-coq10') {
+        tip = rule.message
+        message = ''
+      }
+
+      conflicts.push({
+        type: severity === 'block' ? 'dni_block' : 'dni_warning',
+        supplementId: supp.id,
+        supplementName: cleanProductName(supp.productName),
+        nutrientId: matched.nutrientId,
+        nutrientName: matched.standardName,
+        message: message,
+        tip: tip,
+        severity: severity,
+      })
     }
   }
 
@@ -542,7 +463,7 @@ export function generateSchedule(input: ScheduleInput): TimeSlot[] {
     assignments.set(supplement.id, slotKey)
   }
 
-  const dniConflicts = analyzeDNI(supplements, medications)
+  const dniConflicts = analyzeDNI(supplements, medications, conditions)
   const antagonismConflicts = analyzeAntagonism(supplements, assignments)
   const allConflicts = [...dniConflicts, ...antagonismConflicts]
 

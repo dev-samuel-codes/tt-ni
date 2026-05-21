@@ -120,13 +120,13 @@ describe('findReferenceValue', () => {
   it('finds reference for elderly male', () => {
     const ref = findReferenceValue({ ...defaultProfile, gender: 'male', birthYear: 1950 }, 'vitamin_d')
     expect(ref).toBeDefined()
-    expect(ref!.rda).toBe(20)
+    expect(ref!.ai).toBe(15)
   })
 
   it('finds reference for young adult vitamin D', () => {
     const ref = findReferenceValue({ ...defaultProfile, gender: 'male', birthYear: 1995 }, 'vitamin_d')
     expect(ref).toBeDefined()
-    expect(ref!.rda).toBe(15)
+    expect(ref!.ai).toBe(10)
   })
 })
 

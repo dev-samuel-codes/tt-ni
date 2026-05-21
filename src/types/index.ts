@@ -88,7 +88,9 @@ export interface InteractionRule {
   id: string
   nutrientId: string
   medicationKeyword?: string
+  medicationAliases?: string[]
   conditionCode?: string
+  conditionAliases?: string[]
   severity: 'notice' | 'caution' | 'high'
   message: string
   sourceNote: string
