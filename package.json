@@ -14,6 +14,7 @@
     "predeploy:check": "node scripts/predeploy-check.mjs",
     "predeploy:check:release": "TT_NI_FAIL_ON_WARNINGS=1 node scripts/predeploy-check.mjs",
     "postdeploy:check": "node scripts/postdeploy-check.mjs",
+    "security:quota-check": "node scripts/security-quota-check.mjs",
     "verify": "npm run lint && npm test -- --run && npm run build && npm run predeploy:check && npm run audit:supabase",
     "verify:release": "npm run lint && npm test -- --run && npm run build && npm run predeploy:check:release && npm run audit:supabase",
     "verify:remote": "npm run verify && npm run smoke:remote",

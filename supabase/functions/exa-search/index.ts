@@ -1,6 +1,7 @@
 import '@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { corsHeaders, getCorsHeaders, jsonResponse } from '../_shared/cors.ts'
+import { getCorsHeaders, jsonResponse } from '../_shared/cors.ts'
+import { consumeApiUsage, dailyLimitPayload } from '../_shared/rateLimit.ts'
 
 /** Exa.ai 검색 요청 */
 interface ExaSearchRequest {
@@ -30,6 +31,8 @@ interface Product {
   ingredients: Ingredient[]
   sourceUrl: string
 }
+
+const DAILY_EXA_SEARCH_LIMIT = 30
 
 /** 영양소명 패턴 매칭을 위한 정규식 (웹 페이지 텍스트에서 함량 정보 추출) */
 const nutrientPatterns = [
@@ -168,6 +171,9 @@ Deno.serve(async (req) => {
     })
     const { data: userData, error: userError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
     if (userError || !userData.user) return jsonResponse(req, { error: 'Invalid user session' }, 401)
+
+    const usage = await consumeApiUsage(supabase, userData.user.id, 'exa_search', DAILY_EXA_SEARCH_LIMIT)
+    if (!usage.allowed) return jsonResponse(req, dailyLimitPayload(usage), 429)
 
     const searchResponse = await fetch('https://api.exa.ai/search', {
       method: 'POST',

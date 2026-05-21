@@ -29,7 +29,7 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 ### 2.2 Supabase Edge Functions Secrets
 
 ```bash
-supabase secrets set OPENAI_API_KEY=sk-xxx
+supabase secrets set OPENAI_API_KEY=<openai_api_key>
 supabase secrets set EXA_API_KEY=xxx
 supabase secrets set TT_NI_SERVICE_ROLE_KEY=your-service-role-key
 ```

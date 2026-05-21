@@ -1,6 +1,7 @@
 import '@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { corsHeaders, getCorsHeaders, jsonResponse } from '../_shared/cors.ts'
+import { getCorsHeaders, jsonResponse } from '../_shared/cors.ts'
+import { consumeApiUsage, dailyLimitPayload } from '../_shared/rateLimit.ts'
 
 interface RawIngredient {
   name: string
@@ -35,6 +36,8 @@ interface RefineResponse {
   ingredients: RefinedIngredient[]
   summary: string
 }
+
+const DAILY_REFINE_LIMIT = 50
 
 /**
  * 내장 영양소 데이터베이스
@@ -172,24 +175,8 @@ Deno.serve(async (req) => {
 
     const nutrientDatabase = await loadNutrientDatabase(supabase)
 
-    const usageDate = new Date().toISOString().split('T')[0]
-    const { data: usageData } = await supabase
-      .from('api_usage')
-      .select('call_count')
-      .eq('user_id', userData.user.id)
-      .eq('usage_date', usageDate)
-      .eq('api_type', 'refine')
-      .single()
-
-    const dailyLimit = 50
-    if (usageData && usageData.call_count >= dailyLimit) {
-      return jsonResponse(req, {
-        error: 'DAILY_LIMIT_EXCEEDED',
-        message: '일일 API 호출 한도를 초과했습니다. 내일 다시 시도해주세요.',
-        limit: dailyLimit,
-        used: usageData.call_count,
-      }, 429)
-    }
+    const usage = await consumeApiUsage(supabase, userData.user.id, 'refine', DAILY_REFINE_LIMIT)
+    if (!usage.allowed) return jsonResponse(req, dailyLimitPayload(usage), 429)
 
     // --- 1차: 내장 DB에서 매칭되는 성분은 바로 정제 ---
     const refinedFromDb: RefinedIngredient[] = []
@@ -306,13 +293,6 @@ Return JSON array only. Be precise with amounts and units.`
     }
 
     const allIngredients = [...refinedFromDb, ...llmRefined]
-
-    await supabase.from('api_usage').upsert({
-      user_id: userData.user.id,
-      usage_date: usageDate,
-      api_type: 'refine',
-      call_count: (usageData?.call_count ?? 0) + 1,
-    }, { onConflict: 'user_id,usage_date,api_type' })
 
     const response: RefineResponse = {
       productName,

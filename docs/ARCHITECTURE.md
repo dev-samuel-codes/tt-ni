@@ -57,7 +57,7 @@ graph TD
 | 구성 요소 | 역할 |
 |-----------|------|
 | **React SPA** | 사용자 인터페이스. Supabase JS 클라이언트를 통해 Auth, DB, Storage와 직접 통신. Edge Function은 `supabase.functions.invoke()`로 호출. |
-| **Supabase Auth** | 이메일 로그인 + Google/Kakao OAuth. 세션은 `localStorage`에 자동 관리되며, DB 접근 시 JWT가 포함됨. |
+| **Supabase Auth** | 이메일 로그인 + Google/Kakao OAuth. 세션은 Supabase 클라이언트가 브라우저 저장소에서 관리하며, DB 접근 시 JWT가 포함됨. |
 | **Supabase Database** | PostgreSQL. 모든 테이블에 RLS(Row Level Security)가 적용되어 `auth.uid()` 기준으로 행 단위 접근 제어. |
 | **Supabase Storage** | `labels` 프라이빗 버킷. 업로드된 영양제 라벨 이미지를 저장. 접근은 RLS 정책으로 제어. |
 | **Edge Functions** | Supabase Deno 런타임에서 실행되는 서버리스 함수. OpenAI, Exa.ai 등 서드파티 API 호출을 담당하며, secret 키를 안전하게 보관. (parse-label, refine-ingredients, run-analysis, generate-schedule, chat-completion, exa-search) |
@@ -512,7 +512,7 @@ CREATE POLICY "사용자는 본인 프로필 생성 가능"
 
 ```
 1. 사용자 로그인 → Supabase Auth가 JWT 발급
-2. JS 클라이언트가 JWT를 localStorage에 저장
+2. JS 클라이언트가 JWT를 브라우저 저장소에 저장
 3. 모든 DB/Storage/Function 요청에 JWT 자동 포함
 4. Supabase가 JWT 검증 후 RLS 정책에 따라 접근 제어
 ```
@@ -529,7 +529,7 @@ CREATE POLICY "사용자는 본인 프로필 생성 가능"
 
 ```bash
 # Edge Function secret 설정 명령어
-supabase secrets set OPENAI_API_KEY=sk-...
+supabase secrets set OPENAI_API_KEY=<openai_api_key>
 supabase secrets set EXA_API_KEY=...
 supabase secrets set TT_NI_SERVICE_ROLE_KEY=...
 ```

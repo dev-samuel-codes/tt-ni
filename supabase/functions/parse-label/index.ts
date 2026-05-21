@@ -1,6 +1,7 @@
 import '@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { corsHeaders, getCorsHeaders, jsonResponse } from '../_shared/cors.ts'
+import { getCorsHeaders, jsonResponse } from '../_shared/cors.ts'
+import { consumeApiUsage, dailyLimitPayload } from '../_shared/rateLimit.ts'
 import { getServiceKey } from '../_shared/serviceKey.ts'
 
 type Unit = 'mg' | 'mcg' | 'IU' | 'g' | 'CFU' | 'unknown'
@@ -58,6 +59,8 @@ const schema = {
   },
   required: ['product_name', 'serving_size', 'daily_servings_recommended', 'ingredients', 'warnings'],
 }
+
+const DAILY_PARSE_LABEL_LIMIT = 20
 
 /**
  * DB의 nutrients 테이블에서 전체 영양소 목록을 로드합니다.
@@ -140,6 +143,9 @@ Deno.serve(async (req) => {
     const { data: userData, error: userError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
     if (userError || !userData.user) return jsonResponse(req, { error: 'Invalid user session' }, 401)
     if (!image_path.startsWith(`${userData.user.id}/`)) return jsonResponse(req, { error: 'Image path does not belong to this user' }, 403)
+
+    const usage = await consumeApiUsage(supabase, userData.user.id, 'parse_label', DAILY_PARSE_LABEL_LIMIT)
+    if (!usage.allowed) return jsonResponse(req, dailyLimitPayload(usage), 429)
 
     const nutrientAliases = await loadNutrientAliases(supabase)
 

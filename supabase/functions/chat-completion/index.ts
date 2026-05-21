@@ -1,6 +1,6 @@
 import '@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { corsHeaders, getCorsHeaders, jsonResponse } from '../_shared/cors.ts'
+import { getCorsHeaders, jsonResponse } from '../_shared/cors.ts'
 
 interface Profile {
   gender?: string

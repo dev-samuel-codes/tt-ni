@@ -28,7 +28,8 @@ export function getServiceKey(): string {
     return first
   } catch (error) {
     if (error instanceof SyntaxError) {
-      throw new Error('SUPABASE_SECRET_KEYS is not valid JSON')
+      console.error('Failed to parse SUPABASE_SECRET_KEYS:', error)
+      throw new Error('SUPABASE_SECRET_KEYS is not valid JSON', { cause: error })
     }
     throw error
   }

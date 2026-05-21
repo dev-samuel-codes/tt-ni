@@ -91,7 +91,7 @@ npx supabase db push
 npx supabase functions deploy
 
 # 5. Edge Function Secrets 설정
-npx supabase secrets set OPENAI_API_KEY=sk-xxx EXA_API_KEY=xxx
+npx supabase secrets set OPENAI_API_KEY=<openai_api_key> EXA_API_KEY=<exa_api_key>
 
 # 6. 개발 서버 실행
 npm run dev
