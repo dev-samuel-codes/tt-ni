@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Loader2, Lock } from 'lucide-react'
-import { firebaseConfigError, signInWithEmail, signInWithGoogle, signInWithKakao, signOutCurrentUser, signUpWithEmail } from '../../lib/firebase'
+import { firebaseConfigError, signInWithEmail, signInWithGoogle, signInWithKakao, signOutCurrentUser, signUpWithEmail, socialAuthEnabled } from '../../lib/firebase'
 import type { SocialProvider } from '../../features/auth/authTypes'
 import { socialProviderLabels } from '../../features/auth/authTypes'
 
@@ -19,6 +19,8 @@ export function AuthPanel({
   const [loading, setLoading] = useState(false)
   const [oauthLoading, setOauthLoading] = useState<SocialProvider | null>(null)
   const authDisabled = firebaseConfigError !== null
+  const enabledSocialProviders = (['google', 'kakao'] as SocialProvider[]).filter((provider) => socialAuthEnabled[provider])
+  const hasSocialAuth = enabledSocialProviders.length > 0
 
   async function signIn(mode: 'login' | 'signup') {
     if (authDisabled) {
@@ -52,7 +54,9 @@ export function AuthPanel({
       const result = provider === 'google'
         ? await signInWithGoogle()
         : await signInWithKakao()
-      onSessionEmail(result.user.email ?? null)
+      if (result) {
+        onSessionEmail(result.user.email ?? null)
+      }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : `${socialProviderLabels[provider]} 로그인 시작에 실패했습니다.`)
       setOauthLoading(null)
@@ -84,27 +88,35 @@ export function AuthPanel({
         <Lock size={16} />
         <span>계정</span>
       </div>
-      <div className="social-auth-actions" aria-label="소셜 로그인">
-        <button
-          type="button"
-          className="social-auth-button google"
-          onClick={() => signInWithSocial('google')}
-          disabled={authDisabled || loading || oauthLoading !== null}
-        >
-          {oauthLoading === 'google' ? <Loader2 size={16} className="spin" /> : <span>G</span>}
-          구글로 로그인
-        </button>
-        <button
-          type="button"
-          className="social-auth-button kakao"
-          onClick={() => signInWithSocial('kakao')}
-          disabled={authDisabled || loading || oauthLoading !== null}
-        >
-          {oauthLoading === 'kakao' ? <Loader2 size={16} className="spin" /> : <span>K</span>}
-          카카오로 로그인
-        </button>
-      </div>
-      <div className="auth-divider"><span>또는 이메일로 계속</span></div>
+      {hasSocialAuth && (
+        <>
+          <div className="social-auth-actions" aria-label="소셜 로그인">
+            {socialAuthEnabled.google && (
+              <button
+                type="button"
+                className="social-auth-button google"
+                onClick={() => signInWithSocial('google')}
+                disabled={authDisabled || loading || oauthLoading !== null}
+              >
+                {oauthLoading === 'google' ? <Loader2 size={16} className="spin" /> : <span>G</span>}
+                구글로 로그인
+              </button>
+            )}
+            {socialAuthEnabled.kakao && (
+              <button
+                type="button"
+                className="social-auth-button kakao"
+                onClick={() => signInWithSocial('kakao')}
+                disabled={authDisabled || loading || oauthLoading !== null}
+              >
+                {oauthLoading === 'kakao' ? <Loader2 size={16} className="spin" /> : <span>K</span>}
+                카카오로 로그인
+              </button>
+            )}
+          </div>
+          <div className="auth-divider"><span>또는 이메일로 계속</span></div>
+        </>
+      )}
       <input
         aria-label="이메일"
         type="email"

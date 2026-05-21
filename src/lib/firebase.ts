@@ -6,6 +6,7 @@ import {
   OAuthProvider,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
   signOut,
 } from 'firebase/auth'
 
@@ -38,6 +39,11 @@ const app = isFirebaseConfigured ? initializeApp(firebaseConfig as FirebaseOptio
 
 export const auth = app ? getAuth(app) : null
 
+export const socialAuthEnabled = {
+  google: import.meta.env.VITE_FIREBASE_GOOGLE_ENABLED === 'true',
+  kakao: import.meta.env.VITE_FIREBASE_KAKAO_ENABLED === 'true',
+}
+
 function requireFirebaseAuth() {
   if (!auth) {
     throw new Error(firebaseConfigError ?? 'Firebase 인증을 초기화할 수 없습니다.')
@@ -54,12 +60,30 @@ export async function signInWithEmail(email: string, password: string) {
 }
 
 export async function signInWithGoogle() {
-  return signInWithPopup(requireFirebaseAuth(), new GoogleAuthProvider())
+  const firebaseAuth = requireFirebaseAuth()
+  try {
+    return await signInWithPopup(firebaseAuth, new GoogleAuthProvider())
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('popup-blocked')) {
+      await signInWithRedirect(firebaseAuth, new GoogleAuthProvider())
+      return null
+    }
+    throw error
+  }
 }
 
 export async function signInWithKakao() {
+  const firebaseAuth = requireFirebaseAuth()
   const provider = new OAuthProvider(import.meta.env.VITE_FIREBASE_KAKAO_PROVIDER_ID ?? 'oidc.kakao')
-  return signInWithPopup(requireFirebaseAuth(), provider)
+  try {
+    return await signInWithPopup(firebaseAuth, provider)
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('popup-blocked')) {
+      await signInWithRedirect(firebaseAuth, provider)
+      return null
+    }
+    throw error
+  }
 }
 
 export async function signOutCurrentUser() {
