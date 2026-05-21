@@ -908,13 +908,22 @@ export function SupplementWorkspace({
                   <span>{parsingStep}</span>
                 </div>
               )}
-              <label className={`button ghost ${!sessionEmail ? 'disabled-upload' : ''}`}>
-                <Camera size={16} />파일 선택
-                <input hidden type="file" accept="image/jpeg,image/png,image/webp,.heic,.heif" onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) parseLabel(file)
-                }} />
-              </label>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center', width: '100%', marginTop: '8px' }}>
+                <label className={`button ghost ${!sessionEmail ? 'disabled-upload' : ''}`}>
+                  <FileImage size={16} /> 앨범에서 선택
+                  <input hidden type="file" accept="image/jpeg,image/png,image/webp,.heic,.heif" onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) parseLabel(file)
+                  }} />
+                </label>
+                <label className={`button ghost ${!sessionEmail ? 'disabled-upload' : ''}`}>
+                  <Camera size={16} /> 직접 사진 촬영
+                  <input hidden type="file" accept="image/*" capture="environment" onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) parseLabel(file)
+                  }} />
+                </label>
+              </div>
             </div>
           )}
           

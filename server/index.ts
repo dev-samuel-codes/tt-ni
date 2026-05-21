@@ -513,11 +513,11 @@ app.post('/api/parse-label', upload.single('image'), asyncRoute(async (req, res)
   const response = await openaiChat({
     model: process.env.OPENAI_VISION_MODEL ?? process.env.OPENAI_MODEL ?? 'gpt-5-mini',
     messages: [
-      { role: 'system', content: 'Extract supplement label data into JSON only. This is not medical advice.' },
+      { role: 'system', content: 'Extract supplement label data into JSON only. Standardize ingredient names by removing extra compound details in parentheses where applicable (e.g. convert "Vitamin C (as Ascorbic Acid)" to "Vitamin C", "Calcium (as Calcium Carbonate)" to "Calcium") and normalize synonyms to commonly known clean names. This is not medical advice.' },
       {
         role: 'user',
         content: [
-          { type: 'text', text: 'Read this supplement facts label and extract product name, daily serving recommendation, ingredient names, amounts, units, confidence, and raw text.' },
+          { type: 'text', text: 'Read this supplement facts label and extract product name, daily serving recommendation, ingredient names, amounts, units, confidence, and raw text. Standardize the ingredient names into clean, common names (e.g. "Vitamin C" instead of "Vitamin C (Ascorbic Acid)") to ensure maximum match efficiency.' },
           { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } },
         ],
       },

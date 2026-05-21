@@ -3112,3 +3112,30 @@ textarea:focus {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.012) !important;
   color: #21332f !important;
 }
+
+/* ==========================================
+   추가 모바일 및 소형 화면 반응형 최적화
+   ========================================== */
+@media (max-width: 580px) {
+  .timeline-slot {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+  
+  .timeline-axis {
+    flex-direction: row !important;
+    align-items: center !important;
+    min-width: 100% !important;
+    height: 40px !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+  }
+  
+  .timeline-axis .timeline-connector {
+    display: none !important;
+  }
+  
+  .premium-timeline-card {
+    padding: 16px !important;
+  }
+}

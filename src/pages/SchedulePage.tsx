@@ -100,9 +100,9 @@ export function SchedulePage({
                 아직 생성된 스케줄이 없어요. 분석 리포트를 먼저 확인해보세요.
               </p>
             ) : timeline.map((slot, idx) => (
-              <div key={idx} style={{ display: 'flex', gap: '20px' }}>
+              <div key={idx} className="timeline-slot" style={{ display: 'flex', gap: '20px' }}>
                 {/* 좌측 프리미엄 타임라인 커넥터 축 */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '60px' }}>
+                <div className="timeline-axis" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '60px' }}>
                   <div 
                     className="timeline-badge-glow"
                     style={{ 
