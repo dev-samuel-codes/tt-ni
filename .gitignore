@@ -33,3 +33,4 @@ sample img/
 
 # Playwright test artifacts
 .playwright-mcp/
+.vercel
