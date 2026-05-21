@@ -210,7 +210,7 @@ export function ChatPage({
           const updated = [...prev]
           updated[updated.length - 1] = {
             role: 'assistant',
-            content: '요청이 너무 많아 잠시 제한되었습니다. 1분 후에 다시 물어봐 주세요.',
+            content: '일일 AI/API 호출 한도를 초과했습니다. 내일 다시 이용해주세요.',
           }
           return updated
         })
@@ -429,7 +429,7 @@ export function ChatPage({
           {rateLimited && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#b96b00', fontSize: '13px', background: '#fff8d9', padding: '8px 12px', borderRadius: '8px', marginBottom: '12px' }}>
               <AlertCircle size={14} />
-              <span>요청이 너무 많아 잠시 제한되었습니다. 1분 후에 다시 시도해주세요.</span>
+              <span>일일 AI/API 호출 한도를 초과했습니다. 내일 다시 이용해주세요.</span>
             </div>
           )}
           <div style={{ display: 'flex', gap: '12px' }}>

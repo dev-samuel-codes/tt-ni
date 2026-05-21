@@ -9,6 +9,7 @@ import type { ResultSetHeader, RowDataPacket } from 'mysql2'
 import { pool, ensureUser, id } from './db.js'
 import { firebaseAuth } from './firebaseAdmin.js'
 import { openaiChat } from './openai.js'
+import { consumeExternalApiQuota, DAILY_EXTERNAL_API_LIMIT_MESSAGE } from './rateLimit.js'
 import { nutrients } from '../src/features/nutrition/nutritionData.js'
 import { runAnalysis } from '../src/features/analysis/analysisEngine.js'
 import { generateSchedule } from '../src/features/schedule/scheduleEngine.js'
@@ -70,6 +71,12 @@ function asyncRoute(handler: (req: AuthedRequest, res: Response) => Promise<void
     }
     handler(req, res).catch(next)
   }
+}
+
+async function enforceExternalApiQuota(req: AuthedRequest, res: Response): Promise<boolean> {
+  if (await consumeExternalApiQuota(req.user.uid)) return true
+  res.status(429).json({ error: DAILY_EXTERNAL_API_LIMIT_MESSAGE })
+  return false
 }
 
 function parseJson<T>(value: unknown, fallback: T): T {
@@ -474,6 +481,7 @@ app.post('/api/refine-ingredients', asyncRoute(async (req, res) => {
 
 app.post('/api/parse-label', upload.single('image'), asyncRoute(async (req, res) => {
   if (!req.file) throw new Error('성분표 이미지 파일을 선택해야 AI 파싱을 실행할 수 있습니다.')
+  if (!await enforceExternalApiQuota(req, res)) return
   const mimeType = req.file.mimetype || 'image/jpeg'
   const base64 = req.file.buffer.toString('base64')
   const schema = {
@@ -583,8 +591,13 @@ function extractIngredients(text: string) {
 
 app.post('/api/exa-search', asyncRoute(async (req, res) => {
   const { query } = req.body as { query: string }
+  if (!query?.trim()) {
+    res.status(400).json({ error: '검색어를 입력해주세요.' })
+    return
+  }
   const exaApiKey = process.env.EXA_API_KEY
   if (!exaApiKey) throw new Error('EXA_API_KEY가 설정되지 않았습니다.')
+  if (!await enforceExternalApiQuota(req, res)) return
   const response = await fetch('https://api.exa.ai/search', {
     method: 'POST',
     headers: { 'x-api-key': exaApiKey, 'Content-Type': 'application/json' },
@@ -616,17 +629,6 @@ ${JSON.stringify(context)}
 - 사용자의 프로필, 복용 약물, 등록 영양제, 최신 분석 결과를 고려하세요.
 - 과잉, 결핍, 약물 상호작용 가능성이 있으면 먼저 경고하세요.
 - 단정적인 표현은 피하고 전문가 상담이 필요한 경우 명확히 안내하세요.`
-}
-
-async function chatRateLimit(userId: string) {
-  const [rows] = await pool.query<RowDataPacket[]>(
-    `select count(*) as count
-     from app_chat_messages cm
-     join app_chat_sessions cs on cs.id = cm.session_id
-     where cs.user_id = ? and cm.role = 'user' and cm.created_at >= current_date()`,
-    [userId],
-  )
-  return Number(rows[0]?.count ?? 0) < 50
 }
 
 app.get('/api/chat/sessions', asyncRoute(async (req, res) => {
@@ -668,8 +670,7 @@ app.post('/api/chat/completion', asyncRoute(async (req, res) => {
     res.status(400).json({ error: '메시지를 입력해주세요.' })
     return
   }
-  if (!await chatRateLimit(req.user.uid)) {
-    res.status(429).json({ error: '일일 메시지 한도를 초과했습니다. 내일 다시 이용해주세요.' })
+  if (!await enforceExternalApiQuota(req, res)) {
     return
   }
 

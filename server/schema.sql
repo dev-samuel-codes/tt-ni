@@ -114,5 +114,15 @@ create table if not exists app_chat_messages (
   constraint fk_chat_messages_session foreign key (session_id) references app_chat_sessions(id) on delete cascade
 );
 
+create table if not exists app_api_usage (
+  user_id varchar(128) not null,
+  usage_date date not null,
+  usage_bucket varchar(64) not null,
+  call_count int not null default 0,
+  updated_at timestamp default current_timestamp on update current_timestamp,
+  primary key (user_id, usage_date, usage_bucket),
+  constraint fk_api_usage_user foreign key (user_id) references app_users(id) on delete cascade
+);
+
 create index if not exists idx_chat_messages_session_created on app_chat_messages(session_id, created_at);
 create index if not exists idx_chat_sessions_user_updated on app_chat_sessions(user_id, updated_at);
