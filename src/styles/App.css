@@ -1310,6 +1310,28 @@
   align-items: center;
 }
 
+.auth-card-session {
+  display: block;
+  padding: 0;
+}
+
+.auth-signout-button {
+  width: 100%;
+  min-height: 58px;
+  border: 0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #20312f;
+  font: inherit;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.auth-signout-button:hover {
+  background: #f1f5f2;
+  color: #173c3c;
+}
+
 .auth-actions {
   justify-content: flex-end;
   gap: 8px;
@@ -3068,5 +3090,4 @@ textarea:focus {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.012) !important;
   color: #21332f !important;
 }
-
 

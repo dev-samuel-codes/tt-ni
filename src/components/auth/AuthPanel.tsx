@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Loader2, Lock, LogOut } from 'lucide-react'
+import { Loader2, Lock } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import type { SocialProvider, SocialProviderStatus } from '../../features/auth/authTypes'
 import { socialProviderLabels } from '../../features/auth/authTypes'
@@ -86,11 +86,9 @@ export function AuthPanel({
 
   if (sessionEmail) {
     return (
-      <div className={variant === 'page' ? 'auth-card compact page-auth-card' : 'auth-card compact'}>
-        <Lock size={16} />
-        <span>{sessionEmail}</span>
-        <button type="button" className="icon-button" aria-label="로그아웃" onClick={signOut}>
-          <LogOut size={16} />
+      <div className={variant === 'page' ? 'auth-card compact auth-card-session page-auth-card' : 'auth-card compact auth-card-session'}>
+        <button type="button" className="auth-signout-button" aria-label="로그아웃하기" onClick={signOut}>
+          로그아웃하기
         </button>
       </div>
     )
