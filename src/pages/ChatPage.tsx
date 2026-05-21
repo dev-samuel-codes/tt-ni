@@ -87,9 +87,9 @@ export function ChatPage() {
       if (!user) return
 
       const [{ data: profiles }, { data: supplements }, { data: reports }] = await Promise.all([
-        supabase.from('user_profiles').select('id').limit(1),
-        supabase.from('supplement_products').select('id'),
-        supabase.from('analysis_reports').select('id').order('created_at', { ascending: false }).limit(1),
+        supabase.from('user_profiles').select('id').eq('user_id', user.id).limit(1),
+        supabase.from('supplement_products').select('id').eq('owner_user_id', user.id),
+        supabase.from('analysis_reports').select('id').eq('user_id', user.id).order('created_at', { ascending: false }).limit(1),
       ])
 
       if (profiles && profiles.length > 0) badges.push('프로필 정보')

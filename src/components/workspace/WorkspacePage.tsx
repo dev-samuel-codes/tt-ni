@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import {
   Activity, AlertTriangle, Calendar, Camera, Check, ChevronRight,
   FileImage, Lock, LogIn, Pill, Plus, ShieldCheck, Sparkles, Trash2
@@ -53,8 +53,15 @@ export function Dashboard({
     }).catch((err) => console.warn('Failed to load user name:', err))
   }, [])
 
+  const profileJson = JSON.stringify(profile)
+  const supplementsJson = JSON.stringify(supplements)
+  const medicationsJson = JSON.stringify(medications)
+
   useEffect(() => {
     if (!hasData || supplements.length === 0 || !profile) return
+    let cancelled = false
+    setScheduleLoading(true)
+
     const requestProfile = {
       gender: profile.gender,
       birthYear: profile.birthYear,
@@ -88,10 +95,14 @@ export function Dashboard({
         preferences: requestPreferences
       },
     }).then(({ data }) => {
+      if (cancelled) return
       const timelineData = data?.timeline || data?.slots
       if (timelineData) setTodaySchedule(timelineData)
-    }).catch(() => {}).finally(() => setScheduleLoading(false))
-  }, [hasData, supplements, profile, medications])
+    }).catch(() => {}).finally(() => {
+      if (!cancelled) setScheduleLoading(false)
+    })
+    return () => { cancelled = true }
+  }, [hasData, supplementsJson, profileJson, medicationsJson])
 
   const today = new Date()
   const dateStr = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일 ${'일월화수목금토'[today.getDay()]}요일`

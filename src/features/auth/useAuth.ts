@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import type { Medication, Profile, SupplementProduct, AnalysisReport } from '../../types'
 import type { AuthNoticeState } from './authTypes'
@@ -11,11 +11,6 @@ type UseAuthOptions = {
   onReport: (report: AnalysisReport | null) => void
 }
 
-/**
- * URL 해시/쿼리 파라미터에서 OAuth 콜백 정보를 추출합니다.
- * 로그인 성공 시 access_token 또는 code가 포함되고,
- * 실패 시 error, error_description, error_code가 포함됩니다.
- */
 function parseAuthCallbackNotice(): { hasAuthCallback: boolean; initialAuthNotice: AuthNoticeState } {
   const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
   const searchParams = new URLSearchParams(window.location.search)
@@ -39,20 +34,11 @@ function parseAuthCallbackNotice(): { hasAuthCallback: boolean; initialAuthNotic
   }
 }
 
-/** OAuth 콜백 후 URL에서 인증 파라미터를 제거하여 깔끔한 URL을 유지합니다. */
 function clearAuthCallbackUrl() {
   if (!window.location.search && !window.location.hash) return
   window.history.replaceState({}, document.title, window.location.pathname)
 }
 
-/**
- * 인증 상태 관리 훅
- *
- * 주요 기능:
- * - 세션 초기화 및 OAuth 콜백 처리
- * - 사용자 데이터(프로필, 약물, 영양제) 로드
- * - 인증 상태 변경 감지 및 데이터 동기화
- */
 export function useAuth({
   defaultProfile,
   onProfile,
@@ -65,6 +51,18 @@ export function useAuth({
   const [authNotice, setAuthNotice] = useState<AuthNoticeState>(initialAuthNotice)
   const [isAuthInitialized, setIsAuthInitialized] = useState(false)
   const [profileIsSetup, setProfileIsSetup] = useState(false)
+
+  const defaultProfileRef = useRef(defaultProfile)
+  const onProfileRef = useRef(onProfile)
+  const onMedicationsRef = useRef(onMedications)
+  const onSupplementsRef = useRef(onSupplements)
+  const onReportRef = useRef(onReport)
+
+  defaultProfileRef.current = defaultProfile
+  onProfileRef.current = onProfile
+  onMedicationsRef.current = onMedications
+  onSupplementsRef.current = onSupplements
+  onReportRef.current = onReport
 
   const loadUserData = useCallback(async (userId: string) => {
     const [profileResult, conditionsResult, medicationsResult, userSupplementsResult] = await Promise.all([
@@ -80,7 +78,7 @@ export function useAuth({
     if (profileResult.data) {
       setProfileIsSetup(true)
       const conditions = conditionsResult.data ?? []
-      onProfile({
+      onProfileRef.current({
         gender: profileResult.data.gender,
         birthYear: profileResult.data.birth_year,
         heightCm: profileResult.data.height_cm ?? undefined,
@@ -94,7 +92,7 @@ export function useAuth({
       })
     }
 
-    onMedications((medicationsResult.data ?? []).map((medication) => ({
+    onMedicationsRef.current((medicationsResult.data ?? []).map((medication) => ({
       id: medication.id,
       name: medication.medication_name,
       purpose: medication.dosage_text ?? '',
@@ -102,7 +100,7 @@ export function useAuth({
       memo: medication.memo ?? '',
     })))
 
-    onSupplements((userSupplementsResult.data ?? []).flatMap((row) => {
+    onSupplementsRef.current((userSupplementsResult.data ?? []).flatMap((row) => {
       const product = Array.isArray(row.supplement_products) ? row.supplement_products[0] : row.supplement_products
       if (!product) return []
       return [{
@@ -127,7 +125,7 @@ export function useAuth({
         })),
       }]
     }))
-  }, [onMedications, onProfile, onSupplements])
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -174,10 +172,10 @@ export function useAuth({
         }
       } else {
         setProfileIsSetup(false)
-        onProfile(defaultProfile)
-        onMedications([])
-        onSupplements([])
-        onReport(null)
+        onProfileRef.current(defaultProfileRef.current)
+        onMedicationsRef.current([])
+        onSupplementsRef.current([])
+        onReportRef.current(null)
       }
     })
 
@@ -185,7 +183,7 @@ export function useAuth({
       cancelled = true
       data.subscription.unsubscribe()
     }
-  }, [defaultProfile, hasAuthCallback, initialAuthNotice, loadUserData, onMedications, onProfile, onReport, onSupplements])
+  }, [hasAuthCallback, initialAuthNotice, loadUserData])
 
   return {
     sessionEmail,

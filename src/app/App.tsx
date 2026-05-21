@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import '../styles/App.css'
 import '../styles/auth.css'
 import '../styles/landing.css'
@@ -19,8 +19,7 @@ import { Dashboard, ProfileAndMedication, SupplementWorkspace, AnalysisResult } 
 import { SchedulePage } from '../pages/SchedulePage'
 import { ChatPage } from '../pages/ChatPage'
 
-/** 기본 프로필 값 (성인 여성 기준) */
-const defaultProfile: Profile = {
+const DEFAULT_PROFILE: Profile = {
   gender: 'female', birthYear: 1998, heightCm: 165, weightKg: 55,
   pregnancyStatus: 'none', lactationStatus: false,
   conditions: [], allergies: [], dietaryRestrictions: [],
@@ -38,24 +37,23 @@ const defaultProfile: Profile = {
  */
 function App() {
   const { currentPath, navigateTo } = useCurrentPath()
-  const [profile, setProfile] = useState<Profile>(defaultProfile)
+  const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE)
   const [medications, setMedications] = useState<Medication[]>([])
   const [supplements, setSupplements] = useState<SupplementProduct[]>([])
   const [report, setReport] = useState<AnalysisReport | null>(null)
   const [analysisSyncMessage, setAnalysisSyncMessage] = useState('')
 
   const { sessionEmail, setSessionEmail, authNotice, setAuthNotice, isAuthInitialized, profileIsSetup } = useAuth({
-    defaultProfile,
+    defaultProfile: DEFAULT_PROFILE,
     onProfile: setProfile,
     onMedications: setMedications,
     onSupplements: setSupplements,
     onReport: setReport,
   })
 
-  /** 로컬 분석 미리보기 (서버 저장 없이 즉시 표시용) */
-  const previewReport = runAnalysis(profile, medications, supplements)
-  const confirmedCount = supplements.filter((supplement) => supplement.confirmed).length
-  const needsReview = supplements.flatMap((supplement) => supplement.ingredients).filter((ingredient) => ingredient.reviewRequired).length
+  const previewReport = useMemo(() => runAnalysis(profile, medications, supplements), [profile, medications, supplements])
+  const confirmedCount = useMemo(() => supplements.filter((s) => s.confirmed).length, [supplements])
+  const needsReview = useMemo(() => supplements.flatMap((s) => s.ingredients).filter((i) => i.reviewRequired).length, [supplements])
 
   /** 비로그인 상태에서 워크스페이스 접근 시 로그인 페이지로 리다이렉트 */
   useEffect(() => {

@@ -580,7 +580,7 @@ export async function getScheduleForDate(date: Date): Promise<TimeSlot[]> {
   }
 
   const [{ data: profile }, { data: userSupplements }, { data: medications }] = await Promise.all([
-    supabase.from('profiles').select('conditions').eq('user_id', authData.user.id).single(),
+    supabase.from('user_profiles').select('conditions').eq('user_id', authData.user.id).single(),
     supabase.from('user_supplements').select(`
       daily_servings,
       supplement_products!inner (

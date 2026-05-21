@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Clock, AlertCircle, Coffee, Pill, Loader, Lightbulb } from 'lucide-react'
 import type { Medication, Profile, SupplementProduct } from '../types'
 import { supabase } from '../lib/supabaseClient'
@@ -28,9 +28,14 @@ export function SchedulePage({
   const [isLoading, setIsLoading] = useState(supplements.length > 0)
   const [error, setError] = useState('')
 
+  const profileJson = useMemo(() => JSON.stringify(profile), [profile])
+  const supplementsJson = useMemo(() => JSON.stringify(supplements), [supplements])
+  const medicationsJson = useMemo(() => JSON.stringify(medications), [medications])
+
   useEffect(() => {
     if (!(supplements.length > 0) || !profile) return
     let cancelled = false
+    setIsLoading(true)
 
     const requestProfile = {
       gender: profile.gender,
@@ -84,7 +89,7 @@ export function SchedulePage({
       if (!cancelled) setIsLoading(false)
     })
     return () => { cancelled = true }
-  }, [supplements, selectedDate, profile, medications])
+  }, [supplementsJson, selectedDate, profileJson, medicationsJson])
 
   // 보고서 4.3절 기반 복용 팁
   const dosageTips = [
