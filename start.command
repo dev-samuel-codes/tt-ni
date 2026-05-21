@@ -9,7 +9,7 @@ echo "========================================"
 if [ ! -f .env.local ]; then
   if [ -f .env.example ]; then
     cp .env.example .env.local
-    echo "[+] .env.local 파일을 생성했습니다. Supabase 값을 입력해주세요."
+    echo "[+] .env.local 파일을 생성했습니다. Firebase/TiDB 값을 입력해주세요."
   fi
 fi
 
@@ -37,10 +37,10 @@ else
   fi
 fi
 
-echo "[+] 개발 서버 시작 (http://localhost:5173)"
+echo "[+] 개발 서버와 API 서버 시작 (http://localhost:5173)"
 echo ""
 
-# 백그라운드에서 Vite 실행 후 브라우저 열기
+# 백그라운드에서 Vite/API 서버 실행 후 브라우저 열기
 npm run dev &
 DEV_PID=$!
 

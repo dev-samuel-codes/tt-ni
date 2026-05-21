@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Send, Bot, User, Plus, MessageCircle, Info, AlertCircle } from 'lucide-react'
-import { supabase } from '../lib/supabaseClient'
+import { apiRequest, getAuthToken } from '../lib/apiClient'
 import type { AnalysisReport, Medication, Profile, SupplementProduct } from '../types'
 
 interface ChatMessage {
@@ -56,14 +56,9 @@ export function ChatPage({
 
   const loadSessions = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from('chat_sessions')
-        .select('id, title')
-        .order('created_at', { ascending: false })
+      const data = await apiRequest<Array<{ id: string; title: string }>>('/api/chat/sessions')
 
-      if (error) throw error
-
-      const loaded: ChatSession[] = (data || []).map((s: { id: string; title: string }) => ({
+      const loaded: ChatSession[] = data.map((s) => ({
         id: s.id,
         title: s.title || '새 대화',
         active: false,
@@ -85,14 +80,10 @@ export function ChatPage({
 
   async function loadMessages(sessionId: string) {
     try {
-      const { data } = await supabase
-        .from('chat_messages')
-        .select('role, content')
-        .eq('session_id', sessionId)
-        .order('created_at', { ascending: true })
+      const data = await apiRequest<ChatMessage[]>(`/api/chat/sessions/${sessionId}/messages`)
 
       if (data && data.length > 0) {
-        setMessages(data as ChatMessage[])
+        setMessages(data)
       } else {
         setMessages([
           { role: 'assistant', content: '안녕하세요! 등록하신 영양제와 건강 상태에 대해 궁금한 점을 물어보세요.' }
@@ -104,33 +95,21 @@ export function ChatPage({
   }
 
   useEffect(() => {
-    void loadSessions()
+    const timer = window.setTimeout(() => {
+      void loadSessions()
+    }, 0)
+    return () => window.clearTimeout(timer)
   }, [loadSessions])
 
   async function createSession(title?: string): Promise<string | null> {
     try {
-      const { data, error } = await supabase
-        .from('chat_sessions')
-        .insert({ title: title || '새 대화' })
-        .select('id, title')
-        .single()
-
-      if (error) throw error
+      const data = await apiRequest<{ id: string; title: string }>('/api/chat/sessions', {
+        method: 'POST',
+        body: { title: title || '새 대화' },
+      })
       return data.id
     } catch {
       return null
-    }
-  }
-
-  async function saveMessage(sessionId: string, msg: ChatMessage) {
-    try {
-      await supabase.from('chat_messages').insert({
-        session_id: sessionId,
-        role: msg.role,
-        content: msg.content,
-      })
-    } catch {
-      // best-effort save
     }
   }
 
@@ -193,29 +172,28 @@ export function ChatPage({
           prev.map((s) => (s.id === sessionId ? { ...s, title: msgText.slice(0, 30) } : s))
         )
         try {
-          await supabase.from('chat_sessions').update({ title: msgText.slice(0, 30) }).eq('id', sessionId)
+          await apiRequest(`/api/chat/sessions/${sessionId}`, {
+            method: 'PATCH',
+            body: { title: msgText.slice(0, 30) },
+          })
         } catch { /* best-effort */ }
       }
-    }
-
-    if (sessionId !== 'local') {
-      await saveMessage(sessionId, userMsg)
     }
 
     setMessages((prev) => [...prev, { role: 'assistant', content: '' }])
 
     try {
-      const { data: { session } } = await supabase.auth.getSession()
+      const token = await getAuthToken()
       abortControllerRef.current?.abort()
       const controller = new AbortController()
       abortControllerRef.current = controller
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-completion`,
+        `${(import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? ''}/api/chat/completion`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${session?.access_token || ''}`,
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             message: msgText,
@@ -281,10 +259,6 @@ export function ChatPage({
             }
           }
         }
-      }
-
-      if (sessionId !== 'local' && fullTextRef.current) {
-        await saveMessage(sessionId, { role: 'assistant', content: fullTextRef.current })
       }
     } catch {
       setMessages((prev) => {

@@ -5,9 +5,8 @@ import '../styles/landing.css'
 import '../styles/workspace.css'
 import '../styles/legal.css'
 import { runAnalysis } from '../features/analysis/analysisEngine'
-import { createAnalysisReportFromServer } from '../features/analysis/serverAnalysis'
 import { useAuth } from '../features/auth/useAuth'
-import { supabase } from '../lib/supabaseClient'
+import { apiRequest } from '../lib/apiClient'
 import type { AnalysisReport, Medication, Profile, SupplementProduct } from '../types'
 import { routes, useCurrentPath } from './routes'
 import { LandingPage } from '../pages/LandingPage'
@@ -77,14 +76,10 @@ function App() {
     setReport(null)
     try {
       if (!sessionEmail) throw new Error('로그인 후 분석 리포트를 서버에 저장할 수 있습니다.')
-      const { data, error } = await supabase.functions.invoke('run-analysis', {
+      const serverReport = await apiRequest<AnalysisReport>('/api/analysis', {
+        method: 'POST',
         body: { profile, medications, supplements },
       })
-      if (error) {
-        const errMsg = typeof error === 'string' ? error : (error as Error).message || '서버 분석 중 오류가 발생했습니다.'
-        throw new Error(errMsg)
-      }
-      const serverReport = createAnalysisReportFromServer(data)
       setReport(serverReport)
       if (serverReport.totals.length > 0) {
         setAnalysisSyncMessage('분석 결과가 저장되었습니다.')

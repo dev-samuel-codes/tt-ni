@@ -1,7 +1,5 @@
-import type { Provider } from '@supabase/supabase-js'
-
 /** 지원하는 소셜 로그인 제공자 */
-export type SocialProvider = Extract<Provider, 'google' | 'kakao'>
+export type SocialProvider = 'google' | 'kakao'
 
 /** 소셜 로그인 제공자별 활성화 상태 (null = 로딩 중) */
 export type SocialProviderStatus = Record<SocialProvider, boolean | null>

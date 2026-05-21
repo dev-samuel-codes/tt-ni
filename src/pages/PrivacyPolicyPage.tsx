@@ -94,7 +94,7 @@ export function PrivacyPolicyPage({ onBack }: { onBack: () => void }) {
               <tr><th>수탁자</th><th>위탁 업무</th></tr>
             </thead>
             <tbody>
-              <tr><td>Supabase, Inc.</td><td>데이터베이스 호스팅, 인증 서비스, 스토리지</td></tr>
+              <tr><td>Firebase / TiDB Cloud</td><td>인증 서비스 및 데이터베이스 호스팅</td></tr>
               <tr><td>Vercel, Inc.</td><td>프론트엔드 호스팅, CDN</td></tr>
               <tr><td>OpenAI, LLM</td><td>AI 이미지 분석, 영양성분 정제, 채팅 응답 생성</td></tr>
               <tr><td>Exa, Inc.</td><td>영양제 제품 웹 검색</td></tr>
@@ -110,7 +110,7 @@ export function PrivacyPolicyPage({ onBack }: { onBack: () => void }) {
               <tr><th>이전받는 자</th><th>이전 국가</th><th>이전 항목</th><th>이전 목적</th><th>보유 기간</th></tr>
             </thead>
             <tbody>
-              <tr><td>Supabase, Inc.</td><td>미국</td><td>서비스 이용 시 수집되는 모든 개인정보</td><td>데이터 저장 및 서비스 운영</td><td>회원 탈퇴 시까지</td></tr>
+              <tr><td>Firebase / TiDB Cloud</td><td>서비스 제공 지역</td><td>서비스 이용 시 수집되는 개인정보</td><td>인증, 데이터 저장 및 서비스 운영</td><td>회원 탈퇴 시까지</td></tr>
               <tr><td>Vercel, Inc.</td><td>미국</td><td>서비스 이용 기록</td><td>프론트엔드 호스팅</td><td>회원 탈퇴 시까지</td></tr>
               <tr><td>OpenAI, LLM</td><td>미국</td><td>영양제 라벨 이미지, 성분 정보</td><td>AI 분석 처리</td><td>처리 후 즉시 삭제</td></tr>
               <tr><td>Exa, Inc.</td><td>미국</td><td>영양제 검색 쿼리</td><td>제품 검색</td><td>처리 후 즉시 삭제</td></tr>

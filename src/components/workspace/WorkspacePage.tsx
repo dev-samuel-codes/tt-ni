@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState } from 'react'
 import {
   Activity, AlertTriangle, Calendar, Camera, Check, ChevronRight,
   FileImage, Lock, LogIn, Pill, Plus, ShieldCheck, Sparkles, Trash2
@@ -9,7 +9,7 @@ import { statusLabel } from '../../features/analysis/analysisEngine'
 import { createId, getStatusTone, splitList } from '../../lib/utils'
 import { saveProfileBundle } from '../../features/profile/profileService'
 import { createManualIngredient, parseLabelImage, saveSupplementProduct, updateSupplementProduct, batchUpdateSupplementIngredients, deleteSupplementProduct, refineIngredients } from '../../features/supplements/supplementService'
-import { supabase } from '../../lib/supabaseClient'
+import { apiRequest } from '../../lib/apiClient'
 import { MetricCard } from './Shared'
 
 
@@ -23,7 +23,7 @@ import { MetricCard } from './Shared'
 export function Dashboard({
   report, supplements, onSupplements, onStart, onAnalyze, confirmedCount, needsReview,
   onSchedule, onChat, onProfile, profileIsSetup,
-  profile, medications, sessionEmail,
+  sessionEmail,
   todaySchedule, scheduleLoading,
 }: {
   report: AnalysisReport
@@ -43,16 +43,13 @@ export function Dashboard({
   todaySchedule: Array<{ time: string; items: string[] }>
   scheduleLoading: boolean
 }) {
-  const hasData = report.totals.length > 0
-  const [userName, setUserName] = useState('사용자')
-
-  useEffect(() => {
-    if (sessionEmail) {
-      setUserName(sessionEmail.split('@')[0])
-    }
-  }, [sessionEmail])
-
-  const today = new Date()
+  const userName = sessionEmail ? sessionEmail.split('@')[0] : '사용자'
+  const dateStr = new Date().toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long',
+  })
 
   const synergies = report.synergyRecommendations.map((s) => ({ combo: s.label, benefit: s.benefit }))
 
@@ -304,7 +301,7 @@ export function Dashboard({
 /**
  * 프로필 및 약물 관리 컴포넌트
  * 기본 정보(성별, 연령, 체중 등), 건강 상태(기저질환, 알레르기, 식이 제한),
- * 복용 약물 목록을 편집하고 Supabase에 저장합니다.
+ * 복용 약물 목록을 편집하고 TiDB API에 저장합니다.
  */
 export function ProfileAndMedication({
   profile, medications, onProfile, onMedications,
@@ -325,7 +322,7 @@ export function ProfileAndMedication({
     setDraftMedication({ id: '', name: '', purpose: '', frequency: '', memo: '' })
   }
 
-  async function saveProfileToSupabase() {
+  async function saveProfileToTiDB() {
     setSyncMessage('')
     try {
       setSyncMessage(await saveProfileBundle(profile, medications))
@@ -342,7 +339,7 @@ export function ProfileAndMedication({
             <h2>기본 정보</h2>
             <p>기준 섭취량 비교에 사용됩니다.</p>
           </div>
-          <button type="button" className="button primary" onClick={saveProfileToSupabase}>저장</button>
+          <button type="button" className="button primary" onClick={saveProfileToTiDB}>저장</button>
         </div>
         <div className="form-grid">
           <label>성별
@@ -454,7 +451,7 @@ export function ProfileAndMedication({
  * 3. 수동 입력 → 직접 성분명/함량/단위 입력
  *
  * 등록 전 성분 검수(표준명 매칭, 단위 확인, 신뢰도 평가)를 수행하고
- * refine-ingredients Edge Function을 통해 성분 정보를 보강합니다.
+ * refine-ingredients API를 통해 성분 정보를 보강합니다.
  */
 export function SupplementWorkspace({
   supplements, onSupplements, onAnalyze, sessionEmail,
@@ -530,15 +527,12 @@ export function SupplementWorkspace({
     if (!editingId) return
     setEditMessage('')
     try {
-      const { data: authData } = await supabase.auth.getUser()
-      const userId = authData?.user?.id
-
       await updateSupplementProduct(editingId, {
         productName: editProductName,
         brandName: editBrandName,
         dailyServings: editDailyServings,
         intakeTime: editIntakeTime,
-      }, userId)
+      })
       await batchUpdateSupplementIngredients(
         editIngredients.map((ing) => ({
           id: ing.id,
@@ -549,41 +543,14 @@ export function SupplementWorkspace({
         editDailyServings,
       )
 
-      if (userId) {
-        const { data: row } = await supabase
-          .from('user_supplements')
-          .select('daily_servings, intake_time, supplement_products(id, product_name, brand_name, source_type, label_image_path, supplement_ingredients(*))')
-          .eq('product_id', editingId)
-          .eq('user_id', userId)
-          .eq('active', true)
-          .maybeSingle()
-
-        if (row?.supplement_products) {
-          const product = Array.isArray(row.supplement_products) ? row.supplement_products[0] : row.supplement_products
-          const refreshed: SupplementProduct = {
-            id: product.id,
-            productName: product.product_name,
-            brandName: product.brand_name ?? '',
-            sourceType: product.source_type,
-            dailyServings: Number(row.daily_servings),
-            intakeTime: row.intake_time ?? '',
-            imageName: product.label_image_path ?? undefined,
-            confirmed: true,
-            ingredients: (product.supplement_ingredients ?? []).map((ing: Record<string, unknown>) => ({
-              id: ing.id as string,
-              rawName: ing.raw_name as string,
-              standardName: ing.standard_name as string,
-              nutrientId: (ing.nutrient_id as string) || '',
-              amount: ing.amount === null ? null : Number(ing.amount),
-              unit: ing.unit as Unit,
-              confidence: Number(ing.confidence),
-              rawText: ing.raw_name as string,
-              reviewRequired: Boolean(ing.review_required),
-            })),
-          }
-          onSupplements(supplements.map((s) => s.id === editingId ? refreshed : s))
-        }
-      }
+      onSupplements(supplements.map((s) => s.id === editingId ? {
+        ...s,
+        productName: editProductName,
+        brandName: editBrandName,
+        dailyServings: editDailyServings,
+        intakeTime: editIntakeTime,
+        ingredients: editIngredients,
+      } : s))
 
       setEditMessage('수정이 완료되었습니다.')
       setEditingId(null)
@@ -595,8 +562,7 @@ export function SupplementWorkspace({
   async function handleDeleteSupplement(productId: string, name: string) {
     if (!window.confirm(`'${name}'을(를) 정말 삭제하시겠습니까?`)) return
     try {
-      const { data: authData } = await supabase.auth.getUser()
-      await deleteSupplementProduct(productId, authData?.user?.id)
+      await deleteSupplementProduct(productId)
       onSupplements(supplements.filter((s) => s.id !== productId))
     } catch (error) {
       alert(error instanceof Error ? error.message : '삭제에 실패했습니다.')
@@ -668,10 +634,16 @@ export function SupplementWorkspace({
     setParseWarnings([])
     setSyncMessage('')
     try {
-      const { data, error } = await supabase.functions.invoke('exa-search', {
+      const data = await apiRequest<{
+        products?: Array<{
+          name?: string
+          brand?: string
+          ingredients?: ParsedIngredient[]
+        }>
+      }>('/api/exa-search', {
+        method: 'POST',
         body: { query: searchQuery },
       })
-      if (error) throw new Error(error.message || '검색 중 오류가 발생했습니다.')
       const product = data?.products?.[0]
       if (!product || !product.ingredients || product.ingredients.length === 0) {
         setParseWarnings(['검색 결과에서 성분 정보를 찾을 수 없습니다. 제품명을 다시 확인해주세요.'])
@@ -755,8 +727,7 @@ export function SupplementWorkspace({
       ingredients: finalIngredients, confirmed: true,
     }
     try {
-      const { data: authData } = await supabase.auth.getUser()
-      const saved = await saveSupplementProduct(supplement, labelImagePath, authData?.user?.id)
+      const saved = await saveSupplementProduct(supplement, labelImagePath)
       supplement.id = saved.productId
       setSyncMessage('저장되었습니다.')
     } catch (error) {

@@ -329,7 +329,7 @@ describe('runAnalysis', () => {
 
 // ─── Server Analysis Report Tests ─────────────────────────────────
 describe('createAnalysisReportFromServer', () => {
-  it('builds the displayed report from the Supabase analysis response', () => {
+  it('builds the displayed report from the server analysis response', () => {
     const report = createAnalysisReportFromServer({
       analysis_report_id: 'remote-report',
       summary: { caution: 1 },

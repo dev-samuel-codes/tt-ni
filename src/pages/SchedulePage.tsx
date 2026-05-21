@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from 'react'
-import { Clock, AlertCircle, Coffee, Pill, Loader, Lightbulb } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Clock, AlertCircle, Coffee, Pill, Lightbulb } from 'lucide-react'
 import type { Medication, Profile, SupplementProduct } from '../types'
-import { supabase } from '../lib/supabaseClient'
+import { generateSchedule } from '../features/schedule/scheduleEngine'
 
 interface TimelineSlot {
   time: string
@@ -24,24 +24,9 @@ export function SchedulePage({
   medications: Medication[]
 }) {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
-  const [timeline, setTimeline] = useState<TimelineSlot[]>([])
-  const [isLoading, setIsLoading] = useState(supplements.length > 0)
-  const [error, setError] = useState('')
 
-  const profileJson = useMemo(() => JSON.stringify(profile), [profile])
-  const supplementsJson = useMemo(() => JSON.stringify(supplements), [supplements])
-  const medicationsJson = useMemo(() => JSON.stringify(medications), [medications])
-
-  useEffect(() => {
-    if (!(supplements.length > 0) || !profile) return
-    let cancelled = false
-    setIsLoading(true)
-
-    const requestProfile = {
-      gender: profile.gender,
-      birthYear: profile.birthYear,
-      conditions: profile.conditions
-    }
+  const timeline = useMemo<TimelineSlot[]>(() => {
+    if (!(supplements.length > 0)) return []
     const requestSupplements = supplements.map((s) => ({
       id: s.id,
       productName: s.productName,
@@ -49,47 +34,29 @@ export function SchedulePage({
       ingredients: s.ingredients.map((ing) => ({
         nutrientId: ing.nutrientId,
         standardName: ing.standardName,
-        amount: ing.amount,
+        amount: ing.amount ?? 0,
         unit: ing.unit
       }))
     }))
     const requestMedications = medications.map((m) => ({
       name: m.name,
-      memo: m.memo || undefined
+      memo: m.memo || ''
     }))
     const requestPreferences = {
       wakeTime: '08:00',
       mealTimes: ['09:00', '13:00', '19:00']
     }
 
-    supabase.functions.invoke('generate-schedule', {
-      body: {
-        profile: requestProfile,
-        supplements: requestSupplements,
-        medications: requestMedications,
-        preferences: requestPreferences,
-        date: selectedDate
-      },
-    }).then(({ data, error: invokeError }) => {
-      if (cancelled) return
-      if (invokeError) throw new Error(invokeError.message || '스케줄 생성에 실패했습니다.')
-      const timelineData = data?.timeline || data?.slots
-      if (timelineData) {
-        setTimeline(timelineData.map((slot: Omit<TimelineSlot, 'color'>, idx: number) => ({
-          ...slot,
-          color: TIMELINE_COLORS[idx % TIMELINE_COLORS.length],
-        })))
-      } else {
-        setTimeline([])
-      }
-    }).catch((err) => {
-      if (cancelled) return
-      setError(err instanceof Error ? err.message : '스케줄을 불러오는 중 문제가 발생했습니다.')
-    }).finally(() => {
-      if (!cancelled) setIsLoading(false)
-    })
-    return () => { cancelled = true }
-  }, [supplementsJson, selectedDate, profileJson, medicationsJson])
+    return generateSchedule({
+      supplements: requestSupplements,
+      medications: requestMedications,
+      conditions: profile.conditions,
+      preferences: requestPreferences,
+    }).map((slot, idx) => ({
+      ...slot,
+      color: TIMELINE_COLORS[idx % TIMELINE_COLORS.length],
+    }))
+  }, [supplements, medications, profile])
 
   // 보고서 4.3절 기반 복용 팁
   const dosageTips = [
@@ -126,18 +93,7 @@ export function SchedulePage({
           </div>
 
           <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            {isLoading ? (
-              <div style={{ textAlign: 'center', padding: '32px 0', color: '#697771' }}>
-                <Loader size={24} style={{ animation: 'spin 1s linear infinite', marginBottom: '12px' }} />
-                <p style={{ fontSize: '14px' }}>맞춤형 복용 스케줄을 생성하고 있습니다...</p>
-              </div>
-            ) : error ? (
-              <div style={{ textAlign: 'center', padding: '32px 0' }}>
-                <AlertCircle size={24} color="#b96b00" style={{ marginBottom: '12px' }} />
-                <p style={{ color: '#b96b00', fontSize: '14px' }}>{error}</p>
-                <p style={{ color: '#8a9a95', fontSize: '13px', marginTop: '8px' }}>잠시 후 다시 시도해주세요.</p>
-              </div>
-            ) : timeline.length === 0 ? (
+            {timeline.length === 0 ? (
               <p style={{ color: '#8a9a95', textAlign: 'center', padding: '32px 0', fontSize: '14px' }}>
                 아직 생성된 스케줄이 없어요. 분석 리포트를 먼저 확인해보세요.
               </p>

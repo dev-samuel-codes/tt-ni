@@ -1,5 +1,3 @@
-import { supabase } from '../../lib/supabaseClient'
-
 /** 하루 중 특정 시간대의 복용 정보 */
 export interface TimeSlot {
   time: string
@@ -556,82 +554,4 @@ export function generateSchedule(input: ScheduleInput): TimeSlot[] {
   }
 
   return resultSlots
-}
-
-/**
- * 특정 날짜의 복용 스케줄을 Supabase에서 조회하거나 생성합니다.
- * 먼저 저장된 스케줄을 확인하고, 없으면 사용자 프로필/영양제/약물 데이터를 기반으로 새로 생성합니다.
- */
-export async function getScheduleForDate(date: Date): Promise<TimeSlot[]> {
-  const { data: authData } = await supabase.auth.getUser()
-  if (!authData?.user) return []
-
-  const dateStr = date.toISOString().split('T')[0]
-
-  const { data: savedSchedule } = await supabase
-    .from('schedules')
-    .select('schedule_data')
-    .eq('user_id', authData.user.id)
-    .eq('schedule_date', dateStr)
-    .single()
-
-  if (savedSchedule?.schedule_data) {
-    return savedSchedule.schedule_data as TimeSlot[]
-  }
-
-  const [{ data: profile }, { data: userSupplements }, { data: medications }] = await Promise.all([
-    supabase.from('user_profiles').select('conditions').eq('user_id', authData.user.id).single(),
-    supabase.from('user_supplements').select(`
-      daily_servings,
-      supplement_products!inner (
-        id,
-        product_name,
-        supplement_ingredients (
-          nutrient_id,
-          standard_name,
-          amount,
-          unit
-        )
-      )
-    `).eq('user_id', authData.user.id).eq('active', true),
-    supabase.from('user_medications').select('name, memo').eq('user_id', authData.user.id),
-  ])
-
-  if (!userSupplements || userSupplements.length === 0) return []
-
-  const supplements: ScheduleInput['supplements'] = (userSupplements as unknown as Array<{
-    daily_servings: number
-    supplement_products: {
-      id: string
-      product_name: string
-      supplement_ingredients: Array<{
-        nutrient_id: string
-        standard_name: string
-        amount: number
-        unit: string
-      }>
-    }
-  }>).map((us) => ({
-    id: us.supplement_products.id,
-    productName: us.supplement_products.product_name,
-    dailyServings: us.daily_servings,
-    ingredients: us.supplement_products.supplement_ingredients.map((ing) => ({
-      nutrientId: ing.nutrient_id,
-      standardName: ing.standard_name,
-      amount: ing.amount,
-      unit: ing.unit,
-    })),
-  }))
-
-  const input: ScheduleInput = {
-    supplements,
-    medications: (medications ?? []).map((m: { name: string; memo: string | null }) => ({
-      name: m.name,
-      memo: m.memo ?? '',
-    })),
-    conditions: profile?.conditions ?? [],
-    preferences: {},
-  }
-
-  return generateSchedule(input)
 }

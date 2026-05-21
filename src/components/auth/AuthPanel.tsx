@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Loader2, Lock } from 'lucide-react'
-import { supabase } from '../../lib/supabaseClient'
-import type { SocialProvider, SocialProviderStatus } from '../../features/auth/authTypes'
+import { signInWithEmail, signInWithGoogle, signInWithKakao, signOutCurrentUser, signUpWithEmail } from '../../lib/firebase'
+import type { SocialProvider } from '../../features/auth/authTypes'
 import { socialProviderLabels } from '../../features/auth/authTypes'
-import { loadSocialProviderStatus } from '../../features/auth/providerStatus'
 
 export function AuthPanel({
   sessionEmail,
@@ -19,36 +18,16 @@ export function AuthPanel({
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [oauthLoading, setOauthLoading] = useState<SocialProvider | null>(null)
-  const [socialProviderStatus, setSocialProviderStatus] = useState<SocialProviderStatus>({
-    google: null,
-    kakao: null,
-  })
-
-  useEffect(() => {
-    const controller = new AbortController()
-    async function loadProviderStatus() {
-      try {
-        setSocialProviderStatus(await loadSocialProviderStatus(controller.signal))
-      } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') return
-        setSocialProviderStatus({ google: null, kakao: null })
-      }
-    }
-    void loadProviderStatus()
-    return () => controller.abort()
-  }, [])
 
   async function signIn(mode: 'login' | 'signup') {
     if (!email) return
     setLoading(true)
     setMessage('')
     try {
-      const result =
-        mode === 'signup'
-          ? await supabase.auth.signUp({ email, password })
-          : await supabase.auth.signInWithPassword({ email, password })
-      if (result.error) throw result.error
-      onSessionEmail(result.data.user?.email ?? email)
+      const result = mode === 'signup'
+        ? await signUpWithEmail(email, password)
+        : await signInWithEmail(email, password)
+      onSessionEmail(result.user.email ?? email)
       setMessage(mode === 'signup' ? '가입 요청이 처리됐습니다.' : '로그인됐습니다.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '인증 중 문제가 발생했습니다.')
@@ -58,29 +37,21 @@ export function AuthPanel({
   }
 
   async function signInWithSocial(provider: SocialProvider) {
-    if (socialProviderStatus[provider] === false) {
-      setMessage(`${socialProviderLabels[provider]} 로그인은 관리자 설정이 먼저 필요합니다.`)
-      return
-    }
     setOauthLoading(provider)
     setMessage('')
     try {
-      const redirectPath = variant === 'page' ? '/login' : '/'
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}${redirectPath}`,
-        },
-      })
-      if (error) throw error
+      const result = provider === 'google'
+        ? await signInWithGoogle()
+        : await signInWithKakao()
+      onSessionEmail(result.user.email ?? null)
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : `${provider} 로그인 시작에 실패했습니다.`)
+      setMessage(error instanceof Error ? error.message : `${socialProviderLabels[provider]} 로그인 시작에 실패했습니다.`)
       setOauthLoading(null)
     }
   }
 
   async function signOut() {
-    await supabase.auth.signOut()
+    await signOutCurrentUser()
     onSessionEmail(null)
   }
 
@@ -105,7 +76,7 @@ export function AuthPanel({
           type="button"
           className="social-auth-button google"
           onClick={() => signInWithSocial('google')}
-          disabled={loading || oauthLoading !== null || socialProviderStatus.google === false}
+          disabled={loading || oauthLoading !== null}
         >
           {oauthLoading === 'google' ? <Loader2 size={16} className="spin" /> : <span>G</span>}
           구글로 로그인
@@ -114,15 +85,12 @@ export function AuthPanel({
           type="button"
           className="social-auth-button kakao"
           onClick={() => signInWithSocial('kakao')}
-          disabled={loading || oauthLoading !== null || socialProviderStatus.kakao === false}
+          disabled={loading || oauthLoading !== null}
         >
           {oauthLoading === 'kakao' ? <Loader2 size={16} className="spin" /> : <span>K</span>}
           카카오로 로그인
         </button>
       </div>
-      {(socialProviderStatus.google === false || socialProviderStatus.kakao === false) && (
-        <small className="auth-provider-warning">관리자 설정에서 Google/Kakao 로그인을 활성화하면 소셜 로그인이 바로 동작합니다.</small>
-      )}
       <div className="auth-divider"><span>또는 이메일로 계속</span></div>
       <input
         aria-label="이메일"
