@@ -1,204 +1,264 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1100" viewBox="0 0 1800 1100" role="img" aria-labelledby="title desc">
-  <title id="title">tt-ni Project Architecture</title>
-  <desc id="desc">A layered project architecture diagram for the tt-ni React, Supabase, OpenAI, and Exa.ai application.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1050" viewBox="0 0 1800 1050" role="img" aria-labelledby="title desc">
+  <title id="title">tt-ni Icon Based Project Architecture</title>
+  <desc id="desc">Icon based architecture diagram for tt-ni showing web client, Vercel, React app, Supabase backend, Edge Functions, OpenAI, Exa.ai, OAuth providers, database, storage, and project scripts.</desc>
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#f7fbf8"/>
-      <stop offset="52%" stop-color="#f3f8fb"/>
-      <stop offset="100%" stop-color="#fff8f2"/>
-    </linearGradient>
-    <linearGradient id="clientFill" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#e8f5ee"/>
-      <stop offset="100%" stop-color="#f8fff9"/>
-    </linearGradient>
-    <linearGradient id="supabaseFill" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#edf7ff"/>
-      <stop offset="100%" stop-color="#f9fcff"/>
-    </linearGradient>
-    <linearGradient id="externalFill" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#fff0e3"/>
-      <stop offset="100%" stop-color="#fffaf4"/>
-    </linearGradient>
-    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
-      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#17251d" flood-opacity="0.12"/>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#15221b" flood-opacity="0.16"/>
     </filter>
-    <marker id="arrowGreen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2e7d5b"/>
-    </marker>
-    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#266a9a"/>
-    </marker>
-    <marker id="arrowOrange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#bd6125"/>
+    <linearGradient id="canvas" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="55%" stop-color="#f8fbf8"/>
+      <stop offset="100%" stop-color="#fff9f2"/>
+    </linearGradient>
+    <linearGradient id="orange3d" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ff9a3d"/>
+      <stop offset="100%" stop-color="#d85a1b"/>
+    </linearGradient>
+    <linearGradient id="green3d" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5ee3a1"/>
+      <stop offset="100%" stop-color="#188a57"/>
+    </linearGradient>
+    <linearGradient id="blue3d" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#47b5ff"/>
+      <stop offset="100%" stop-color="#116398"/>
+    </linearGradient>
+    <linearGradient id="gray3d" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f8faf9"/>
+      <stop offset="100%" stop-color="#cfd7d3"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="11" markerHeight="11" orient="auto">
+      <path d="M 1 1 L 11 6 L 1 11 z" fill="#39a461"/>
     </marker>
     <style>
-      .bg { fill: url(#bg); }
-      .title { font: 800 52px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #10261e; letter-spacing: 0; }
-      .subtitle { font: 500 22px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #5d6f67; letter-spacing: 0; }
-      .section-title { font: 800 28px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #10261e; letter-spacing: 0; }
-      .section-kicker { font: 700 14px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #4e6d60; letter-spacing: 0; text-transform: uppercase; }
-      .box-title { font: 800 19px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #132b22; letter-spacing: 0; }
-      .box-body { font: 500 15px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #4c5d56; letter-spacing: 0; }
-      .small { font: 500 13px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #66766f; letter-spacing: 0; }
-      .pill-text { font: 700 13px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #244339; letter-spacing: 0; }
-      .flow-title { font: 800 20px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #163428; letter-spacing: 0; }
-      .flow-body { font: 600 14px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #485b52; letter-spacing: 0; }
-      .panel { stroke: rgba(22, 45, 36, 0.12); stroke-width: 1.5; filter: url(#shadow); }
-      .module { fill: rgba(255, 255, 255, 0.82); stroke: rgba(28, 67, 52, 0.12); stroke-width: 1.2; }
-      .module-blue { fill: rgba(255, 255, 255, 0.84); stroke: rgba(30, 92, 135, 0.14); stroke-width: 1.2; }
-      .module-orange { fill: rgba(255, 255, 255, 0.86); stroke: rgba(170, 86, 28, 0.14); stroke-width: 1.2; }
-      .arrow-green { stroke: #2e7d5b; stroke-width: 4; fill: none; marker-end: url(#arrowGreen); stroke-linecap: round; stroke-linejoin: round; }
-      .arrow-blue { stroke: #266a9a; stroke-width: 4; fill: none; marker-end: url(#arrowBlue); stroke-linecap: round; stroke-linejoin: round; }
-      .arrow-orange { stroke: #bd6125; stroke-width: 4; fill: none; marker-end: url(#arrowOrange); stroke-linecap: round; stroke-linejoin: round; }
-      .arrow-muted { stroke: #9eb0a8; stroke-width: 3; fill: none; marker-end: url(#arrowGreen); stroke-linecap: round; stroke-dasharray: 8 10; }
-      .code { font: 700 13px "SFMono-Regular", "Menlo", "Consolas", monospace; fill: #254038; letter-spacing: 0; }
+      .title { font: 800 42px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #14231d; letter-spacing: 0; }
+      .subtitle { font: 600 20px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #5a6b63; letter-spacing: 0; }
+      .node-title { font: 800 24px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #182922; letter-spacing: 0; text-anchor: middle; }
+      .node-sub { font: 600 15px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #5d6b64; letter-spacing: 0; text-anchor: middle; }
+      .edge-label { font: 800 16px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #2e7d4d; letter-spacing: 0; }
+      .small { font: 600 14px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #64726c; letter-spacing: 0; }
+      .group-title { font: 800 20px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #20352b; letter-spacing: 0; }
+      .node-card { fill: rgba(255,255,255,0.9); stroke: rgba(34,68,52,0.16); stroke-width: 1.5; filter: url(#softShadow); }
+      .node-card-green { fill: #f2fbf6; stroke: rgba(36,135,83,0.22); stroke-width: 1.6; filter: url(#softShadow); }
+      .node-card-blue { fill: #f1f8ff; stroke: rgba(28,105,160,0.22); stroke-width: 1.6; filter: url(#softShadow); }
+      .node-card-orange { fill: #fff5ed; stroke: rgba(202,91,24,0.22); stroke-width: 1.6; filter: url(#softShadow); }
+      .connector { fill: none; stroke: #39a461; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow); }
+      .connector-thin { fill: none; stroke: #39a461; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow); }
+      .connector-dash { fill: none; stroke: #39a461; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 12 13; marker-end: url(#arrow); }
+      .icon-line { fill: none; stroke: #20332b; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+      .icon-line-light { fill: none; stroke: #ffffff; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+      .label-bg { fill: rgba(255,255,255,0.88); stroke: rgba(57,164,97,0.28); stroke-width: 1; }
     </style>
   </defs>
 
-  <rect class="bg" width="1800" height="1100"/>
-  <circle cx="1502" cy="90" r="88" fill="#f6e1c6" opacity="0.42"/>
-  <circle cx="156" cy="985" r="120" fill="#cde7d7" opacity="0.36"/>
+  <rect width="1800" height="1050" fill="url(#canvas)"/>
+  <text class="title" x="72" y="78">tt-ni 프로젝트 아키텍처</text>
+  <text class="subtitle" x="74" y="112">아이콘 기반 런타임 흐름: React SPA, Vercel, Supabase, Edge Functions, OpenAI, Exa.ai</text>
+  <text class="small" x="1430" y="82">현재 저장소 기준</text>
+  <text class="small" x="1430" y="106">/Users/samuel/Desktop/Project/tt-ni</text>
 
-  <text class="title" x="70" y="80">tt-ni 프로젝트 아키텍처</text>
-  <text class="subtitle" x="72" y="116">React SPA + Supabase Cloud + OpenAI/Exa.ai 기반 맞춤형 영양제 분석 및 복용 관리 서비스</text>
-  <text class="small" x="1505" y="90">기준: 현재 저장소 구조</text>
-  <text class="small" x="1505" y="113">/Users/samuel/Desktop/Project/tt-ni</text>
+  <!-- background zones -->
+  <rect x="62" y="150" width="510" height="760" rx="28" fill="#eef8f2" stroke="#d7eadf" stroke-width="2"/>
+  <rect x="610" y="150" width="560" height="760" rx="28" fill="#f4faff" stroke="#d9ebfa" stroke-width="2"/>
+  <rect x="1210" y="150" width="528" height="760" rx="28" fill="#fff6ee" stroke="#f1ddce" stroke-width="2"/>
+  <text class="group-title" x="94" y="192">Client / Delivery</text>
+  <text class="group-title" x="642" y="192">Supabase Cloud</text>
+  <text class="group-title" x="1242" y="192">External APIs / Operations</text>
 
-  <!-- Client -->
-  <rect x="70" y="155" width="440" height="710" rx="18" fill="url(#clientFill)" class="panel"/>
-  <text class="section-kicker" x="100" y="205">CLIENT</text>
-  <text class="section-title" x="100" y="240">React SPA</text>
-  <text class="small" x="100" y="270">React 19, TypeScript, Vite 8</text>
+  <!-- Node: DNS -->
+  <rect class="node-card-orange" x="104" y="248" width="170" height="150" rx="22"/>
+  <g transform="translate(189 299)">
+    <path d="M-42 36 h84 v30 h-84 z" fill="url(#orange3d)"/>
+    <path d="M-42 36 l42 -24 l42 24 l-42 24 z" fill="#ffad5a"/>
+    <path d="M0 12 v48" stroke="#c94f18" stroke-width="6"/>
+    <path d="M-26 48 h52" stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>
+  </g>
+  <text class="node-title" x="189" y="438">Domain</text>
+  <text class="node-sub" x="189" y="465">Route / DNS</text>
 
-  <rect class="module" x="100" y="305" width="380" height="78" rx="12"/>
-  <text class="box-title" x="124" y="337">앱 라우팅</text>
-  <text class="box-body" x="124" y="362">App.tsx, routes.ts</text>
+  <!-- Node: Web client -->
+  <rect class="node-card-green" x="352" y="248" width="178" height="150" rx="22"/>
+  <g transform="translate(441 309)">
+    <rect x="-45" y="-28" width="90" height="58" rx="8" fill="#24372f"/>
+    <rect x="-34" y="-17" width="68" height="36" rx="5" fill="#9ce7bd"/>
+    <path d="M-15 52 h30 M0 30 v22" class="icon-line"/>
+  </g>
+  <text class="node-title" x="441" y="438">Web Client</text>
+  <text class="node-sub" x="441" y="465">Browser</text>
 
-  <rect class="module" x="100" y="403" width="380" height="108" rx="12"/>
-  <text class="box-title" x="124" y="435">페이지 계층</text>
-  <text class="box-body" x="124" y="461">Landing, Login, Workspace</text>
-  <text class="box-body" x="124" y="486">Schedule, Chat, Privacy, Terms</text>
+  <!-- Node: Vercel -->
+  <rect class="node-card" x="174" y="548" width="178" height="156" rx="22"/>
+  <g transform="translate(263 607)">
+    <path d="M0 -48 L58 52 H-58 Z" fill="#101815"/>
+    <path d="M0 -26 L34 34 H-34 Z" fill="#ffffff" opacity="0.18"/>
+  </g>
+  <text class="node-title" x="263" y="744">Vercel</text>
+  <text class="node-sub" x="263" y="771">Static hosting</text>
 
-  <rect class="module" x="100" y="531" width="380" height="112" rx="12"/>
-  <text class="box-title" x="124" y="563">UI 컴포넌트</text>
-  <text class="box-body" x="124" y="589">landing, auth, layout</text>
-  <text class="box-body" x="124" y="614">workspace 대시보드/분석/등록</text>
+  <!-- Node: React SPA -->
+  <rect class="node-card-green" x="424" y="548" width="178" height="156" rx="22"/>
+  <g transform="translate(513 618)">
+    <circle cx="0" cy="0" r="12" fill="#42c5d9"/>
+    <ellipse cx="0" cy="0" rx="60" ry="23" class="icon-line" stroke="#42c5d9"/>
+    <ellipse cx="0" cy="0" rx="60" ry="23" class="icon-line" stroke="#42c5d9" transform="rotate(60)"/>
+    <ellipse cx="0" cy="0" rx="60" ry="23" class="icon-line" stroke="#42c5d9" transform="rotate(-60)"/>
+  </g>
+  <text class="node-title" x="513" y="744">React SPA</text>
+  <text class="node-sub" x="513" y="771">App / Pages / Features</text>
 
-  <rect class="module" x="100" y="663" width="380" height="124" rx="12"/>
-  <text class="box-title" x="124" y="696">도메인 기능</text>
-  <text class="box-body" x="124" y="722">analysisEngine, scheduleEngine</text>
-  <text class="box-body" x="124" y="747">profileService, supplementService</text>
-  <text class="box-body" x="124" y="772">nutritionData, useAuth, providerStatus</text>
+  <!-- Supabase Auth -->
+  <rect class="node-card-blue" x="650" y="245" width="184" height="150" rx="22"/>
+  <g transform="translate(742 305)">
+    <path d="M0 -52 L50 -28 V8 C50 42 24 60 0 72 C-24 60 -50 42 -50 8 V-28 Z" fill="url(#blue3d)"/>
+    <circle cx="0" cy="-4" r="18" fill="#ffffff"/>
+    <path d="M0 14 v26 M-13 40 h26" class="icon-line-light"/>
+  </g>
+  <text class="node-title" x="742" y="438">Auth</text>
+  <text class="node-sub" x="742" y="465">Email / Google / Kakao</text>
 
-  <rect class="module" x="100" y="807" width="380" height="38" rx="12"/>
-  <text class="box-title" x="124" y="832">supabaseClient: PKCE 세션 + API 호출</text>
+  <!-- Supabase DB -->
+  <rect class="node-card-blue" x="890" y="245" width="184" height="150" rx="22"/>
+  <g transform="translate(982 314)">
+    <ellipse cx="0" cy="-48" rx="54" ry="18" fill="#56b5f6"/>
+    <path d="M-54 -48 v78 c0 10 24 18 54 18 s54 -8 54 -18 v-78" fill="url(#blue3d)"/>
+    <ellipse cx="0" cy="30" rx="54" ry="18" fill="#116398"/>
+    <ellipse cx="0" cy="-48" rx="54" ry="18" fill="none" stroke="#083b5d" stroke-width="4"/>
+  </g>
+  <text class="node-title" x="982" y="438">PostgreSQL</text>
+  <text class="node-sub" x="982" y="465">Tables + RLS</text>
 
-  <!-- Delivery -->
-  <rect x="565" y="155" width="260" height="290" rx="18" fill="#fffaf2" class="panel"/>
-  <text class="section-kicker" x="595" y="205">DELIVERY</text>
-  <text class="section-title" x="595" y="240">Vercel</text>
-  <rect class="module-orange" x="595" y="285" width="200" height="72" rx="12"/>
-  <text class="box-title" x="616" y="317">정적 호스팅</text>
-  <text class="box-body" x="616" y="342">HTML / JS / CSS</text>
-  <rect class="module-orange" x="595" y="375" width="200" height="48" rx="12"/>
-  <text class="code" x="616" y="405">vite build + vercel.json</text>
+  <!-- Supabase Storage -->
+  <rect class="node-card-blue" x="890" y="548" width="184" height="156" rx="22"/>
+  <g transform="translate(982 612)">
+    <path d="M-56 -34 h112 l-12 92 h-88 z" fill="url(#blue3d)"/>
+    <path d="M-36 -50 h72 l20 16 h-112 z" fill="#56b5f6"/>
+    <rect x="-24" y="-8" width="48" height="38" rx="5" fill="#ffffff" opacity="0.9"/>
+    <path d="M-18 22 l14 -14 l11 10 l10 -12 l13 16" fill="none" stroke="#116398" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text class="node-title" x="982" y="744">Storage</text>
+  <text class="node-sub" x="982" y="771">Private labels bucket</text>
 
-  <!-- Supabase -->
-  <rect x="875" y="155" width="575" height="710" rx="18" fill="url(#supabaseFill)" class="panel"/>
-  <text class="section-kicker" x="905" y="205">BACKEND</text>
-  <text class="section-title" x="905" y="240">Supabase Cloud</text>
-  <text class="small" x="905" y="270">Auth, PostgreSQL, Storage, Edge Functions</text>
+  <!-- Edge Functions -->
+  <rect class="node-card-blue" x="705" y="530" width="185" height="178" rx="22"/>
+  <g transform="translate(798 600)">
+    <path d="M0 -64 L58 -31 V34 L0 68 L-58 34 V-31 Z" fill="url(#green3d)"/>
+    <path d="M-24 -16 L-46 4 L-24 24 M24 -16 L46 4 L24 24 M9 -28 L-9 36" class="icon-line-light"/>
+  </g>
+  <text class="node-title" x="798" y="748">Edge Functions</text>
+  <text class="node-sub" x="798" y="775">parse, analyze, chat</text>
 
-  <rect class="module-blue" x="905" y="305" width="245" height="138" rx="12"/>
-  <text class="box-title" x="929" y="337">BaaS</text>
-  <text class="box-body" x="929" y="363">Auth: Email, Google, Kakao</text>
-  <text class="box-body" x="929" y="388">PostgreSQL + RLS</text>
-  <text class="box-body" x="929" y="413">Storage: labels private bucket</text>
+  <!-- Supabase logo hub -->
+  <rect class="node-card-blue" x="742" y="784" width="240" height="78" rx="20"/>
+  <g transform="translate(772 823)">
+    <path d="M0 -34 L42 -34 L16 4 H0 Z" fill="#39a461"/>
+    <path d="M42 34 H0 L26 -4 H42 Z" fill="#2b9b67"/>
+  </g>
+  <text class="node-title" x="882" y="816">Supabase</text>
+  <text class="node-sub" x="882" y="842">BaaS + Deno runtime</text>
 
-  <rect class="module-blue" x="1175" y="305" width="245" height="138" rx="12"/>
-  <text class="box-title" x="1199" y="337">DB 모델</text>
-  <text class="box-body" x="1199" y="363">profiles, medications</text>
-  <text class="box-body" x="1199" y="388">supplements, ingredients</text>
-  <text class="box-body" x="1199" y="413">reports, schedules, chat</text>
+  <!-- OpenAI -->
+  <rect class="node-card-orange" x="1282" y="245" width="184" height="150" rx="22"/>
+  <g transform="translate(1374 308)">
+    <circle cx="0" cy="0" r="58" fill="#2f3430"/>
+    <path d="M-23 -22 C-8 -48 24 -36 25 -10 C52 -2 38 31 13 24 C-1 50 -35 31 -25 6 C-53 -3 -39 -37 -12 -28 C1 -44 32 -33 20 -5 C42 2 28 30 3 18 C-8 40 -32 18 -17 -4 C-40 -14 -22 -38 -1 -22" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text class="node-title" x="1374" y="438">OpenAI</text>
+  <text class="node-sub" x="1374" y="465">Vision / Chat / Refinement</text>
 
-  <rect class="module-blue" x="905" y="468" width="245" height="244" rx="12"/>
-  <text class="box-title" x="929" y="501">Edge Functions</text>
-  <text class="box-body" x="929" y="528">parse-label</text>
-  <text class="box-body" x="929" y="553">refine-ingredients</text>
-  <text class="box-body" x="929" y="578">run-analysis</text>
-  <text class="box-body" x="929" y="603">generate-schedule</text>
-  <text class="box-body" x="929" y="628">chat-completion (SSE)</text>
-  <text class="box-body" x="929" y="653">exa-search</text>
-  <text class="small" x="929" y="683">_shared: cors, rateLimit, serviceKey</text>
+  <!-- Exa -->
+  <rect class="node-card-orange" x="1525" y="245" width="184" height="150" rx="22"/>
+  <g transform="translate(1617 306)">
+    <circle cx="-8" cy="-8" r="45" fill="url(#orange3d)"/>
+    <path d="M25 28 L62 65" class="icon-line"/>
+    <circle cx="-8" cy="-8" r="25" fill="#ffffff" opacity="0.85"/>
+    <path d="M-24 -8 h32 M4 -24 v32 M-2 14 h22" stroke="#d85a1b" stroke-width="6" stroke-linecap="round"/>
+  </g>
+  <text class="node-title" x="1617" y="438">Exa.ai</text>
+  <text class="node-sub" x="1617" y="465">Product search</text>
 
-  <rect class="module-blue" x="1175" y="468" width="245" height="244" rx="12"/>
-  <text class="box-title" x="1199" y="501">보안/운영</text>
-  <text class="box-body" x="1199" y="528">JWT 기반 RLS</text>
-  <text class="box-body" x="1199" y="553">Vault Secrets</text>
-  <text class="box-body" x="1199" y="578">API quota tracking</text>
-  <text class="box-body" x="1199" y="603">migrations 스키마 관리</text>
-  <text class="box-body" x="1199" y="628">predeploy/postdeploy checks</text>
-  <text class="small" x="1199" y="683">service role key는 브라우저 미노출</text>
+  <!-- OAuth -->
+  <rect class="node-card-orange" x="1282" y="548" width="184" height="156" rx="22"/>
+  <g transform="translate(1374 614)">
+    <circle cx="-24" cy="0" r="34" fill="#f04438"/>
+    <circle cx="28" cy="0" r="34" fill="#f9d84a"/>
+    <path d="M-36 -5 h24 M-24 -17 v24 M15 -3 C20 -20 45 -15 45 3 C45 22 14 24 13 2" class="icon-line"/>
+  </g>
+  <text class="node-title" x="1374" y="744">OAuth</text>
+  <text class="node-sub" x="1374" y="771">Google / Kakao</text>
 
-  <rect class="module-blue" x="905" y="737" width="515" height="88" rx="12"/>
-  <text class="box-title" x="929" y="770">서버 저장 데이터</text>
-  <text class="box-body" x="929" y="797">사용자 프로필, 약물, 영양제, 성분, 분석 리포트, 복용 스케줄, 채팅 기록</text>
+  <!-- Secrets -->
+  <rect class="node-card-orange" x="1525" y="548" width="184" height="156" rx="22"/>
+  <g transform="translate(1617 614)">
+    <rect x="-48" y="-40" width="96" height="82" rx="16" fill="url(#orange3d)"/>
+    <path d="M-24 -40 v-14 c0 -20 48 -20 48 0 v14" class="icon-line"/>
+    <circle cx="0" cy="0" r="11" fill="#ffffff"/>
+    <path d="M0 11 v20" class="icon-line-light"/>
+  </g>
+  <text class="node-title" x="1617" y="744">Secrets</text>
+  <text class="node-sub" x="1617" y="771">OpenAI / Exa / Service Key</text>
 
-  <!-- External -->
-  <rect x="1495" y="155" width="235" height="710" rx="18" fill="url(#externalFill)" class="panel"/>
-  <text class="section-kicker" x="1525" y="205">EXTERNAL</text>
-  <text class="section-title" x="1525" y="240">External APIs</text>
+  <!-- CI scripts -->
+  <rect class="node-card" x="1282" y="788" width="427" height="74" rx="20"/>
+  <g transform="translate(1326 825)">
+    <circle cx="0" cy="0" r="28" fill="url(#gray3d)" stroke="#75857d" stroke-width="4"/>
+    <path d="M0 -16 v32 M-16 0 h32 M-11 -11 l22 22 M11 -11 l-22 22" stroke="#41524a" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <text class="node-title" x="1518" y="817">Deploy / Verify Scripts</text>
+  <text class="node-sub" x="1518" y="843">predeploy, postdeploy, audit, remote smoke</text>
 
-  <rect class="module-orange" x="1525" y="305" width="175" height="128" rx="12"/>
-  <text class="box-title" x="1546" y="337">OpenAI API</text>
-  <text class="box-body" x="1546" y="363">GPT-5-mini</text>
-  <text class="box-body" x="1546" y="388">Vision / Chat</text>
-  <text class="box-body" x="1546" y="413">Ingredient refinement</text>
+  <!-- Connectors -->
+  <path class="connector" d="M274 323 H352"/>
+  <rect class="label-bg" x="296" y="285" width="105" height="28" rx="14"/>
+  <text class="edge-label" x="309" y="305">도메인 접속</text>
 
-  <rect class="module-orange" x="1525" y="463" width="175" height="92" rx="12"/>
-  <text class="box-title" x="1546" y="496">Exa.ai API</text>
-  <text class="box-body" x="1546" y="522">제품명 검색</text>
+  <path class="connector" d="M441 398 C441 492 263 492 263 548"/>
+  <rect class="label-bg" x="311" y="473" width="126" height="28" rx="14"/>
+  <text class="edge-label" x="326" y="493">정적 자산 로드</text>
 
-  <rect class="module-orange" x="1525" y="585" width="175" height="92" rx="12"/>
-  <text class="box-title" x="1546" y="618">OAuth Providers</text>
-  <text class="box-body" x="1546" y="644">Google</text>
-  <text class="box-body" x="1546" y="669">Kakao</text>
+  <path class="connector" d="M352 626 H424"/>
+  <text class="edge-label" x="365" y="611">HTML / JS</text>
 
-  <rect class="module-orange" x="1525" y="707" width="175" height="118" rx="12"/>
-  <text class="box-title" x="1546" y="740">Secrets</text>
-  <text class="box-body" x="1546" y="766">OPENAI_API_KEY</text>
-  <text class="box-body" x="1546" y="791">EXA_API_KEY</text>
+  <path class="connector" d="M602 626 H705"/>
+  <rect class="label-bg" x="618" y="588" width="128" height="28" rx="14"/>
+  <text class="edge-label" x="633" y="608">functions.invoke</text>
 
-  <!-- Arrows between major blocks -->
-  <path class="arrow-orange" d="M 510 310 C 540 310, 540 300, 565 300"/>
-  <text class="small" x="520" y="286">정적 자산 로드</text>
-  <path class="arrow-blue" d="M 510 675 C 660 675, 705 675, 875 675"/>
-  <text class="small" x="585" y="651">Auth / DB / Storage / Functions 호출</text>
-  <path class="arrow-blue" d="M 825 330 C 842 330, 848 330, 875 330"/>
-  <text class="small" x="748" y="309">배포 결과</text>
-  <path class="arrow-orange" d="M 1450 535 C 1470 535, 1475 383, 1495 383"/>
-  <text class="small" x="1396" y="363">AI 처리</text>
-  <path class="arrow-orange" d="M 1450 604 C 1471 604, 1476 513, 1495 513"/>
-  <text class="small" x="1396" y="587">검색</text>
+  <path class="connector-thin" d="M602 596 C642 596 642 338 650 338"/>
+  <text class="edge-label" x="610" y="360">Auth API</text>
 
-  <!-- Main user flow -->
-  <rect x="70" y="910" width="1660" height="132" rx="18" fill="#ffffff" class="panel"/>
-  <text class="flow-title" x="100" y="952">주요 런타임 흐름</text>
+  <path class="connector-thin" d="M602 652 C690 652 690 330 890 330"/>
+  <text class="edge-label" x="674" y="323">DB API</text>
 
-  <rect x="100" y="980" width="245" height="38" rx="19" fill="#e7f4ed"/>
-  <text class="pill-text" x="123" y="1005">1. 로그인 - Supabase Auth</text>
-  <path class="arrow-green" d="M 350 999 L 430 999"/>
+  <path class="connector-thin" d="M602 684 C702 684 744 626 890 626"/>
+  <text class="edge-label" x="716" y="671">Storage API</text>
 
-  <rect x="435" y="980" width="300" height="38" rx="19" fill="#eef7ff"/>
-  <text class="pill-text" x="458" y="1005">2. 라벨/검색 - Edge Functions</text>
-  <path class="arrow-blue" d="M 740 999 L 820 999"/>
+  <path class="connector-thin" d="M838 708 C838 742 828 762 806 784"/>
+  <path class="connector-thin" d="M890 618 C980 618 1070 542 1070 395"/>
+  <path class="connector-thin" d="M890 612 C920 612 935 612 890 612"/>
 
-  <rect x="825" y="980" width="330" height="38" rx="19" fill="#fff3e9"/>
-  <text class="pill-text" x="848" y="1005">3. OpenAI/Exa.ai - 성분 구조화</text>
-  <path class="arrow-orange" d="M 1160 999 L 1240 999"/>
+  <path class="connector" d="M890 596 C1058 596 1130 330 1282 330"/>
+  <rect class="label-bg" x="1094" y="386" width="74" height="28" rx="14"/>
+  <text class="edge-label" x="1108" y="406">AI 처리</text>
 
-  <rect x="1245" y="980" width="455" height="38" rx="19" fill="#eef4ef"/>
-  <text class="pill-text" x="1268" y="1005">4. DB 저장 - 분석 리포트, 스케줄, 채팅 UI 반영</text>
+  <path class="connector" d="M890 646 C1098 646 1320 344 1525 344"/>
+  <rect class="label-bg" x="1152" y="579" width="58" height="28" rx="14"/>
+  <text class="edge-label" x="1165" y="599">검색</text>
 
-  <text class="small" x="100" y="1070">운영 보조: Supabase migrations, Edge Function deploy scripts, predeploy/postdeploy checks, Supabase audit scripts.</text>
+  <path class="connector-dash" d="M742 245 C742 216 1374 216 1374 548"/>
+  <rect class="label-bg" x="1066" y="203" width="92" height="28" rx="14"/>
+  <text class="edge-label" x="1080" y="223">소셜 로그인</text>
+
+  <path class="connector-dash" d="M1525 626 C1370 726 1120 746 890 650"/>
+  <rect class="label-bg" x="1190" y="710" width="92" height="28" rx="14"/>
+  <text class="edge-label" x="1204" y="730">서버 전용 키</text>
+
+  <path class="connector-dash" d="M1282 825 C1125 825 1010 802 982 704"/>
+  <rect class="label-bg" x="1110" y="800" width="92" height="28" rx="14"/>
+  <text class="edge-label" x="1124" y="820">배포 / 검증</text>
+
+  <!-- Runtime flow footer -->
+  <rect x="92" y="938" width="1616" height="76" rx="22" fill="#ffffff" stroke="#dfe9e3" stroke-width="2" filter="url(#softShadow)"/>
+  <text class="small" x="124" y="970">주요 흐름</text>
+  <text class="small" x="226" y="970">1. 브라우저가 Vercel 정적 앱 로드</text>
+  <text class="small" x="524" y="970">2. React SPA가 Supabase Auth/DB/Storage/Functions 호출</text>
+  <text class="small" x="952" y="970">3. Edge Functions가 OpenAI/Exa.ai와 통신</text>
+  <text class="small" x="1288" y="970">4. 분석/스케줄/채팅 결과를 DB와 UI에 반영</text>
 </svg>
