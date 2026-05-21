@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
-import { Clock, AlertCircle, Coffee, Pill, Lightbulb } from 'lucide-react'
+import { Clock, AlertCircle, Coffee, Pill, Lightbulb, AlertTriangle } from 'lucide-react'
 import type { Medication, Profile, SupplementProduct } from '../types'
-import { generateSchedule } from '../features/schedule/scheduleEngine'
+import { generateSchedule, cleanProductName } from '../features/schedule/scheduleEngine'
 
 interface TimelineSlot {
   time: string
@@ -9,6 +9,8 @@ interface TimelineSlot {
   items: string[]
   tip?: string
   warning?: string
+  tips?: string[]
+  warnings?: string[]
   color: string
 }
 
@@ -149,7 +151,7 @@ export function SchedulePage({
                             boxShadow: `0 0 8px ${slot.color}`
                           }} 
                         />
-                        {item}
+                        {cleanProductName(item)}
                       </li>
                     ))}
                   </ul>
@@ -178,7 +180,67 @@ export function SchedulePage({
                     </div>
                   )}
 
-                  {slot.warning && (
+                  {slot.warnings && slot.warnings.length > 0 ? (
+                    <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {slot.warnings.map((warn, wIdx) => {
+                        const isBlock = warn.includes('금지') || warn.includes('수 없습니다') || warn.includes('금지됩니다')
+                        let title = '복용 주의'
+                        let desc = warn
+                        if (warn.includes(':')) {
+                          const parts = warn.split(':')
+                          title = parts[0].trim()
+                          desc = parts.slice(1).join(':').trim()
+                        }
+
+                        return (
+                          <div 
+                            key={wIdx}
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '6px',
+                              background: isBlock ? '#fff1f0' : '#fffbe6',
+                              border: `1px solid ${isBlock ? '#ffa39e' : '#ffe58f'}`,
+                              borderLeft: `4px solid ${isBlock ? '#ff4d4f' : '#faad14'}`,
+                              borderRadius: '10px',
+                              padding: '12px 16px',
+                              lineHeight: 1.5,
+                              boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+                              transition: 'transform 0.2s ease',
+                            }}
+                            className="warning-card"
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'space-between' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                {isBlock ? (
+                                  <AlertCircle size={15} color="#ff4d4f" style={{ flexShrink: 0 }} />
+                                ) : (
+                                  <AlertTriangle size={15} color="#d46b08" style={{ flexShrink: 0 }} />
+                                )}
+                                <strong style={{ fontSize: '13.5px', color: isBlock ? '#cf1322' : '#d46b08', fontWeight: 800 }}>
+                                  {title}
+                                </strong>
+                              </div>
+                              <span style={{
+                                fontSize: '11px',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                fontWeight: 800,
+                                background: isBlock ? '#ffccc7' : '#fffb8f',
+                                color: isBlock ? '#a8071a' : '#ad6800',
+                                letterSpacing: '-0.2px'
+                              }}>
+                                {isBlock ? '병용 금지' : '시간차 복용 권장'}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '13px', color: '#434343', paddingLeft: '21px', fontWeight: 550 }}>
+                              {desc}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : slot.warning ? (
                     <div 
                       style={{ 
                         marginTop: '12px', 
@@ -197,7 +259,7 @@ export function SchedulePage({
                       <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
                       <span>{slot.warning}</span>
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
             ))}

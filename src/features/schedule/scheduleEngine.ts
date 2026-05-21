@@ -5,6 +5,26 @@ export interface TimeSlot {
   items: string[]
   tip?: string
   warning?: string
+  tips?: string[]
+  warnings?: string[]
+}
+
+/**
+ * 장황하고 지저분한 영양제 제품명을 핵심 브랜드와 제품명만 남기고 정제하는 유틸리티
+ */
+export function cleanProductName(name: string): string {
+  if (!name) return ''
+  // 1. "상품 상세보기 : " 또는 "상품 상세보기 :" 제거
+  let cleaned = name.replace(/상품\s*상세보기\s*:\s*/g, '')
+  // 2. 앞뒤의 대시나 불필요한 기호 제거
+  cleaned = cleaned.replace(/^\s*[-~+=>↔]\s*/, '')
+  // 3. 쉼표(,)로 구분된 경우 첫 번째 항목이 제품명일 확률이 높으므로 첫 번째 항목 선택
+  if (cleaned.includes(',')) {
+    cleaned = cleaned.split(',')[0].trim()
+  }
+  // 4. "영양제1 ↔ " 같은 접두어가 붙어있는 경우 처리
+  cleaned = cleaned.replace(/^영양제\d+\s*↔\s*/, '')
+  return cleaned.trim()
 }
 
 /** 스케줄 생성을 위한 입력 데이터 */
@@ -333,7 +353,7 @@ function analyzeDNI(
         conflicts.push({
           type: rule.severity === 'block' ? 'dni_block' : 'dni_warning',
           supplementId: supp.id,
-          supplementName: supp.productName,
+          supplementName: cleanProductName(supp.productName),
           nutrientId: matched.nutrientId,
           nutrientName: matched.standardName,
           message: rule.message,
@@ -349,7 +369,7 @@ function analyzeDNI(
 
 /**
  * 길항작용을 분석합니다.
- * 같은 슬롯에 배정된 길항 관계의 영양소 쌍이 있는지 검사하여 충돌로 기록합니다.
+ * 같은 슬롯에 배정된 길항 관계의 영양소 쌍이 있는지 검사하여 충돌으로 기록합니다.
  */
 function analyzeAntagonism(
   supplements: ScheduleInput['supplements'],
@@ -372,7 +392,7 @@ function analyzeAntagonism(
           conflicts.push({
             type: 'antagonism',
             supplementId: sa.id,
-            supplementName: `${sa.productName} ↔ ${sb.productName}`,
+            supplementName: `${cleanProductName(sa.productName)} ↔ ${cleanProductName(sb.productName)}`,
             nutrientId: `${rule.a}/${rule.b}`,
             nutrientName: `${ingA.standardName} ↔ ${ingB.standardName}`,
             message: rule.reason,
@@ -465,14 +485,14 @@ function generateSlotWarnings(
     for (const item of slotItems) {
       const hasIron = item.ingredients.some((ing) => ing.nutrientId === 'iron')
       if (hasIron && hasGI) {
-        warnings.push(`${item.productName}: 위장 장애가 있는 경우 철분은 식후 복용을 권장합니다.`)
+        warnings.push(`${cleanProductName(item.productName)}: 위장 장애가 있는 경우 철분은 식후 복용을 권장합니다.`)
       }
     }
   }
 
   for (const item of slotItems) {
     if (item.dailyServings > 1) {
-      tips.push(`${item.productName}: 1일 ${item.dailyServings}회 복용이 권장됩니다.`)
+      tips.push(`${cleanProductName(item.productName)}: 1일 ${item.dailyServings}회 복용이 권장됩니다.`)
     }
   }
 
@@ -547,8 +567,14 @@ export function generateSchedule(input: ScheduleInput): TimeSlot[] {
       items: items.map((s) => s.productName),
     }
 
-    if (tips.length > 0) output.tip = tips.join(' ')
-    if (warnings.length > 0) output.warning = warnings.join(' ')
+    if (tips.length > 0) {
+      output.tip = tips.join(' ')
+      output.tips = tips
+    }
+    if (warnings.length > 0) {
+      output.warning = warnings.join(' ')
+      output.warnings = warnings
+    }
 
     resultSlots.push(output)
   }
