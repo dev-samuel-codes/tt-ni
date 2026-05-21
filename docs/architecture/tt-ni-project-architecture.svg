@@ -1,0 +1,204 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1100" viewBox="0 0 1800 1100" role="img" aria-labelledby="title desc">
+  <title id="title">tt-ni Project Architecture</title>
+  <desc id="desc">A layered project architecture diagram for the tt-ni React, Supabase, OpenAI, and Exa.ai application.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f7fbf8"/>
+      <stop offset="52%" stop-color="#f3f8fb"/>
+      <stop offset="100%" stop-color="#fff8f2"/>
+    </linearGradient>
+    <linearGradient id="clientFill" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e8f5ee"/>
+      <stop offset="100%" stop-color="#f8fff9"/>
+    </linearGradient>
+    <linearGradient id="supabaseFill" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#edf7ff"/>
+      <stop offset="100%" stop-color="#f9fcff"/>
+    </linearGradient>
+    <linearGradient id="externalFill" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fff0e3"/>
+      <stop offset="100%" stop-color="#fffaf4"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#17251d" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arrowGreen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2e7d5b"/>
+    </marker>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#266a9a"/>
+    </marker>
+    <marker id="arrowOrange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#bd6125"/>
+    </marker>
+    <style>
+      .bg { fill: url(#bg); }
+      .title { font: 800 52px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #10261e; letter-spacing: 0; }
+      .subtitle { font: 500 22px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #5d6f67; letter-spacing: 0; }
+      .section-title { font: 800 28px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #10261e; letter-spacing: 0; }
+      .section-kicker { font: 700 14px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #4e6d60; letter-spacing: 0; text-transform: uppercase; }
+      .box-title { font: 800 19px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #132b22; letter-spacing: 0; }
+      .box-body { font: 500 15px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #4c5d56; letter-spacing: 0; }
+      .small { font: 500 13px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #66766f; letter-spacing: 0; }
+      .pill-text { font: 700 13px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #244339; letter-spacing: 0; }
+      .flow-title { font: 800 20px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #163428; letter-spacing: 0; }
+      .flow-body { font: 600 14px "Pretendard", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #485b52; letter-spacing: 0; }
+      .panel { stroke: rgba(22, 45, 36, 0.12); stroke-width: 1.5; filter: url(#shadow); }
+      .module { fill: rgba(255, 255, 255, 0.82); stroke: rgba(28, 67, 52, 0.12); stroke-width: 1.2; }
+      .module-blue { fill: rgba(255, 255, 255, 0.84); stroke: rgba(30, 92, 135, 0.14); stroke-width: 1.2; }
+      .module-orange { fill: rgba(255, 255, 255, 0.86); stroke: rgba(170, 86, 28, 0.14); stroke-width: 1.2; }
+      .arrow-green { stroke: #2e7d5b; stroke-width: 4; fill: none; marker-end: url(#arrowGreen); stroke-linecap: round; stroke-linejoin: round; }
+      .arrow-blue { stroke: #266a9a; stroke-width: 4; fill: none; marker-end: url(#arrowBlue); stroke-linecap: round; stroke-linejoin: round; }
+      .arrow-orange { stroke: #bd6125; stroke-width: 4; fill: none; marker-end: url(#arrowOrange); stroke-linecap: round; stroke-linejoin: round; }
+      .arrow-muted { stroke: #9eb0a8; stroke-width: 3; fill: none; marker-end: url(#arrowGreen); stroke-linecap: round; stroke-dasharray: 8 10; }
+      .code { font: 700 13px "SFMono-Regular", "Menlo", "Consolas", monospace; fill: #254038; letter-spacing: 0; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1800" height="1100"/>
+  <circle cx="1502" cy="90" r="88" fill="#f6e1c6" opacity="0.42"/>
+  <circle cx="156" cy="985" r="120" fill="#cde7d7" opacity="0.36"/>
+
+  <text class="title" x="70" y="80">tt-ni 프로젝트 아키텍처</text>
+  <text class="subtitle" x="72" y="116">React SPA + Supabase Cloud + OpenAI/Exa.ai 기반 맞춤형 영양제 분석 및 복용 관리 서비스</text>
+  <text class="small" x="1505" y="90">기준: 현재 저장소 구조</text>
+  <text class="small" x="1505" y="113">/Users/samuel/Desktop/Project/tt-ni</text>
+
+  <!-- Client -->
+  <rect x="70" y="155" width="440" height="710" rx="18" fill="url(#clientFill)" class="panel"/>
+  <text class="section-kicker" x="100" y="205">CLIENT</text>
+  <text class="section-title" x="100" y="240">React SPA</text>
+  <text class="small" x="100" y="270">React 19, TypeScript, Vite 8</text>
+
+  <rect class="module" x="100" y="305" width="380" height="78" rx="12"/>
+  <text class="box-title" x="124" y="337">앱 라우팅</text>
+  <text class="box-body" x="124" y="362">App.tsx, routes.ts</text>
+
+  <rect class="module" x="100" y="403" width="380" height="108" rx="12"/>
+  <text class="box-title" x="124" y="435">페이지 계층</text>
+  <text class="box-body" x="124" y="461">Landing, Login, Workspace</text>
+  <text class="box-body" x="124" y="486">Schedule, Chat, Privacy, Terms</text>
+
+  <rect class="module" x="100" y="531" width="380" height="112" rx="12"/>
+  <text class="box-title" x="124" y="563">UI 컴포넌트</text>
+  <text class="box-body" x="124" y="589">landing, auth, layout</text>
+  <text class="box-body" x="124" y="614">workspace 대시보드/분석/등록</text>
+
+  <rect class="module" x="100" y="663" width="380" height="124" rx="12"/>
+  <text class="box-title" x="124" y="696">도메인 기능</text>
+  <text class="box-body" x="124" y="722">analysisEngine, scheduleEngine</text>
+  <text class="box-body" x="124" y="747">profileService, supplementService</text>
+  <text class="box-body" x="124" y="772">nutritionData, useAuth, providerStatus</text>
+
+  <rect class="module" x="100" y="807" width="380" height="38" rx="12"/>
+  <text class="box-title" x="124" y="832">supabaseClient: PKCE 세션 + API 호출</text>
+
+  <!-- Delivery -->
+  <rect x="565" y="155" width="260" height="290" rx="18" fill="#fffaf2" class="panel"/>
+  <text class="section-kicker" x="595" y="205">DELIVERY</text>
+  <text class="section-title" x="595" y="240">Vercel</text>
+  <rect class="module-orange" x="595" y="285" width="200" height="72" rx="12"/>
+  <text class="box-title" x="616" y="317">정적 호스팅</text>
+  <text class="box-body" x="616" y="342">HTML / JS / CSS</text>
+  <rect class="module-orange" x="595" y="375" width="200" height="48" rx="12"/>
+  <text class="code" x="616" y="405">vite build + vercel.json</text>
+
+  <!-- Supabase -->
+  <rect x="875" y="155" width="575" height="710" rx="18" fill="url(#supabaseFill)" class="panel"/>
+  <text class="section-kicker" x="905" y="205">BACKEND</text>
+  <text class="section-title" x="905" y="240">Supabase Cloud</text>
+  <text class="small" x="905" y="270">Auth, PostgreSQL, Storage, Edge Functions</text>
+
+  <rect class="module-blue" x="905" y="305" width="245" height="138" rx="12"/>
+  <text class="box-title" x="929" y="337">BaaS</text>
+  <text class="box-body" x="929" y="363">Auth: Email, Google, Kakao</text>
+  <text class="box-body" x="929" y="388">PostgreSQL + RLS</text>
+  <text class="box-body" x="929" y="413">Storage: labels private bucket</text>
+
+  <rect class="module-blue" x="1175" y="305" width="245" height="138" rx="12"/>
+  <text class="box-title" x="1199" y="337">DB 모델</text>
+  <text class="box-body" x="1199" y="363">profiles, medications</text>
+  <text class="box-body" x="1199" y="388">supplements, ingredients</text>
+  <text class="box-body" x="1199" y="413">reports, schedules, chat</text>
+
+  <rect class="module-blue" x="905" y="468" width="245" height="244" rx="12"/>
+  <text class="box-title" x="929" y="501">Edge Functions</text>
+  <text class="box-body" x="929" y="528">parse-label</text>
+  <text class="box-body" x="929" y="553">refine-ingredients</text>
+  <text class="box-body" x="929" y="578">run-analysis</text>
+  <text class="box-body" x="929" y="603">generate-schedule</text>
+  <text class="box-body" x="929" y="628">chat-completion (SSE)</text>
+  <text class="box-body" x="929" y="653">exa-search</text>
+  <text class="small" x="929" y="683">_shared: cors, rateLimit, serviceKey</text>
+
+  <rect class="module-blue" x="1175" y="468" width="245" height="244" rx="12"/>
+  <text class="box-title" x="1199" y="501">보안/운영</text>
+  <text class="box-body" x="1199" y="528">JWT 기반 RLS</text>
+  <text class="box-body" x="1199" y="553">Vault Secrets</text>
+  <text class="box-body" x="1199" y="578">API quota tracking</text>
+  <text class="box-body" x="1199" y="603">migrations 스키마 관리</text>
+  <text class="box-body" x="1199" y="628">predeploy/postdeploy checks</text>
+  <text class="small" x="1199" y="683">service role key는 브라우저 미노출</text>
+
+  <rect class="module-blue" x="905" y="737" width="515" height="88" rx="12"/>
+  <text class="box-title" x="929" y="770">서버 저장 데이터</text>
+  <text class="box-body" x="929" y="797">사용자 프로필, 약물, 영양제, 성분, 분석 리포트, 복용 스케줄, 채팅 기록</text>
+
+  <!-- External -->
+  <rect x="1495" y="155" width="235" height="710" rx="18" fill="url(#externalFill)" class="panel"/>
+  <text class="section-kicker" x="1525" y="205">EXTERNAL</text>
+  <text class="section-title" x="1525" y="240">External APIs</text>
+
+  <rect class="module-orange" x="1525" y="305" width="175" height="128" rx="12"/>
+  <text class="box-title" x="1546" y="337">OpenAI API</text>
+  <text class="box-body" x="1546" y="363">GPT-5-mini</text>
+  <text class="box-body" x="1546" y="388">Vision / Chat</text>
+  <text class="box-body" x="1546" y="413">Ingredient refinement</text>
+
+  <rect class="module-orange" x="1525" y="463" width="175" height="92" rx="12"/>
+  <text class="box-title" x="1546" y="496">Exa.ai API</text>
+  <text class="box-body" x="1546" y="522">제품명 검색</text>
+
+  <rect class="module-orange" x="1525" y="585" width="175" height="92" rx="12"/>
+  <text class="box-title" x="1546" y="618">OAuth Providers</text>
+  <text class="box-body" x="1546" y="644">Google</text>
+  <text class="box-body" x="1546" y="669">Kakao</text>
+
+  <rect class="module-orange" x="1525" y="707" width="175" height="118" rx="12"/>
+  <text class="box-title" x="1546" y="740">Secrets</text>
+  <text class="box-body" x="1546" y="766">OPENAI_API_KEY</text>
+  <text class="box-body" x="1546" y="791">EXA_API_KEY</text>
+
+  <!-- Arrows between major blocks -->
+  <path class="arrow-orange" d="M 510 310 C 540 310, 540 300, 565 300"/>
+  <text class="small" x="520" y="286">정적 자산 로드</text>
+  <path class="arrow-blue" d="M 510 675 C 660 675, 705 675, 875 675"/>
+  <text class="small" x="585" y="651">Auth / DB / Storage / Functions 호출</text>
+  <path class="arrow-blue" d="M 825 330 C 842 330, 848 330, 875 330"/>
+  <text class="small" x="748" y="309">배포 결과</text>
+  <path class="arrow-orange" d="M 1450 535 C 1470 535, 1475 383, 1495 383"/>
+  <text class="small" x="1396" y="363">AI 처리</text>
+  <path class="arrow-orange" d="M 1450 604 C 1471 604, 1476 513, 1495 513"/>
+  <text class="small" x="1396" y="587">검색</text>
+
+  <!-- Main user flow -->
+  <rect x="70" y="910" width="1660" height="132" rx="18" fill="#ffffff" class="panel"/>
+  <text class="flow-title" x="100" y="952">주요 런타임 흐름</text>
+
+  <rect x="100" y="980" width="245" height="38" rx="19" fill="#e7f4ed"/>
+  <text class="pill-text" x="123" y="1005">1. 로그인 - Supabase Auth</text>
+  <path class="arrow-green" d="M 350 999 L 430 999"/>
+
+  <rect x="435" y="980" width="300" height="38" rx="19" fill="#eef7ff"/>
+  <text class="pill-text" x="458" y="1005">2. 라벨/검색 - Edge Functions</text>
+  <path class="arrow-blue" d="M 740 999 L 820 999"/>
+
+  <rect x="825" y="980" width="330" height="38" rx="19" fill="#fff3e9"/>
+  <text class="pill-text" x="848" y="1005">3. OpenAI/Exa.ai - 성분 구조화</text>
+  <path class="arrow-orange" d="M 1160 999 L 1240 999"/>
+
+  <rect x="1245" y="980" width="455" height="38" rx="19" fill="#eef4ef"/>
+  <text class="pill-text" x="1268" y="1005">4. DB 저장 - 분석 리포트, 스케줄, 채팅 UI 반영</text>
+
+  <text class="small" x="100" y="1070">운영 보조: Supabase migrations, Edge Function deploy scripts, predeploy/postdeploy checks, Supabase audit scripts.</text>
+</svg>

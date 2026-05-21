@@ -8,6 +8,8 @@
 
 tt-ni는 **Vercel**에서 호스팅되는 React SPA 프론트엔드, **Supabase**가 제공하는 백엔드 서비스(BaaS), 그리고 **OpenAI/Exa.ai** 외부 API로 구성됩니다.
 
+![tt-ni 프로젝트 아키텍처](./architecture/tt-ni-project-architecture.png)
+
 ```mermaid
 graph TD
     subgraph Client["클라이언트"]
