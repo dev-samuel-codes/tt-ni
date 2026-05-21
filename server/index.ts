@@ -10,6 +10,7 @@ import { pool, ensureUser, id } from './db.js'
 import { firebaseAuth } from './firebaseAdmin.js'
 import { openaiChat } from './openai.js'
 import { consumeExternalApiQuota, DAILY_EXTERNAL_API_LIMIT_MESSAGE } from './rateLimit.js'
+import { mapExaSearchResults } from './exaSearch.js'
 import { nutrients } from '../src/features/nutrition/nutritionData.js'
 import { runAnalysis } from '../src/features/analysis/analysisEngine.js'
 import { generateSchedule } from '../src/features/schedule/scheduleEngine.js'
@@ -553,42 +554,6 @@ app.post('/api/parse-label', upload.single('image'), asyncRoute(async (req, res)
   })
 }))
 
-const nutrientPatterns = [
-  { name: 'Vitamin A', patterns: [/vitamin\s*a/i, /retinol/i, /beta[-\s]?carotene/i] },
-  { name: 'Vitamin B1', patterns: [/vitamin\s*b1/i, /thiamine/i] },
-  { name: 'Vitamin B6', patterns: [/vitamin\s*b6/i, /pyridoxine/i] },
-  { name: 'Vitamin B12', patterns: [/vitamin\s*b12/i, /cobalamin/i] },
-  { name: 'Vitamin C', patterns: [/vitamin\s*c/i, /ascorbic\s*acid/i] },
-  { name: 'Vitamin D', patterns: [/vitamin\s*d/i, /d3/i, /cholecalciferol/i] },
-  { name: 'Calcium', patterns: [/calcium/i, /\bca\b/i] },
-  { name: 'Magnesium', patterns: [/magnesium/i] },
-  { name: 'Zinc', patterns: [/zinc/i, /\bzn\b/i] },
-  { name: 'Iron', patterns: [/iron/i, /\bfe\b/i] },
-  { name: 'Omega-3', patterns: [/omega[\s-]*3/i, /epa/i, /dha/i] },
-]
-
-function extractIngredients(text: string) {
-  const ingredients: Array<{ name: string; amount: number; unit: string }> = []
-  const seen = new Set<string>()
-  for (const line of text.split(/[.\n]+/)) {
-    const unitMatch = line.match(/(\d+(?:,\d{3})*(?:\.\d+)?)\s*(mcg|mg|g|IU|CFU|μg)/i)
-    if (!unitMatch) continue
-    const amount = parseFloat(unitMatch[1].replace(/,/g, ''))
-    const unit = unitMatch[2].toLowerCase() === 'μg' ? 'mcg' : unitMatch[2]
-    const beforeAmount = line.substring(0, unitMatch.index).toLowerCase()
-    for (const nutrient of nutrientPatterns) {
-      if (!nutrient.patterns.some((pattern) => pattern.test(beforeAmount))) continue
-      const key = `${nutrient.name}:${amount}:${unit}`
-      if (!seen.has(key)) {
-        seen.add(key)
-        ingredients.push({ name: nutrient.name, amount, unit })
-      }
-      break
-    }
-  }
-  return ingredients
-}
-
 app.post('/api/exa-search', asyncRoute(async (req, res) => {
   const { query } = req.body as { query: string }
   if (!query?.trim()) {
@@ -604,15 +569,8 @@ app.post('/api/exa-search', asyncRoute(async (req, res) => {
     body: JSON.stringify({ query, type: 'auto', numResults: 5, contents: { text: true } }),
   })
   if (!response.ok) throw new Error(`Exa API 요청에 실패했습니다: ${await response.text()}`)
-  const payload = await response.json() as { results?: Array<{ title: string; url: string; text?: string }> }
-  res.json({
-    products: (payload.results ?? []).map((result) => ({
-      name: result.title.replace(/\s*[-–|]\s*(Amazon\.com|Walmart|iHerb|Target|eBay).*/i, '').replace(/\s*\|.*$/, '').trim(),
-      brand: '',
-      ingredients: extractIngredients(result.text ?? ''),
-      sourceUrl: result.url,
-    })),
-  })
+  const payload = await response.json() as { results?: Array<{ title?: string; url?: string; text?: string | string[] }> }
+  res.json({ products: mapExaSearchResults(payload.results) })
 }))
 
 function buildSystemPrompt(context: Record<string, unknown>): string {

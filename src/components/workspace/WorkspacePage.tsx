@@ -644,7 +644,7 @@ export function SupplementWorkspace({
         method: 'POST',
         body: { query: searchQuery },
       })
-      const product = data?.products?.[0]
+      const product = data?.products?.find((item) => (item.ingredients?.length ?? 0) > 0)
       if (!product || !product.ingredients || product.ingredients.length === 0) {
         setParseWarnings(['검색 결과에서 성분 정보를 찾을 수 없습니다. 제품명을 다시 확인해주세요.'])
         return
