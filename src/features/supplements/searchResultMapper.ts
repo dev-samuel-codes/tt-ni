@@ -2,10 +2,17 @@ import { findNutrientByName } from '../nutrition/nutritionData'
 import { createId } from '../../lib/utils'
 import type { ParsedIngredient, Unit } from '../../types'
 
+/** 검색 결과에서 받은 원시 성분 입력. Partial<ParsedIngredient>에 name 필드 추가. */
 export type SearchIngredientInput = Partial<ParsedIngredient> & {
   name?: string
 }
 
+/**
+ * Exa 검색 결과 또는 검색 API의 원시 성분을 ParsedIngredient로 변환합니다.
+ * 1. 성분명을 기준으로 nutrients DB에서 표준 영양소 조회
+ * 2. 매칭 성공 시 표준명, nutrientId, unit을 덮어씀
+ * 3. 매칭 실패 시 reviewRequired=true로 설정
+ */
 export function mapSearchIngredientToParsed(
   ingredient: SearchIngredientInput,
   idFactory: (prefix: string) => string = createId,

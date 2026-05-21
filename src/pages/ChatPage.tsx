@@ -14,6 +14,12 @@ interface ChatSession {
   active: boolean
 }
 
+/**
+ * AI 채팅 상담 페이지.
+ * 왼쪽 사이드바에 세션 목록, 오른쪽 메인 영역에 채팅 UI를 표시합니다.
+ * SSE 스트리밍으로 실시간 AI 응답을 받아오고,
+ * 사용자 컨텍스트(프로필, 약물, 영양제, 분석 결과)를 시스템 프롬프트에 포함합니다.
+ */
 export function ChatPage({
   profile,
   medications,

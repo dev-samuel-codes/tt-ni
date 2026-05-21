@@ -16,6 +16,7 @@ import { runAnalysis } from '../src/features/analysis/analysisEngine.js'
 import { generateSchedule } from '../src/features/schedule/scheduleEngine.js'
 import type { AnalysisReport, Medication, ParsedIngredient, Profile, SupplementProduct, Unit } from '../src/types/index.js'
 
+/** 인증 미들웨어를 통과한 요청. `req.user`에 Firebase 사용자 정보가 포함됩니다. */
 type AuthedRequest = Request & {
   user: {
     uid: string
@@ -24,6 +25,7 @@ type AuthedRequest = Request & {
   }
 }
 
+/** 채팅 메시지 형식 */
 type ChatMessage = {
   role: 'user' | 'assistant' | 'system'
   content: string
@@ -35,13 +37,20 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
 })
 
+// CORS는 모든 오리진 허용 (프론트엔드는 별도 도메인에 배포될 수 있음)
 app.use(cors({ origin: true }))
 app.use(express.json({ limit: '2mb' }))
 
+/** req가 AuthedRequest 타입인지 확인하는 타입 가드 */
 function isAuthed(req: Request): req is AuthedRequest {
   return 'user' in req
 }
 
+/**
+ * Firebase ID 토큰을 검증하는 인증 미들웨어.
+ * Authorization 헤더에서 Bearer 토큰을 추출하고, Firebase Admin SDK로 검증합니다.
+ * 검증 성공 시 req.user에 사용자 정보를 설정하고 app_users 테이블에 upsert 합니다.
+ */
 async function authenticate(req: Request, res: Response, next: NextFunction) {
   try {
     const authHeader = req.header('Authorization')
@@ -64,6 +73,11 @@ async function authenticate(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+/**
+ * 인증이 필요한 비동기 라우트 핸들러를 래핑합니다.
+ * 인증 미들웨어 다음에 사용되어 req가 항상 AuthedRequest로 들어오도록 보장합니다.
+ * 핸들러에서 발생한 비동기 예외는 next(error)로 전파되어 Express 오류 핸들러로 전달됩니다.
+ */
 function asyncRoute(handler: (req: AuthedRequest, res: Response) => Promise<void>) {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!isAuthed(req)) {
@@ -74,12 +88,22 @@ function asyncRoute(handler: (req: AuthedRequest, res: Response) => Promise<void
   }
 }
 
+/**
+ * 외부 API(OpenAI, Exa) 호출에 대한 일일 사용량 한도를 확인합니다.
+ * 한도 초과 시 429 응답을 전송하고 false를 반환합니다.
+ * 정상이면 호출량을 증가시키고 true를 반환합니다.
+ */
 async function enforceExternalApiQuota(req: AuthedRequest, res: Response): Promise<boolean> {
   if (await consumeExternalApiQuota(req.user.uid)) return true
   res.status(429).json({ error: DAILY_EXTERNAL_API_LIMIT_MESSAGE })
   return false
 }
 
+/**
+ * JSON 컬럼에서 가져온 데이터를 안전하게 파싱합니다.
+ * null/undefined이면 fallback을 반환하고,
+ * 문자열이면 JSON.parse, 그 외에는 그대로 캐스팅합니다.
+ */
 function parseJson<T>(value: unknown, fallback: T): T {
   if (value === null || value === undefined) return fallback
   if (typeof value === 'string') {
@@ -92,10 +116,16 @@ function parseJson<T>(value: unknown, fallback: T): T {
   return value as T
 }
 
+/** MySQL boolean 값을 JavaScript boolean으로 변환 */
 function toBool(value: unknown): boolean {
   return value === true || value === 1 || value === '1'
 }
 
+/**
+ * 원재료명을 표준 영양소명으로 정규화 매칭합니다.
+ * nutrients 데이터베이스에서 표준명 정확 일치 또는 별칭 포함 여부로 검색합니다.
+ * 매칭 실패 시에도 임시 NutrientId를 생성하여 반환합니다.
+ */
 function normalizeNutrientName(name: string) {
   const normalized = name.trim().toLowerCase()
   const nutrient = nutrients.find((item) =>
@@ -118,6 +148,10 @@ function normalizeNutrientName(name: string) {
   }
 }
 
+/**
+ * DB 조회 결과 행을 AnalysisReport 타입으로 변환합니다.
+ * JSON 컬럼들은 parseJson으로 안전하게 파싱합니다.
+ */
 function mapReport(row: RowDataPacket | undefined): AnalysisReport | null {
   if (!row) return null
   return {
@@ -133,6 +167,11 @@ function mapReport(row: RowDataPacket | undefined): AnalysisReport | null {
   }
 }
 
+/**
+ * 사용자의 등록된 영양제와 성분 정보를 조인하여 조회합니다.
+ * app_user_supplements + app_supplement_products + app_supplement_ingredients 3-way join.
+ * 활성(active=true) 영양제만 조회하며, 성분은 제품별로 그룹화됩니다.
+ */
 async function loadSupplements(userId: string): Promise<SupplementProduct[]> {
   const [productRows] = await pool.query<RowDataPacket[]>(
     `select
@@ -152,6 +191,7 @@ async function loadSupplements(userId: string): Promise<SupplementProduct[]> {
     `select * from app_supplement_ingredients where product_id in (${placeholders}) order by created_at asc`,
     productIds,
   )
+  // 제품별로 성분 그룹화
   const ingredientsByProduct = new Map<string, ParsedIngredient[]>()
   for (const row of ingredientRows) {
     const productId = String(row.product_id)
@@ -183,6 +223,10 @@ async function loadSupplements(userId: string): Promise<SupplementProduct[]> {
   }))
 }
 
+/**
+ * 사용자 데이터를 일괄 조회합니다.
+ * 프로필, 건강상태, 약물, 최신 분석 리포트, 영양제를 병렬 조회합니다.
+ */
 async function loadUserData(userId: string) {
   const [[profileRow], [conditionRows], [medicationRows], [reportRows], supplements] = await Promise.all([
     pool.query<RowDataPacket[]>('select * from app_user_profiles where user_id = ? limit 1', [userId]),
@@ -193,6 +237,7 @@ async function loadUserData(userId: string) {
   ])
 
   const conditions = conditionRows as RowDataPacket[]
+  // 건강상태, 알레르기, 식이제한은 condition_code 접두사로 구분
   const profile = profileRow[0] ? {
     gender: String(profileRow[0].gender) as Profile['gender'],
     birthYear: Number(profileRow[0].birth_year),
@@ -222,21 +267,29 @@ async function loadUserData(userId: string) {
   }
 }
 
+// 서버 상태 확인 (인증 불필요)
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true })
 })
 
+// /api 하위 모든 경로에 인증 미들웨어 적용
 app.use('/api', authenticate)
 
+// 사용자 데이터 일괄 조회
 app.get('/api/user-data', asyncRoute(async (req, res) => {
   res.json(await loadUserData(req.user.uid))
 }))
 
+/**
+ * 프로필 및 약물 저장.
+ * 프로필 upsert → 기존 conditions/medications 삭제 후 재삽입을 단일 트랜잭션으로 처리합니다.
+ */
 app.post('/api/profile', asyncRoute(async (req, res) => {
   const { profile, medications } = req.body as { profile: Profile; medications: Medication[] }
   const connection = await pool.getConnection()
   try {
     await connection.beginTransaction()
+    // 프로필 upsert
     await connection.execute(
       `insert into app_user_profiles
         (user_id, gender, birth_year, height_cm, weight_kg, pregnancy_status, lactation_status, consent_accepted)
@@ -261,6 +314,7 @@ app.post('/api/profile', asyncRoute(async (req, res) => {
       ],
     )
 
+    // 기존 건강상태 삭제 후 재삽입
     await connection.execute('delete from app_user_conditions where user_id = ?', [req.user.uid])
     const conditionRows = [
       ...profile.conditions.map((name) => ({ code: name.toLowerCase(), name, severity: 'notice' })),
@@ -274,6 +328,7 @@ app.post('/api/profile', asyncRoute(async (req, res) => {
       )
     }
 
+    // 기존 약물 삭제 후 재삽입
     await connection.execute('delete from app_user_medications where user_id = ?', [req.user.uid])
     for (const medication of medications) {
       if (!medication.name.trim()) continue
@@ -292,6 +347,10 @@ app.post('/api/profile', asyncRoute(async (req, res) => {
   }
 }))
 
+/**
+ * 영양제 제품 + 성분 + 사용자 연결 저장.
+ * 트랜잭션 내에서 supplement_products → supplement_ingredients → user_supplements 순으로 삽입합니다.
+ */
 app.post('/api/supplements', asyncRoute(async (req, res) => {
   const { supplement, labelImagePath } = req.body as { supplement: SupplementProduct; labelImagePath?: string }
   if (!supplement.productName?.trim()) throw new Error('제품명이 없습니다.')
@@ -320,6 +379,7 @@ app.post('/api/supplements', asyncRoute(async (req, res) => {
           ingredient.standardName || '',
           ingredient.amount,
           ingredient.unit || 'mg',
+          // 1일 총 섭취량 = 성분 함량 × 1일 복용 횟수
           ingredient.amount !== null ? ingredient.amount * (supplement.dailyServings || 1) : null,
           ingredient.confidence ?? 1,
           ingredient.reviewRequired ?? false,
@@ -341,6 +401,10 @@ app.post('/api/supplements', asyncRoute(async (req, res) => {
   }
 }))
 
+/**
+ * 영양제 제품 정보 수정.
+ * 제품명/브랜드는 supplement_products에서, 복용횟수/시간은 user_supplements에서 각각 수정합니다.
+ */
 app.patch('/api/supplements/:id', asyncRoute(async (req, res) => {
   const productId = req.params.id
   const patch = req.body as Partial<Pick<SupplementProduct, 'productName' | 'brandName' | 'dailyServings' | 'intakeTime'>>
@@ -363,6 +427,10 @@ app.patch('/api/supplements/:id', asyncRoute(async (req, res) => {
   res.json({ message: '제품 정보를 수정했습니다.' })
 }))
 
+/**
+ * 영양제 성분 정보 배치 업데이트.
+ * 여러 성분의 standardName/amount/unit을 한 번의 요청으로 수정합니다.
+ */
 app.post('/api/supplements/ingredients', asyncRoute(async (req, res) => {
   const { ingredients, dailyServings } = req.body as {
     ingredients: Array<{ id: string; standardName?: string; amount?: number | null; unit?: string }>
@@ -381,6 +449,7 @@ app.post('/api/supplements/ingredients', asyncRoute(async (req, res) => {
       [
         ingredient.standardName ?? null,
         ingredient.amount ?? null,
+        // amount 변경 시 1일 섭취량도 재계산
         ingredient.amount !== undefined ? (ingredient.amount ?? 0) * (dailyServings || 1) : null,
         ingredient.unit ?? null,
         ingredient.id,
@@ -391,6 +460,10 @@ app.post('/api/supplements/ingredients', asyncRoute(async (req, res) => {
   res.json({ message: '성분 정보를 수정했습니다.' })
 }))
 
+/**
+ * 영양제 제품 삭제.
+ * CASCADE 제약조건으로 연관 성분 및 user_supplements도 자동 삭제됩니다.
+ */
 app.delete('/api/supplements/:id', asyncRoute(async (req, res) => {
   const [result] = await pool.execute<ResultSetHeader>(
     'delete from app_supplement_products where id = ? and owner_user_id = ?',
@@ -400,6 +473,10 @@ app.delete('/api/supplements/:id', asyncRoute(async (req, res) => {
   res.json({ message: '제품을 삭제했습니다.' })
 }))
 
+/**
+ * 분석 리포트 저장.
+ * 클라이언트에서 계산된 분석 결과를 app_analysis_reports 테이블에 JSON 형식으로 저장합니다.
+ */
 app.post('/api/analysis', asyncRoute(async (req, res) => {
   const body = req.body as { profile?: Profile; medications?: Medication[]; supplements?: SupplementProduct[]; report?: AnalysisReport }
   const report = body.report ?? runAnalysis(body.profile!, body.medications ?? [], body.supplements ?? [])
@@ -423,6 +500,10 @@ app.post('/api/analysis', asyncRoute(async (req, res) => {
   res.json({ ...report, id: reportId, createdAt: new Date().toISOString() })
 }))
 
+/**
+ * 복용 스케줄 생성.
+ * 사용자의 영양제, 약물, 건강상태, 선호 시간을 기반으로 시간약리학적 복용 타임라인을 계산합니다.
+ */
 app.post('/api/generate-schedule', asyncRoute(async (req, res) => {
   const body = req.body as {
     profile: Profile
@@ -449,6 +530,11 @@ app.post('/api/generate-schedule', asyncRoute(async (req, res) => {
   res.json({ timeline })
 }))
 
+/**
+ * 성분명 정제 API.
+ * 서버 메모리 내 nutrients 데이터베이스로 표준명 매칭 후,
+ * 각 성분의 효능, 권장량, 주의사항 정보를 기본값으로 채워 반환합니다.
+ */
 app.post('/api/refine-ingredients', asyncRoute(async (req, res) => {
   const { productName, brandName, ingredients } = req.body as {
     productName: string
@@ -464,6 +550,7 @@ app.post('/api/refine-ingredients', asyncRoute(async (req, res) => {
       nutrientId: nutrient.id,
       amount: ingredient.amount ?? null,
       unit: (ingredient.unit || nutrient.unit) as Unit,
+      // DB 매칭 성공 시 높은 신뢰도, 실패 시 낮은 신뢰도
       confidence: nutrient.matched ? 0.95 : 0.5,
       rawText: ingredient.name,
       reviewRequired: !nutrient.matched,
@@ -480,11 +567,17 @@ app.post('/api/refine-ingredients', asyncRoute(async (req, res) => {
   })
 }))
 
+/**
+ * 영양제 라벨 이미지 업로드 및 Vision AI 파싱.
+ * multipart/form-data로 이미지를 받아 base64로 변환 후 OpenAI Vision API로 성분표 데이터를 추출합니다.
+ * 추출된 성분은 표준명 매칭(normalizeNutrientName)을 거쳐 응답됩니다.
+ */
 app.post('/api/parse-label', upload.single('image'), asyncRoute(async (req, res) => {
   if (!req.file) throw new Error('성분표 이미지 파일을 선택해야 AI 파싱을 실행할 수 있습니다.')
   if (!await enforceExternalApiQuota(req, res)) return
   const mimeType = req.file.mimetype || 'image/jpeg'
   const base64 = req.file.buffer.toString('base64')
+  // OpenAI Structured Outputs JSON Schema 정의
   const schema = {
     type: 'object',
     properties: {
@@ -547,6 +640,7 @@ app.post('/api/parse-label', upload.single('image'), asyncRoute(async (req, res)
         unit: ingredient.unit,
         confidence: ingredient.confidence,
         rawText: ingredient.raw_text,
+        // 매칭 실패, 낮은 신뢰도, unknown 단위면 검수 필요
         reviewRequired: !nutrient.matched || ingredient.confidence < 0.8 || ingredient.unit === 'unknown',
       }
     }),
@@ -554,6 +648,11 @@ app.post('/api/parse-label', upload.single('image'), asyncRoute(async (req, res)
   })
 }))
 
+/**
+ * Exa.ai 웹 검색 API.
+ * 제품명을 쿼리로 Exa.ai 검색을 실행하고, 결과에서 성분 정보를 추출합니다.
+ * Comet API를 통해 제품명을 추가로 정제합니다 (실패 시 원본 이름 유지).
+ */
 app.post('/api/exa-search', asyncRoute(async (req, res) => {
   const { query } = req.body as { query: string }
   if (!query?.trim()) {
@@ -579,6 +678,11 @@ app.post('/api/exa-search', asyncRoute(async (req, res) => {
   }
 }))
 
+/**
+ * AI 채팅 시스템 프롬프트 빌더.
+ * 사용자 컨텍스트(프로필, 약물, 영양제, 분석 결과)를 JSON으로 포함하고,
+ * 한국어 응답, 의학 면책, 전문가 상담 권장 등의 응답 지침을 포함합니다.
+ */
 function buildSystemPrompt(context: Record<string, unknown>): string {
   return `당신은 영양제 및 건강 보조제에 관한 정보를 제공하는 AI 어시스턴트입니다.
 
@@ -595,6 +699,7 @@ ${JSON.stringify(context)}
 - 단정적인 표현은 피하고 전문가 상담이 필요한 경우 명확히 안내하세요.`
 }
 
+// 채팅 세션 목록 조회
 app.get('/api/chat/sessions', asyncRoute(async (req, res) => {
   const [rows] = await pool.query<RowDataPacket[]>(
     'select id, title from app_chat_sessions where user_id = ? order by updated_at desc',
@@ -603,6 +708,7 @@ app.get('/api/chat/sessions', asyncRoute(async (req, res) => {
   res.json(rows.map((row) => ({ id: String(row.id), title: String(row.title), active: false })))
 }))
 
+// 새 채팅 세션 생성
 app.post('/api/chat/sessions', asyncRoute(async (req, res) => {
   const title = String((req.body as { title?: string }).title ?? '새 대화').slice(0, 100)
   const sessionId = id('chat')
@@ -610,12 +716,14 @@ app.post('/api/chat/sessions', asyncRoute(async (req, res) => {
   res.json({ id: sessionId, title })
 }))
 
+// 채팅 세션 제목 수정
 app.patch('/api/chat/sessions/:id', asyncRoute(async (req, res) => {
   const title = String((req.body as { title?: string }).title ?? '새 대화').slice(0, 100)
   await pool.execute('update app_chat_sessions set title = ? where id = ? and user_id = ?', [title, req.params.id, req.user.uid])
   res.json({ message: 'updated' })
 }))
 
+// 세션별 채팅 메시지 내역 조회
 app.get('/api/chat/sessions/:id/messages', asyncRoute(async (req, res) => {
   const [rows] = await pool.query<RowDataPacket[]>(
     `select cm.role, cm.content
@@ -628,6 +736,12 @@ app.get('/api/chat/sessions/:id/messages', asyncRoute(async (req, res) => {
   res.json(rows.map((row) => ({ role: row.role, content: row.content })))
 }))
 
+/**
+ * AI 채팅 완성 (SSE 스트리밍).
+ * OpenAI Chat Completion API를 스트리밍 모드로 호출하고
+ * 응답을 SSE(text/event-stream)로 클라이언트에 실시간 전달합니다.
+ * 전체 응답이 완료되면 assistant 메시지를 DB에 저장합니다.
+ */
 app.post('/api/chat/completion', asyncRoute(async (req, res) => {
   const { sessionId, message, context } = req.body as { sessionId?: string; message: string; context: Record<string, unknown> }
   if (!message?.trim()) {
@@ -638,11 +752,13 @@ app.post('/api/chat/completion', asyncRoute(async (req, res) => {
     return
   }
 
+  // 세션이 없으면 자동 생성
   let sessionIdToUse = sessionId
   if (!sessionIdToUse) {
     sessionIdToUse = id('chat')
     await pool.execute('insert into app_chat_sessions (id, user_id, title) values (?, ?, ?)', [sessionIdToUse, req.user.uid, message.slice(0, 100)])
   } else {
+    // 기존 세션 존재 여부 확인
     const [sessionRows] = await pool.query<RowDataPacket[]>('select id from app_chat_sessions where id = ? and user_id = ? limit 1', [sessionIdToUse, req.user.uid])
     if (sessionRows.length === 0) {
       res.status(404).json({ error: '채팅 세션을 찾을 수 없습니다.' })
@@ -650,7 +766,9 @@ app.post('/api/chat/completion', asyncRoute(async (req, res) => {
     }
   }
 
+  // 사용자 메시지 저장
   await pool.execute('insert into app_chat_messages (id, session_id, role, content) values (?, ?, ?, ?)', [id('message'), sessionIdToUse, 'user', message])
+  // 최근 40개 메시지를 컨텍스트로 로드
   const [historyRows] = await pool.query<RowDataPacket[]>('select role, content from app_chat_messages where session_id = ? order by created_at asc limit 40', [sessionIdToUse])
   const messages: ChatMessage[] = [
     { role: 'system', content: buildSystemPrompt(context) },
@@ -662,6 +780,7 @@ app.post('/api/chat/completion', asyncRoute(async (req, res) => {
     stream: true,
   })
 
+  // SSE 응답 헤더 설정
   res.setHeader('Content-Type', 'text/event-stream')
   res.setHeader('Cache-Control', 'no-cache')
   res.setHeader('Connection', 'keep-alive')
@@ -674,14 +793,16 @@ app.post('/api/chat/completion', asyncRoute(async (req, res) => {
   let buffer = ''
 
   try {
+    // 스트리밍 청크 읽기
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
       const text = decoder.decode(value, { stream: true })
-      res.write(text)
+      res.write(text) // 원본 SSE 청크를 클라이언트에 그대로 전달
       buffer += text
       const lines = buffer.split('\n')
       buffer = lines.pop() ?? ''
+      // SSE 청크에서 content delta 추출하여 전체 응답 누적
       for (const line of lines) {
         if (!line.startsWith('data: ') || line.startsWith('data: [DONE]')) continue
         try {
@@ -693,6 +814,7 @@ app.post('/api/chat/completion', asyncRoute(async (req, res) => {
       }
     }
   } finally {
+    // 응답 완료 후 assistant 메시지 저장
     if (assistantContent) {
       await pool.execute('insert into app_chat_messages (id, session_id, role, content) values (?, ?, ?, ?)', [id('message'), sessionIdToUse, 'assistant', assistantContent])
     }
@@ -700,19 +822,24 @@ app.post('/api/chat/completion', asyncRoute(async (req, res) => {
   }
 }))
 
+// 404 - 등록되지 않은 API 경로
 app.use('/api', (_req, res) => {
   res.status(404).json({ error: 'API 경로를 찾을 수 없습니다.' })
 })
 
+// Express 전역 오류 핸들러 - 모든 미처리 예외를 500으로 변환
 app.use((error: Error, _req: Request, res: Response, _next: NextFunction) => {
   void _next
   res.status(500).json({ error: error.message || '서버 오류가 발생했습니다.' })
 })
 
+// Vercel이 아닌 경우(로컬 개발/운영)에만 정적 파일 서빙 및 서버 리스닝
 if (process.env.VERCEL !== '1') {
   const __dirname = path.dirname(fileURLToPath(import.meta.url))
   const distDir = path.resolve(__dirname, '../dist')
+  // 빌드된 React SPA 정적 파일 서빙
   app.use(express.static(distDir))
+  // SPA 폴백 - 모든 GET 요청을 index.html로 리다이렉트
   app.get(/.*/, (_req, res) => {
     res.sendFile(path.join(distDir, 'index.html'))
   })

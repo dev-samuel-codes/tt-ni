@@ -2,6 +2,7 @@ import { Component, type ErrorInfo, type ReactNode } from 'react'
 
 interface ErrorBoundaryProps {
   children: ReactNode
+  /** 커스텀 폴백 UI (미지정 시 기본 에러 화면 표시) */
   fallback?: ReactNode
 }
 
@@ -11,16 +12,23 @@ interface ErrorBoundaryState {
   errorInfo: ErrorInfo | null
 }
 
+/**
+ * React 에러 경계(Error Boundary) 컴포넌트.
+ * 하위 트리에서 발생한 렌더링 오류를 포착하여 전체 앱이 크래시되는 것을 방지합니다.
+ * 오류 발생 시 새로고침 버튼과 오류 상세 정보(개발용)를 표시합니다.
+ */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props)
     this.state = { hasError: false, error: null, errorInfo: null }
   }
 
+  /** 자식 컴포넌트에서 오류 발생 시 호출되어 state를 업데이트 */
   static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
     return { hasError: true, error }
   }
 
+  /** 오류 발생 후 로깅 및 errorInfo 저장 */
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     this.setState({ errorInfo })
     console.error('ErrorBoundary caught an error:', error, errorInfo)

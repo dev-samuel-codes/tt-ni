@@ -1,6 +1,10 @@
 import { ArrowLeft, Database, ShieldCheck, Sparkles } from 'lucide-react'
 import { LoginCard } from '../components/auth/LoginCard'
 
+/**
+ * 로그인 페이지.
+ * 왼쪽에는 로그인 후 가능한 기능 소개, 오른쪽에는 LoginCard(실제 로그인 폼)를 표시합니다.
+ */
 export function LoginPage({
   sessionEmail, onSessionEmail, onBackHome, onOpenWorkspace,
 }: {

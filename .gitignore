@@ -26,10 +26,9 @@ npm-debug.log*
 # Editor (keep .vscode/settings.json and extensions.json)
 
 # Local documents
-/PROJECT_OVERVIEW.md
-/영양제 상호작용 보고서.md
-/BACKEND_GUIDE.md
 docs/영양제 상호작용 보고서.md
+
+# Sample assets
 sample img/
 
 # Playwright test artifacts

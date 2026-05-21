@@ -4,6 +4,11 @@ import { firebaseConfigError, signInWithEmail, signInWithGoogle, signInWithKakao
 import type { SocialProvider } from '../../features/auth/authTypes'
 import { socialProviderLabels } from '../../features/auth/authTypes'
 
+/**
+ * 인증 패널 컴포넌트.
+ * 로그인 상태에 따라 로그인 폼 또는 로그아웃 버튼을 표시합니다.
+ * variant="page" → 페이지 중앙 로그인, variant="dock" → 사이드바/헤더 내 로그인
+ */
 export function AuthPanel({
   sessionEmail,
   onSessionEmail,
@@ -22,6 +27,7 @@ export function AuthPanel({
   const enabledSocialProviders = (['google', 'kakao'] as SocialProvider[]).filter((provider) => socialAuthEnabled[provider])
   const hasSocialAuth = enabledSocialProviders.length > 0
 
+  /** 이메일 로그인 또는 회원가입 처리 */
   async function signIn(mode: 'login' | 'signup') {
     if (authDisabled) {
       setMessage(firebaseConfigError ?? 'Firebase 인증 설정을 확인할 수 없습니다.')
@@ -43,6 +49,7 @@ export function AuthPanel({
     }
   }
 
+  /** 소셜 로그인 (Google / Kakao) */
   async function signInWithSocial(provider: SocialProvider) {
     if (authDisabled) {
       setMessage(firebaseConfigError ?? 'Firebase 인증 설정을 확인할 수 없습니다.')
@@ -72,6 +79,7 @@ export function AuthPanel({
     }
   }
 
+  // 로그인 상태 → 로그아웃 버튼만 표시
   if (sessionEmail) {
     return (
       <div className={variant === 'page' ? 'auth-card compact auth-card-session page-auth-card' : 'auth-card compact auth-card-session'}>
@@ -82,6 +90,7 @@ export function AuthPanel({
     )
   }
 
+  // 비로그인 상태 → 로그인 폼 표시
   return (
     <form className={variant === 'page' ? 'auth-card page-auth-card' : 'auth-card'} onSubmit={(event) => event.preventDefault()}>
       <div className="auth-state">

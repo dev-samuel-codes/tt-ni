@@ -2,11 +2,17 @@ import { useMemo } from 'react'
 import type { Medication, Profile, SupplementProduct } from '../../types'
 import { generateSchedule } from './scheduleEngine'
 
+/** 오늘의 복용 스케줄 항목 (시간 + 영양제 목록) */
 export interface TodaySlot {
   time: string
   items: string[]
 }
 
+/**
+ * 오늘의 복용 스케줄을 생성하는 훅.
+ * 입력 데이터가 변경될 때마다 useMemo로 scheduleEngine을 호출하여 타임라인을 재계산합니다.
+ * enabled가 false이거나 영양제가 없으면 빈 배열을 반환합니다.
+ */
 export function useTodaySchedule({
   supplements,
   profile,

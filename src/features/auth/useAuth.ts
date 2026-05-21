@@ -13,6 +13,7 @@ type UseAuthOptions = {
   onReport: (report: AnalysisReport | null) => void
 }
 
+/** /api/user-data 응답 타입 */
 interface UserDataResponse {
   profile: Profile | null
   medications: Medication[]
@@ -20,6 +21,10 @@ interface UserDataResponse {
   report: AnalysisReport | null
 }
 
+/**
+ * OAuth 리디렉션 콜백 URL의 에러 파라미터를 파싱하여 알림 상태로 변환합니다.
+ * Firebase Auth 리디렉션 실패 시 URL에 ?error=...&error_description=... 파라미터가 추가됩니다.
+ */
 function parseAuthCallbackNotice(): AuthNoticeState {
   const searchParams = new URLSearchParams(window.location.search)
   const error = searchParams.get('error')
@@ -31,11 +36,17 @@ function parseAuthCallbackNotice(): AuthNoticeState {
   }
 }
 
+/** OAuth 리디렉션 후 URL에서 쿼리 파라미터를 제거하여 깔끔한 URL 유지 */
 function clearAuthCallbackUrl() {
   if (!window.location.search && !window.location.hash) return
   window.history.replaceState({}, document.title, window.location.pathname)
 }
 
+/**
+ * 인증 상태 관리 훅.
+ * Firebase onAuthStateChanged를 구독하여 로그인/로그아웃 상태 변화를 감지하고,
+ * 로그인 시 서버에서 사용자 데이터를 불러와 부모 컴포넌트(App)의 상태를 초기화합니다.
+ */
 export function useAuth({
   defaultProfile,
   onProfile,
@@ -48,6 +59,7 @@ export function useAuth({
   const [isAuthInitialized, setIsAuthInitialized] = useState(false)
   const [profileIsSetup, setProfileIsSetup] = useState(false)
 
+  /** 로그아웃 또는 인증 실패 시 사용자 데이터를 기본값으로 초기화 */
   const resetUserData = useCallback(() => {
     setProfileIsSetup(false)
     onProfile(defaultProfile)
@@ -56,6 +68,7 @@ export function useAuth({
     onReport(null)
   }, [defaultProfile, onMedications, onProfile, onReport, onSupplements])
 
+  /** 서버에서 사용자 데이터(프로필, 약물, 영양제, 분석 리포트)를 조회 */
   const loadUserData = useCallback(async () => {
     const data = await apiRequest<UserDataResponse>('/api/user-data')
     if (data.profile) {
@@ -71,6 +84,7 @@ export function useAuth({
   }, [defaultProfile, onMedications, onProfile, onReport, onSupplements])
 
   useEffect(() => {
+    // Firebase가 설정되지 않은 경우 바로 초기화 완료 처리
     if (!auth) {
       queueMicrotask(() => {
         resetUserData()
@@ -84,6 +98,7 @@ export function useAuth({
     }
 
     let cancelled = false
+    // Firebase 인증 상태 변경 구독
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (cancelled) return
       setSessionEmail(user?.email ?? null)
@@ -92,6 +107,7 @@ export function useAuth({
         setIsAuthInitialized(true)
         return
       }
+      // 로그인 성공 → 사용자 데이터 로드
       void loadUserData()
         .catch((error) => {
           setAuthNotice({

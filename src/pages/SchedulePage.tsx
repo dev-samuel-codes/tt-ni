@@ -16,6 +16,11 @@ interface TimelineSlot {
 
 const TIMELINE_COLORS = ['#18ae90', '#30cdb0', '#d8a030', '#6b8aed', '#ea868f', '#9b5de5']
 
+/**
+ * 복용 스케줄 페이지.
+ * 시간약리학 기반으로 생성된 영양제 복용 타임라인을 타임라인 카드 형식으로 시각화합니다.
+ * 좌측에는 스케줄 타임라인, 우측에는 복용 시 주의사항과 보고서 기반 가이드라인을 표시합니다.
+ */
 export function SchedulePage({
   supplements,
   profile,
