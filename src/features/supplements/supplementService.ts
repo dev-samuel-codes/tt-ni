@@ -167,7 +167,7 @@ export async function updateSupplementProduct(
   if (authError) throw new Error('세션이 만료되었습니다. 다시 로그인해주세요.')
   if (!authData.user) throw new Error('로그인 정보를 확인할 수 없습니다. 다시 로그인해주세요.')
 
-  const { error } = await supabase
+  const { data: productData, error } = await supabase
     .from('supplement_products')
     .update({
       ...(patch.productName !== undefined && { product_name: patch.productName }),
@@ -175,10 +175,13 @@ export async function updateSupplementProduct(
     })
     .eq('id', productId)
     .eq('owner_user_id', authData.user.id)
+    .select('id')
+    .maybeSingle()
   if (error) throw new Error('제품 정보 수정에 실패했습니다: ' + error.message)
+  if (!productData) throw new Error('제품 정보 수정에 실패했습니다: 업데이트된 행이 없습니다.')
 
   if (patch.dailyServings !== undefined || patch.intakeTime !== undefined) {
-    const { error: usError } = await supabase
+    const { data: usData, error: usError } = await supabase
       .from('user_supplements')
       .update({
         ...(patch.dailyServings !== undefined && { daily_servings: patch.dailyServings }),
@@ -186,7 +189,10 @@ export async function updateSupplementProduct(
       })
       .eq('product_id', productId)
       .eq('user_id', authData.user.id)
+      .select('id')
+      .maybeSingle()
     if (usError) throw new Error('복용 정보 수정에 실패했습니다: ' + usError.message)
+    if (!usData) throw new Error('복용 정보 수정에 실패했습니다: 업데이트된 행이 없습니다.')
   }
 
   return '제품 정보를 수정했습니다.'
@@ -206,21 +212,32 @@ export async function updateSupplementIngredient(
   }
   if (patch.unit !== undefined) updatePayload.unit = patch.unit
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('supplement_ingredients')
     .update(updatePayload)
     .eq('id', ingredientId)
+    .select('id')
+    .single()
   if (error) throw new Error('성분 수정에 실패했습니다: ' + error.message)
+  if (!data) throw new Error('성분 수정에 실패했습니다: 업데이트된 행이 없습니다.')
   return '성분 정보를 수정했습니다.'
 }
 
 /** 영양제 제품을 삭제합니다 (CASCADE로 연관 성분, user_supplements도 삭제됨). */
 export async function deleteSupplementProduct(productId: string): Promise<string> {
-  const { error } = await supabase
+  const { data: authData, error: authError } = await supabase.auth.getUser()
+  if (authError) throw new Error('세션이 만료되었습니다. 다시 로그인해주세요.')
+  if (!authData.user) throw new Error('로그인 정보를 확인할 수 없습니다. 다시 로그인해주세요.')
+
+  const { data, error } = await supabase
     .from('supplement_products')
     .delete()
     .eq('id', productId)
+    .eq('owner_user_id', authData.user.id)
+    .select('id')
+    .maybeSingle()
   if (error) throw new Error('제품 삭제에 실패했습니다: ' + error.message)
+  if (!data) throw new Error('제품 삭제에 실패했습니다: 삭제된 행이 없습니다.')
   return '제품을 삭제했습니다.'
 }
 

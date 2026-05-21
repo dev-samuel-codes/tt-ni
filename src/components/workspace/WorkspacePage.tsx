@@ -571,12 +571,44 @@ export function SupplementWorkspace({
           unit: ing.unit,
         }, editDailyServings)
       }
-      const updated = supplements.map((s) =>
-        s.id === editingId
-          ? { ...s, productName: editProductName, brandName: editBrandName, dailyServings: editDailyServings, intakeTime: editIntakeTime, ingredients: editIngredients }
-          : s,
-      )
-      onSupplements(updated)
+
+      const { data: authData } = await supabase.auth.getUser()
+      if (authData?.user) {
+        const { data: row } = await supabase
+          .from('user_supplements')
+          .select('daily_servings, intake_time, supplement_products(id, product_name, brand_name, source_type, label_image_path, supplement_ingredients(*))')
+          .eq('product_id', editingId)
+          .eq('user_id', authData.user.id)
+          .eq('active', true)
+          .maybeSingle()
+
+        if (row?.supplement_products) {
+          const product = Array.isArray(row.supplement_products) ? row.supplement_products[0] : row.supplement_products
+          const refreshed: SupplementProduct = {
+            id: product.id,
+            productName: product.product_name,
+            brandName: product.brand_name ?? '',
+            sourceType: product.source_type,
+            dailyServings: Number(row.daily_servings),
+            intakeTime: row.intake_time ?? '',
+            imageName: product.label_image_path ?? undefined,
+            confirmed: true,
+            ingredients: (product.supplement_ingredients ?? []).map((ing: Record<string, unknown>) => ({
+              id: ing.id as string,
+              rawName: ing.raw_name as string,
+              standardName: ing.standard_name as string,
+              nutrientId: (ing.nutrient_id as string) || '',
+              amount: ing.amount === null ? null : Number(ing.amount),
+              unit: ing.unit as Unit,
+              confidence: Number(ing.confidence),
+              rawText: ing.raw_name as string,
+              reviewRequired: Boolean(ing.review_required),
+            })),
+          }
+          onSupplements(supplements.map((s) => s.id === editingId ? refreshed : s))
+        }
+      }
+
       setEditMessage('수정이 완료되었습니다.')
       setEditingId(null)
     } catch (error) {
