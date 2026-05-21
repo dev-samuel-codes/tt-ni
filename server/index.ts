@@ -10,7 +10,7 @@ import { pool, ensureUser, id } from './db.js'
 import { firebaseAuth } from './firebaseAdmin.js'
 import { openaiChat } from './openai.js'
 import { consumeExternalApiQuota, DAILY_EXTERNAL_API_LIMIT_MESSAGE } from './rateLimit.js'
-import { mapExaSearchResults } from './exaSearch.js'
+import { mapExaSearchResults, refineProductNamesWithComet } from './exaSearch.js'
 import { nutrients } from '../src/features/nutrition/nutritionData.js'
 import { runAnalysis } from '../src/features/analysis/analysisEngine.js'
 import { generateSchedule } from '../src/features/schedule/scheduleEngine.js'
@@ -570,7 +570,13 @@ app.post('/api/exa-search', asyncRoute(async (req, res) => {
   })
   if (!response.ok) throw new Error(`Exa API 요청에 실패했습니다: ${await response.text()}`)
   const payload = await response.json() as { results?: Array<{ title?: string; url?: string; text?: string | string[] }> }
-  res.json({ products: mapExaSearchResults(payload.results) })
+  const products = mapExaSearchResults(payload.results)
+  try {
+    res.json({ products: await refineProductNamesWithComet(query, products) })
+  } catch (error) {
+    console.warn('Comet product name cleanup failed:', error)
+    res.json({ products })
+  }
 }))
 
 function buildSystemPrompt(context: Record<string, unknown>): string {

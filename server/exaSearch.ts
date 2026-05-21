@@ -1,7 +1,20 @@
+import { cometChat } from './openai.js'
+
 type ExaResult = {
   title?: string
   url?: string
   text?: string | string[]
+}
+
+export type ExaSearchProduct = {
+  name: string
+  brand: string
+  ingredients: Array<{ name: string; amount: number; unit: string }>
+  sourceUrl: string
+}
+
+type ChatCompletion = {
+  choices?: Array<{ message?: { content?: string | null } }>
 }
 
 const nutrientPatterns = [
@@ -69,4 +82,71 @@ export function mapExaSearchResults(results: ExaResult[] = []) {
       sourceUrl: result.url ?? '',
     }))
     .filter((product) => product.name && product.ingredients.length > 0)
+}
+
+function parseJsonObject(content: string): unknown {
+  try {
+    return JSON.parse(content)
+  } catch {
+    const match = content.match(/\{[\s\S]*\}/)
+    if (!match) return undefined
+    try {
+      return JSON.parse(match[0])
+    } catch {
+      return undefined
+    }
+  }
+}
+
+export function refinedNameMap(content: string): Map<number, string> {
+  const parsed = parseJsonObject(content) as { products?: Array<{ index?: unknown; name?: unknown }> } | undefined
+  const names = new Map<number, string>()
+  for (const product of parsed?.products ?? []) {
+    const index = Number(product.index)
+    const name = typeof product.name === 'string' ? product.name.trim() : ''
+    if (Number.isInteger(index) && name) names.set(index, name)
+  }
+  return names
+}
+
+export async function refineProductNamesWithComet(
+  query: string,
+  products: ExaSearchProduct[],
+  chatCompletion: typeof cometChat = cometChat,
+): Promise<ExaSearchProduct[]> {
+  if (products.length === 0) return products
+  const response = await chatCompletion({
+    model: process.env.COMETAPI_MODEL ?? process.env.OPENAI_MODEL ?? process.env.OPENAI_CHAT_MODEL ?? 'gpt-5-mini',
+    temperature: 0,
+    response_format: { type: 'json_object' },
+    messages: [
+      {
+        role: 'system',
+        content: [
+          'You clean dietary supplement product names for a Korean supplement tracking app.',
+          'Return JSON only with shape {"products":[{"index":0,"name":"clean product name"}]}.',
+          'Preserve the actual product identity. Remove marketplace names, page labels, SEO suffixes, duplicated words, and irrelevant dosage facts.',
+          'Do not invent brand names or ingredients. If uncertain, return the original product name cleaned only lightly.',
+        ].join(' '),
+      },
+      {
+        role: 'user',
+        content: JSON.stringify({
+          query,
+          products: products.map((product, index) => ({
+            index,
+            name: product.name,
+            sourceUrl: product.sourceUrl,
+            ingredients: product.ingredients.map((ingredient) => ingredient.name),
+          })),
+        }),
+      },
+    ],
+  })
+  const payload = await response.json() as ChatCompletion
+  const names = refinedNameMap(payload.choices?.[0]?.message?.content ?? '')
+  return products.map((product, index) => ({
+    ...product,
+    name: names.get(index) ?? product.name,
+  }))
 }
