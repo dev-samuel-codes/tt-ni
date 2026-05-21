@@ -50,7 +50,7 @@ export function Dashboard({
         const name = data.user.user_metadata?.name || data.user.email?.split('@')[0] || '사용자'
         setUserName(name)
       }
-    }).catch(() => {})
+    }).catch((err) => console.warn('Failed to load user name:', err))
   }, [])
 
   useEffect(() => {

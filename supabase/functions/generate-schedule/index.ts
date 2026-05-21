@@ -1,6 +1,7 @@
 import '@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders, getCorsHeaders, jsonResponse } from '../_shared/cors.ts'
+import { getServiceKey } from '../_shared/serviceKey.ts'
 
 interface Profile {
   gender: string
@@ -186,8 +187,6 @@ function hasGIissues(conditions: string[]): boolean {
 // ---------------------------------------------------------------------------
 // 보충제별 최적 시간대 결정
 // ---------------------------------------------------------------------------
-
-type TimeCategory = 'empty_stomach' | 'after_meal' | 'evening'
 
 function categorizeSupplement(supplement: Supplement, hasGI: boolean, timings: Map<string, TimeCategory>): TimeCategory {
   const nutrientIds = supplement.ingredients.map((ing) => ing.nutrientId)
@@ -448,23 +447,6 @@ function generateSlotWarnings(
     tips: [...new Set(tips)],
     warnings: [...new Set(warnings)],
   }
-}
-
-// ---------------------------------------------------------------------------
-// 인증 유틸
-// ---------------------------------------------------------------------------
-
-function getServiceKey(): string {
-  const projectKey = Deno.env.get('TT_NI_SERVICE_ROLE_KEY')
-  if (projectKey) return projectKey
-  const legacy = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-  if (legacy) return legacy
-  const secrets = Deno.env.get('SUPABASE_SECRET_KEYS')
-  if (!secrets) throw new Error('TT_NI_SERVICE_ROLE_KEY, SUPABASE_SERVICE_ROLE_KEY, or SUPABASE_SECRET_KEYS is required')
-  const parsed = JSON.parse(secrets) as Record<string, string>
-  const first = Object.values(parsed)[0]
-  if (!first) throw new Error('No Supabase secret key was found')
-  return first
 }
 
 // ---------------------------------------------------------------------------

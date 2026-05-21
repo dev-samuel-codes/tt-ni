@@ -1,6 +1,7 @@
 import '@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders, getCorsHeaders, jsonResponse } from '../_shared/cors.ts'
+import { getServiceKey } from '../_shared/serviceKey.ts'
 
 interface Ingredient {
   nutrientId: string
@@ -86,8 +87,8 @@ async function loadReferences(supabase: ReturnType<typeof createClient>): Promis
     { nutrientId: 'vitamin_a', gender: 'female', ageMin: 19, ageMax: 150, target: 700, ul: 3000, unit: 'mcg' },
     { nutrientId: 'vitamin_b1', gender: 'male', ageMin: 19, ageMax: 150, target: 1.2, unit: 'mg' },
     { nutrientId: 'vitamin_b1', gender: 'female', ageMin: 19, ageMax: 150, target: 1.1, unit: 'mg' },
-    { nutrientId: 'vitamin_b6', gender: 'any', ageMin: 19, ageMax: 64, target: 1.3, ul: 100, unit: 'mg' },
-    { nutrientId: 'vitamin_b6', gender: 'any', ageMin: 65, ageMax: 150, target: 1.5, ul: 100, unit: 'mg' },
+    { nutrientId: 'vitamin_b6', gender: 'any', ageMin: 19, ageMax: 50, target: 1.3, ul: 100, unit: 'mg' },
+    { nutrientId: 'vitamin_b6', gender: 'any', ageMin: 51, ageMax: 150, target: 1.5, ul: 100, unit: 'mg' },
     { nutrientId: 'vitamin_b12', gender: 'any', ageMin: 19, ageMax: 150, target: 2.4, unit: 'mcg' },
     { nutrientId: 'vitamin_c', gender: 'male', ageMin: 19, ageMax: 150, target: 90, ul: 2000, unit: 'mg' },
     { nutrientId: 'vitamin_c', gender: 'female', ageMin: 19, ageMax: 150, target: 75, ul: 2000, unit: 'mg' },
@@ -98,8 +99,8 @@ async function loadReferences(supabase: ReturnType<typeof createClient>): Promis
     { nutrientId: 'vitamin_k', gender: 'female', ageMin: 19, ageMax: 150, target: 90, unit: 'mcg' },
     { nutrientId: 'calcium', gender: 'any', ageMin: 19, ageMax: 50, target: 1000, ul: 2500, unit: 'mg' },
     { nutrientId: 'calcium', gender: 'any', ageMin: 51, ageMax: 150, target: 1200, ul: 2000, unit: 'mg' },
-    { nutrientId: 'magnesium', gender: 'male', ageMin: 19, ageMax: 150, target: 420, ul: 350, unit: 'mg' },
-    { nutrientId: 'magnesium', gender: 'female', ageMin: 19, ageMax: 150, target: 320, ul: 350, unit: 'mg' },
+    { nutrientId: 'magnesium', gender: 'male', ageMin: 19, ageMax: 150, target: 420, ul: 3500, unit: 'mg' },
+    { nutrientId: 'magnesium', gender: 'female', ageMin: 19, ageMax: 150, target: 320, ul: 3500, unit: 'mg' },
     { nutrientId: 'zinc', gender: 'male', ageMin: 19, ageMax: 150, target: 11, ul: 40, unit: 'mg' },
     { nutrientId: 'zinc', gender: 'female', ageMin: 19, ageMax: 150, target: 8, ul: 40, unit: 'mg' },
     { nutrientId: 'iron', gender: 'male', ageMin: 19, ageMax: 150, target: 8, ul: 45, unit: 'mg' },
@@ -231,19 +232,6 @@ async function loadAntagonismGroups(supabase: ReturnType<typeof createClient>) {
       nutrients: r.nutrient_ids, label: r.label, reason: r.reason, minIntervalHours: r.min_interval_hours, severity: r.severity as 'caution' | 'high',
     }))
   } catch { return fallback }
-}
-
-function getServiceKey(): string {
-  const projectKey = Deno.env.get('TT_NI_SERVICE_ROLE_KEY')
-  if (projectKey) return projectKey
-  const legacy = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-  if (legacy) return legacy
-  const secrets = Deno.env.get('SUPABASE_SECRET_KEYS')
-  if (!secrets) throw new Error('TT_NI_SERVICE_ROLE_KEY, SUPABASE_SERVICE_ROLE_KEY, or SUPABASE_SECRET_KEYS is required')
-  const parsed = JSON.parse(secrets) as Record<string, string>
-  const first = Object.values(parsed)[0]
-  if (!first) throw new Error('No Supabase secret key was found')
-  return first
 }
 
 /** 영양소 단위 변환 (프론트엔드 convertAmount와 동일 로직) */

@@ -24,7 +24,7 @@ const defaultProfile: Profile = {
   gender: 'female', birthYear: 1998, heightCm: 165, weightKg: 55,
   pregnancyStatus: 'none', lactationStatus: false,
   conditions: [], allergies: [], dietaryRestrictions: [],
-  consentAccepted: true,
+  consentAccepted: false,
 }
 
 /**

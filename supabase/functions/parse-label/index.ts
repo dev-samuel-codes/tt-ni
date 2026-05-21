@@ -1,6 +1,7 @@
 import '@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders, getCorsHeaders, jsonResponse } from '../_shared/cors.ts'
+import { getServiceKey } from '../_shared/serviceKey.ts'
 
 type Unit = 'mg' | 'mcg' | 'IU' | 'g' | 'CFU' | 'unknown'
 
@@ -104,23 +105,6 @@ function normalizeNutrient(aliases: NutrientAliasEntry[], name: string): { id: s
   )
   if (!nutrient) return { id: normalized.replaceAll(/\s+/g, '_'), name, matched: false }
   return { id: nutrient.id, name: nutrient.name, matched: true }
-}
-
-/**
- * Supabase Service Role Key를 환경변수에서 가져옵니다.
- * 우선순위: TT_NI_SERVICE_ROLE_KEY > SUPABASE_SERVICE_ROLE_KEY > SUPABASE_SECRET_KEYS
- */
-function getServiceKey(): string {
-  const projectKey = Deno.env.get('TT_NI_SERVICE_ROLE_KEY')
-  if (projectKey) return projectKey
-  const legacy = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-  if (legacy) return legacy
-  const secrets = Deno.env.get('SUPABASE_SECRET_KEYS')
-  if (!secrets) throw new Error('TT_NI_SERVICE_ROLE_KEY, SUPABASE_SERVICE_ROLE_KEY, or SUPABASE_SECRET_KEYS is required')
-  const parsed = JSON.parse(secrets) as Record<string, string>
-  const first = Object.values(parsed)[0]
-  if (!first) throw new Error('No Supabase secret key was found')
-  return first
 }
 
 /** OpenAI Responses API 출력에서 구조화된 텍스트를 추출합니다. */

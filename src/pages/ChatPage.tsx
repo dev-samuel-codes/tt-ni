@@ -179,7 +179,7 @@ export function ChatPage() {
 
     // AI 개인화 컨텍스트 데이터 수집
     let chatContext: Record<string, unknown> = {
-      profile: { gender: 'female', birthYear: 1998, conditions: [], medications: [] },
+      profile: { conditions: [], medications: [] },
       supplements: [],
     }
 
@@ -208,8 +208,8 @@ export function ChatPage() {
 
         chatContext = {
           profile: {
-            gender: profileData?.gender || 'female',
-            birthYear: profileData?.birth_year || 1998,
+            gender: profileData?.gender,
+            birthYear: profileData?.birth_year,
             conditions: conditions
               .filter((item) => !item.condition_code.startsWith('allergy:') && !item.condition_code.startsWith('diet:'))
               .map((item) => item.condition_name),
