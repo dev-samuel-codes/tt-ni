@@ -19,6 +19,8 @@ export interface Profile {
   allergies: string[]
   dietaryRestrictions: string[]
   consentAccepted: boolean
+  wakeTime?: string
+  mealTimes?: string[]
 }
 
 /** 사용자 복용 약물 */

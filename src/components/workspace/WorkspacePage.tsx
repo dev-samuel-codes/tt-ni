@@ -370,6 +370,54 @@ export function ProfileAndMedication({
           <label className="check-row">
             <input type="checkbox" checked={profile.lactationStatus} onChange={(e) => onProfile({ ...profile, lactationStatus: e.target.checked })} />수유 중
           </label>
+          <div className="full" style={{ borderTop: '1px solid #e1e8e5', paddingTop: '20px', marginTop: '10px' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#173c3c', margin: '0 0 12px 0' }}>선호 복용 시간대 설정</h3>
+            <p style={{ color: '#52605b', fontSize: '13px', margin: '0 0 16px 0', lineHeight: 1.4 }}>
+              설정하신 기상 및 식사 시간을 바탕으로 오늘의 복용 타임라인 스케줄이 자동으로 계산됩니다.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '16px' }}>
+              <label>기상 시간
+                <input 
+                  type="time" 
+                  value={profile.wakeTime || '08:00'} 
+                  onChange={(e) => onProfile({ ...profile, wakeTime: e.target.value })} 
+                />
+              </label>
+              <label>아침 식사 시간
+                <input 
+                  type="time" 
+                  value={profile.mealTimes?.[0] || '09:00'} 
+                  onChange={(e) => {
+                    const meals = [...(profile.mealTimes || ['09:00', '13:00', '19:00'])]
+                    meals[0] = e.target.value
+                    onProfile({ ...profile, mealTimes: meals })
+                  }} 
+                />
+              </label>
+              <label>점심 식사 시간
+                <input 
+                  type="time" 
+                  value={profile.mealTimes?.[1] || '13:00'} 
+                  onChange={(e) => {
+                    const meals = [...(profile.mealTimes || ['09:00', '13:00', '19:00'])]
+                    meals[1] = e.target.value
+                    onProfile({ ...profile, mealTimes: meals })
+                  }} 
+                />
+              </label>
+              <label>저녁 식사 시간
+                <input 
+                  type="time" 
+                  value={profile.mealTimes?.[2] || '19:00'} 
+                  onChange={(e) => {
+                    const meals = [...(profile.mealTimes || ['09:00', '13:00', '19:00'])]
+                    meals[2] = e.target.value
+                    onProfile({ ...profile, mealTimes: meals })
+                  }} 
+                />
+              </label>
+            </div>
+          </div>
           <label className="full">기저질환
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
               {['고혈압', '당뇨', '고지혈증', '신장질환', '갑상선질환', '골다공증', '간질환', '빈혈', '심부정맥', '천식', '관절염', '우울증', '불면증', '위궤양', '통풍'].map((c) => {

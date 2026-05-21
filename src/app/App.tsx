@@ -24,6 +24,8 @@ const DEFAULT_PROFILE: Profile = {
   pregnancyStatus: 'none', lactationStatus: false,
   conditions: [], allergies: [], dietaryRestrictions: [],
   consentAccepted: false,
+  wakeTime: '08:00',
+  mealTimes: ['09:00', '13:00', '19:00'],
 }
 
 /**

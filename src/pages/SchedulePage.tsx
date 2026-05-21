@@ -45,8 +45,8 @@ export function SchedulePage({
       memo: m.memo || ''
     }))
     const requestPreferences = {
-      wakeTime: '08:00',
-      mealTimes: ['09:00', '13:00', '19:00']
+      wakeTime: profile?.wakeTime || '08:00',
+      mealTimes: profile?.mealTimes || ['09:00', '13:00', '19:00']
     }
 
     return generateSchedule({
