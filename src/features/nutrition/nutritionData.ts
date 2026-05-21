@@ -1,4 +1,4 @@
-import type { InteractionRule, Nutrient, ReferenceValue } from '../../types'
+import type { InteractionRule, Nutrient, ReferenceValue } from '../../types/index.js'
 
 /**
  * 지원 영양소 데이터베이스

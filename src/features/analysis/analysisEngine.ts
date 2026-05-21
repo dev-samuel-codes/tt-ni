@@ -2,7 +2,7 @@ import {
   interactionRules,
   nutrients,
   referenceValues,
-} from '../nutrition/nutritionData'
+} from '../nutrition/nutritionData.js'
 import type {
   AnalysisReport,
   Medication,
@@ -12,7 +12,7 @@ import type {
   RiskStatus,
   SupplementProduct,
   Unit,
-} from '../../types'
+} from '../../types/index.js'
 
 /**
  * 시너지 그룹

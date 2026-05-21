@@ -1,8 +1,8 @@
-import './env'
+import './env.js'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { pool } from './db'
+import { pool } from './db.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const schemaPath = path.join(__dirname, 'schema.sql')
