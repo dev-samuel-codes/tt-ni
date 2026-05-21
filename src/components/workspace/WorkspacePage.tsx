@@ -9,6 +9,7 @@ import { statusLabel } from '../../features/analysis/analysisEngine'
 import { createId, getStatusTone, splitList } from '../../lib/utils'
 import { saveProfileBundle } from '../../features/profile/profileService'
 import { createManualIngredient, parseLabelImage, saveSupplementProduct, updateSupplementProduct, batchUpdateSupplementIngredients, deleteSupplementProduct, refineIngredients } from '../../features/supplements/supplementService'
+import { mapSearchIngredientToParsed, type SearchIngredientInput } from '../../features/supplements/searchResultMapper'
 import { apiRequest } from '../../lib/apiClient'
 import { MetricCard } from './Shared'
 
@@ -487,7 +488,7 @@ export function SupplementWorkspace({
     productName.trim().length > 0 && Number.isFinite(dailyServings) && dailyServings > 0 &&
     draftIngredients.length > 0 &&
     draftIngredients.every((ingredient) =>
-      ingredient.standardName.trim().length > 0 &&
+      (ingredient.standardName ?? '').trim().length > 0 &&
       ingredient.amount !== null && Number.isFinite(ingredient.amount) && ingredient.amount >= 0 &&
       ingredient.unit !== 'unknown',
     )
@@ -638,7 +639,7 @@ export function SupplementWorkspace({
         products?: Array<{
           name?: string
           brand?: string
-          ingredients?: ParsedIngredient[]
+          ingredients?: SearchIngredientInput[]
         }>
       }>('/api/exa-search', {
         method: 'POST',
@@ -651,12 +652,7 @@ export function SupplementWorkspace({
       }
       setProductName(product.name || searchQuery)
       setBrandName(product.brand || '')
-      setDraftIngredients(product.ingredients.map((ing: ParsedIngredient & { id?: string }) => ({
-        ...ing,
-        id: ing.id || createId('ing'),
-        confidence: ing.confidence ?? 0.7,
-        reviewRequired: ing.reviewRequired ?? true,
-      })))
+      setDraftIngredients(product.ingredients.map((ing) => mapSearchIngredientToParsed(ing)))
     } catch (error) {
       setParseWarnings([error instanceof Error ? error.message : '검색 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'])
     } finally {
