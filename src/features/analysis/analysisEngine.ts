@@ -159,11 +159,103 @@ export function findReferenceValue(profile: Profile, nutrientId: string): Refere
  * - normal: 위 조건에 해당하지 않음
  * - review: 기준 데이터 부재
  */
-function summarizeStatus(total: number, reference?: ReferenceValue): { status: RiskStatus; message: string; percentOfTarget?: number; percentOfUl?: number } {
+interface NutrientGuide {
+  role: string
+  deficientGuide: string
+  excessGuide: string
+  normalGuide: string
+}
+
+const NUTRIENT_GUIDES: Record<string, NutrientGuide> = {
+  vitamin_a: {
+    role: '시각 기능 유지, 상피 세포 건강 및 면역 반응에 핵심적인 지용성 비타민입니다.',
+    deficientGuide: '야맹증, 안구 건조증, 피부 건조 및 면역 기능 약화가 생길 수 있습니다. 당근, 시금치 같은 녹황색 채소 섭취를 늘려보세요.',
+    excessGuide: '지용성 비타민으로 체내에 축적되어 두통, 피로감, 구토 및 고칼슘혈증이나 간 손상을 유발할 수 있어 즉각적인 감량이 권장됩니다.',
+    normalGuide: '눈 건강과 상피 세포 보호를 위해 아주 이상적인 수준으로 잘 섭취하고 계십니다.'
+  },
+  vitamin_b1: {
+    role: '탄수화물과 에너지 대사에 관여하여 피로 물질 축적을 방지하는 수용성 비타민입니다.',
+    deficientGuide: '에너지 생성 저하로 만성 피로, 무기력증, 소화 불량이 발생할 수 있으며 심하면 각기병으로 이어질 수 있습니다. 돼지고기나 통곡물을 병행 섭취해 보세요.',
+    excessGuide: '수용성 비타민으로 필요 이상 흡수 시 대부분 소변으로 배출되어 안전한 편이나, 과도한 고함량 복용은 피하는 것이 좋습니다.',
+    normalGuide: '원활한 체내 에너지 대사와 피로 회복을 위해 충분한 섭취 상태를 유지하고 계십니다.'
+  },
+  vitamin_b6: {
+    role: '단백질 및 아미노산 대사, 적혈구의 헤모글로빈 합성에 관여하는 조효소 비타민입니다.',
+    deficientGuide: '피부염, 구순염, 설염이 나타날 수 있으며 신경전달물질 합성 저하로 불면이나 우울감이 올 수 있습니다. 바나나, 닭고기에 풍부합니다.',
+    excessGuide: '장기적인 과다 섭취 시 가역적인 말초 신경 장애나 감각 이상을 유발할 수 있으므로, 하루 복용량을 확인해 보세요.',
+    normalGuide: '단백질 대사와 신경 기능 안정을 위해 안정적인 권장 수준을 복용 중이십니다.'
+  },
+  vitamin_b12: {
+    role: '엽산 대사, 신경세포의 유지, 뇌 기능 활성화 및 적혈구 생성에 필수적인 비타민입니다.',
+    deficientGuide: '피로감, 기억력 감퇴, 말초 신경 장애 및 악성 빈혈의 발병 위험이 높습니다. 채식주의자의 경우 특히 부족하기 쉬우니 유의하세요.',
+    excessGuide: '독성이 매우 낮아 과다 복용 시에도 대부분 안전하게 배출되나 과한 보충은 무의미합니다.',
+    normalGuide: '신경 건강 유지와 건강한 적혈구 생성을 위해 훌륭한 수준으로 잘 섭취하고 계십니다.'
+  },
+  vitamin_c: {
+    role: '강력한 항산화 작용으로 세포를 보호하고 콜라겐 합성을 도우며, 면역력을 높여주는 비타민입니다.',
+    deficientGuide: '만성 피로, 상처 치유 지연, 잇몸 출혈 및 면역력 약화가 일어날 수 있습니다. 신선한 과일과 채소 복용량을 늘려주세요.',
+    excessGuide: '수용성이라 안전한 편이나, 상한섭취량 초과 복용 시 위산 과다로 인한 속쓰림, 설사, 수산 칼슘 결석 위험이 증가하므로 감량을 권장합니다.',
+    normalGuide: '우수한 항산화 방어벽 유지와 면역 케어를 위해 충분한 용량을 복용하고 계십니다.'
+  },
+  vitamin_d: {
+    role: '칼슘과 인의 흡수를 도와 뼈의 형성 및 유지에 필수적이며, 면역 조절에 기여하는 지용성 호르몬성 비타민입니다.',
+    deficientGuide: '골밀도 감소로 골다공증, 골연화증 위험이 증가하고 만성 피로와 면역력 저하가 올 수 있습니다. 적절한 일광욕을 병행하면 흡수에 더욱 좋습니다.',
+    excessGuide: '지용성으로 체내 축적 시 고칼슘혈증, 고칼슘뇨증을 유발하고 혈관이나 신장의 석회화를 초래할 수 있어 상한치 이하로 복용량을 제한해야 합니다.',
+    normalGuide: '뼈 건강 증진과 골밀도 보존 및 면역 균형을 위해 매우 적절하고 안전한 수준을 섭취 중이십니다.'
+  },
+  vitamin_e: {
+    role: '세포막의 불포화지방산 산화를 방지하여 노화를 지연시키고 심혈관 건강을 돕는 강력한 항산화제입니다.',
+    deficientGuide: '적혈구 용혈 현상, 신경근육 장애 및 활성산소로 인한 세포 손상이 가속화될 수 있습니다. 견과류, 식물성 기름에 많이 들어있습니다.',
+    excessGuide: '고용량 장기 복용 시 비타민 K 작용을 간섭하여 출혈 성향(혈액 응고 지연)을 높이고 뇌졸중 위험을 증가시킬 수 있어 주의가 요구됩니다.',
+    normalGuide: '활성산소로부터 세포막을 효과적으로 보호하는 수준의 우수한 항산화 상태를 유지하고 계십니다.'
+  },
+  vitamin_k: {
+    role: '혈액 응고 정상화와 칼슘을 뼈에 결합시켜 골다공증 예방에 기여하는 지용성 비타민입니다.',
+    deficientGuide: '상처 시 피가 잘 멈추지 않고 잇몸 출혈, 멍이 쉽게 들며 뼈가 약해질 수 있습니다. 낫또나 시금치 같은 녹색 잎채소 섭취를 고려해 보세요.',
+    excessGuide: '와파린 등 항응고제를 복용 중인 경우 약효를 전면 방해할 수 있으므로, 섭취량 변동 시 반드시 의사와 상담해야 합니다.',
+    normalGuide: '정상적인 혈류 순환 및 뼈 기질 칼슘 정착을 돕기 위해 잘 복용하고 계십니다.'
+  },
+  calcium: {
+    role: '뼈와 치아의 주성분이며 신경 전달, 근육 수축, 혈액 응고에 핵심적인 역할을 담당하는 필수 미네랄입니다.',
+    deficientGuide: '체내 골밀도가 감소하여 골다공증, 골연화증, 근육 경련(눈 떨림 등)이 생기기 쉽습니다. 흡수 촉진을 위해 비타민 D와 병용을 권장합니다.',
+    excessGuide: '과다 복용 시 변비, 신장 결석, 혈관 석회화 및 철분이나 아연 등 다른 미네랄의 체내 흡수를 크게 방해하므로 상한섭취량 이하로 낮추어야 합니다.',
+    normalGuide: '튼튼한 골격 유지와 신경 근육 기능 제어를 위해 아주 훌륭한 수준으로 잘 보충하고 계십니다.'
+  },
+  magnesium: {
+    role: '체내 300가지 이상의 효소 작용을 돕고 신경 및 근육 기능 유지와 에너지 생성에 필수적인 미네랄입니다.',
+    deficientGuide: '근육 경련(눈밑 떨림), 불면증, 불안감, 만성 피로와 부정맥이 올 수 있습니다. 바나나, 아보카도, 아몬드 섭취가 도움을 줄 수 있습니다.',
+    excessGuide: '보충제 형태로 과다 섭취 시 설사, 복통 등 위장 장애를 유발하기 매우 쉬우며 심한 경우 저혈압이 올 수 있으므로 복용량을 낮춰주세요.',
+    normalGuide: '스트레스 완화, 신경 안정 및 근육 이완을 돕는 매우 편안하고 적절한 섭취 상태입니다.'
+  },
+  iron: {
+    role: '헤모글로빈과 미오글로빈의 핵심 구성 요소로 전신 세포에 산소를 공급해주는 필수 미네랄입니다.',
+    deficientGuide: '전신 산소 공급 부족으로 철 결핍성 빈혈, 극심한 피로, 두통, 창백한 안색이 발생할 수 있습니다. 비타민 C와 복용 시 흡수율이 높아집니다.',
+    excessGuide: '간 및 장기에 과도하게 축적되어 장기 손상을 유발하고 위장 장애(흑변, 변비)를 초래할 수 있으므로 권장량 수준으로의 즉시 제한이 필요합니다.',
+    normalGuide: '활력 넘치는 세포 내 산소 전달과 빈혈 예방을 위해 안정적인 수준을 유지하고 계십니다.'
+  },
+  zinc: {
+    role: 'DNA 합성, 세포 분열, 상처 치유 및 정상적인 면역 기능 작동에 기여하는 필수 미네랄입니다.',
+    deficientGuide: '면역력 약화로 감기에 자주 걸리며 상처 회복 지연, 미각 이상, 원형 탈모가 발생할 수 있습니다. 굴, 육류 섭취가 도움을 줍니다.',
+    excessGuide: '만성적인 과잉 섭취 시 구리 결핍증을 일으키고 면역 기능을 오히려 저하시키며 고콜레스테롤혈증을 촉진할 수 있으므로 상량을 조절해야 합니다.',
+    normalGuide: '활발한 세포 분열 및 정상적인 면역력 유지를 위해 든든한 섭취 기준을 충족하고 계십니다.'
+  },
+  omega3: {
+    role: '혈중 중성지질 개선, 혈행 원활화, 안구 건조 완화 및 기억력 개선에 유익한 필수 지방산입니다.',
+    deficientGuide: '피부 건조, 눈 피로, 혈류 흐름 둔화 및 심혈관계 만성 염증 상태가 심화될 수 있습니다. 등푸른생선 섭취를 늘려보세요.',
+    excessGuide: '고용량 섭취 시 피가 묽어져 지혈 지연을 유발할 수 있으므로, 아스피린/와파린 같은 항응고제 복용자는 주의 깊게 모니터링해야 합니다.',
+    normalGuide: '혈관 탄성 유지, 혈류 촉진 및 뇌 기능 활성화를 위해 이상적으로 섭취하고 계십니다.'
+  }
+}
+
+function summarizeStatus(
+  nutrientId: string,
+  total: number,
+  reference?: ReferenceValue
+): { status: RiskStatus; message: string; percentOfTarget?: number; percentOfUl?: number } {
   if (!reference) {
     return {
       status: 'review',
-      message: '기준 데이터가 아직 없어 직접 확인이 필요합니다.',
+      message: '기준 데이터가 아직 없어 직접 확인이 필요합니다. 제품 라벨 정보를 기반으로 직접 점검해 주세요.',
     }
   }
 
@@ -171,36 +263,48 @@ function summarizeStatus(total: number, reference?: ReferenceValue): { status: R
   const percentOfTarget = target ? Math.round((total / target) * 100) : undefined
   const percentOfUl = reference.ul ? Math.round((total / reference.ul) * 100) : undefined
 
+  const guide = NUTRIENT_GUIDES[nutrientId]
+
+  let status: RiskStatus = 'normal'
+  let msg = ''
+
   if (reference.ul && total > reference.ul) {
-    return {
-      status: 'excess',
-      message: '상한 섭취량을 초과했습니다. 제품 복용량을 바꾸기 전 전문가와 상담하세요.',
-      percentOfTarget,
-      percentOfUl,
+    status = 'excess'
+    msg = `[초과 위험] 1일 섭취량(${total}${reference.unit})이 안전 상한선(${reference.ul}${reference.unit})을 초과했습니다.`
+    if (guide) {
+      msg += ` ${guide.role} ${guide.excessGuide}`
+    } else {
+      msg += ` 과도한 장기 섭취는 체내 장기 손상 등 심각한 부작용을 일으킬 수 있어 즉시 전문가 상담 및 감량이 강력히 권장됩니다.`
     }
-  }
-
-  if (reference.ul && total >= reference.ul * 0.8) {
-    return {
-      status: 'caution',
-      message: '상한 섭취량에 가까워 중복 제품과 복용량 확인이 필요합니다.',
-      percentOfTarget,
-      percentOfUl,
+  } else if (reference.ul && total >= reference.ul * 0.8) {
+    status = 'caution'
+    msg = `[과다 주의] 1일 섭취량(${total}${reference.unit})이 상한섭취량(${reference.ul}${reference.unit})에 80% 이상 접근했습니다.`
+    if (guide) {
+      msg += ` ${guide.role} ${guide.excessGuide}`
+    } else {
+      msg += ` 중복 제품의 섭취량을 검토하거나 감량을 고려하여 부작용을 미연에 방지할 필요가 있습니다.`
     }
-  }
-
-  if (target && total < target * 0.7) {
-    return {
-      status: 'deficient',
-      message: '등록된 영양제 기준으로는 기준량보다 낮습니다. 식사 섭취까지 함께 확인하세요.',
-      percentOfTarget,
-      percentOfUl,
+  } else if (target && total < target * 0.7) {
+    status = 'deficient'
+    msg = `[부족 가능] 1일 섭취량(${total}${reference.unit})이 일일 권장치(${target}${reference.unit})의 70% 미만으로 크게 부족합니다.`
+    if (guide) {
+      msg += ` ${guide.role} ${guide.deficientGuide}`
+    } else {
+      msg += ` 지속적인 결핍 상태는 신체 기능 저하를 초래할 수 있으므로, 일상 식사 균형을 점검하거나 보충제 복용 조정을 권장합니다.`
+    }
+  } else {
+    status = 'normal'
+    msg = `[섭취 적정] 권장량 대비 적절한 섭취 상태를 안전하게 잘 유지 중입니다.`
+    if (guide) {
+      msg += ` ${guide.role} ${guide.normalGuide}`
+    } else {
+      msg += ` 현재 용량으로 꾸준히 섭취하시어 활력 있는 일상을 누리시기를 권장합니다.`
     }
   }
 
   return {
-    status: 'normal',
-    message: '현재 등록된 영양제 기준으로 큰 중복 신호가 없습니다.',
+    status,
+    message: msg,
     percentOfTarget,
     percentOfUl,
   }
@@ -270,7 +374,7 @@ export function runAnalysis(profile: Profile, medications: Medication[], supplem
   })
 
   const totals = Array.from(totalsByNutrient.values()).map((total) => {
-    const summary = summarizeStatus(total.totalAmount, total.reference)
+    const summary = summarizeStatus(total.nutrientId, total.totalAmount, total.reference)
     return { ...total, ...summary }
   })
 

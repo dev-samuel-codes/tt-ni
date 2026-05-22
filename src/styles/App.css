@@ -3139,3 +3139,37 @@ textarea:focus {
     padding: 16px !important;
   }
 }
+
+/* ==========================================
+   영양소 시너지 효과 & 보충 추천 프리미엄 스타일
+   ========================================== */
+.synergy-panel {
+  animation: fade-in-up 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.synergy-card {
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+  cursor: pointer;
+}
+
+.synergy-card:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: 0 12px 30px rgba(24, 174, 144, 0.08) !important;
+}
+
+.synergy-card.full-match:hover {
+  border-color: #18ae90 !important;
+  background: #f0fdfa !important;
+}
+
+.synergy-card.partial-match:hover {
+  border-color: #bad3c8 !important;
+  background: #fcfdfe !important;
+}
+
+@media (max-width: 768px) {
+  .synergy-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+

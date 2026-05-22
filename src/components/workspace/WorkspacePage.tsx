@@ -1114,21 +1114,59 @@ export function AnalysisResult({ report, syncMessage, onAnalyze, isLocalFallback
        ) : (
          <div className="analysis-list">
           {filteredTotals.length === 0 && <p className="muted">해당하는 성분이 없습니다.</p>}
-          {filteredTotals.map((total) => (
-            <article className={`analysis-item ${getStatusTone(total.status)}`} key={total.nutrientId}>
-              <div className="analysis-main">
-                <strong>{total.standardName}</strong>
-                <span>{Math.round(total.totalAmount * 100) / 100}{total.unit}</span>
-                <span className="status-pill">{statusLabel(total.status)}</span>
-              </div>
-              <p>{total.message}</p>
-              <div className="breakdown">
-                {total.sourceProducts.map((source) => (
-                  <span key={`${total.nutrientId}-${source.productId}`}>{source.productName}: {Math.round(source.amount * 100) / 100}{source.unit}</span>
-                ))}
-              </div>
-            </article>
-          ))}
+          {filteredTotals.map((total) => {
+            const targetVal = total.reference?.rda || total.reference?.ai
+            const percentOfTarget = total.percentOfTarget ?? 0
+            const percentOfUl = total.percentOfUl ?? 0
+            const displayPercent = Math.min(percentOfTarget, 100)
+
+            let barToneClass = 'bar-normal'
+            if (total.status === 'deficient') barToneClass = 'bar-deficient'
+            else if (total.status === 'caution') barToneClass = 'bar-caution'
+            else if (total.status === 'excess') barToneClass = 'bar-excess'
+
+            return (
+              <article className={`analysis-item ${getStatusTone(total.status)}`} key={total.nutrientId}>
+                <div className="analysis-main" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                  <strong>{total.standardName}</strong>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>{Math.round(total.totalAmount * 100) / 100}{total.unit}</span>
+                    <span className="status-pill">{statusLabel(total.status)}</span>
+                  </div>
+                </div>
+
+                {targetVal && (
+                  <div className="analysis-progress-container" style={{ margin: '12px 0 12px 0' }}>
+                    <div className="analysis-progress-labels" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#52605b', marginBottom: '6px' }}>
+                      <span style={{ fontWeight: 700 }}>권장 대비 {percentOfTarget}%</span>
+                      <span>목표: {targetVal}{total.unit}</span>
+                    </div>
+                    <div className="analysis-progress-bar-outer" style={{ height: '8px', background: '#e1e8e5', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div 
+                        className={`analysis-progress-bar-inner ${barToneClass}`} 
+                        style={{ height: '100%', width: `${displayPercent}%`, transition: 'width 0.4s ease-out' }} 
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {total.reference?.ul && (
+                  <div className="analysis-ul-info" style={{ fontSize: '12px', color: total.status === 'excess' || total.status === 'caution' ? '#c5392f' : '#697771', marginBottom: '10px', fontWeight: total.status === 'excess' ? 800 : 500 }}>
+                    상한섭취량({total.reference.ul}{total.unit}) 대비 복용 비율: {percentOfUl}%
+                  </div>
+                )}
+
+                <p style={{ marginTop: '8px', lineHeight: 1.5 }}>{total.message}</p>
+                <div className="breakdown" style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {total.sourceProducts.map((source) => (
+                    <span key={`${total.nutrientId}-${source.productId}`} style={{ background: '#fff', border: '1px solid #e1e8e5', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', color: '#52605b' }}>
+                      {source.productName}: {Math.round(source.amount * 100) / 100}{source.unit}
+                    </span>
+                  ))}
+                </div>
+              </article>
+            )
+          })}
         </div>
       )}
       <div className="recommendation-panel">
@@ -1151,6 +1189,61 @@ export function AnalysisResult({ report, syncMessage, onAnalyze, isLocalFallback
               <p>{warning.message}</p>
             </article>
           ))}
+        </div>
+      )}
+
+      {/* 영양소 시너지 효과 & 보충 추천 패널 신설 */}
+      {report.synergyRecommendations && report.synergyRecommendations.length > 0 && (
+        <div className="recommendation-panel synergy-panel" style={{ marginTop: '24px' }}>
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#173c3c' }}>
+            <Sparkles size={18} color="#18ae90" />
+            영양소 시너지 효과 & 보충 추천
+          </h3>
+          <p style={{ color: '#52605b', fontSize: '14px', marginBottom: '16px', lineHeight: 1.5 }}>
+            현재 보유하고 계신 영양제 성분의 시너지 궁합과, 추가 시너지를 낼 수 있는 최적의 보충 추천 정보입니다.
+          </p>
+          <div className="synergy-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+            {report.synergyRecommendations.map((synergy, idx) => {
+              const isFull = synergy.matchType === 'full'
+              return (
+                <article 
+                  key={idx} 
+                  className={`synergy-card ${isFull ? 'full-match' : 'partial-match'}`}
+                  style={{
+                    padding: '16px',
+                    borderRadius: '12px',
+                    border: isFull ? '1px solid #18ae90' : '1px solid #dcdfdc',
+                    background: isFull ? '#f0f9f6' : '#fff',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                    transition: 'all 0.3s ease',
+                    position: 'relative'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <strong style={{ fontSize: '15px', color: '#173c3c' }}>{synergy.label}</strong>
+                    <span 
+                      style={{ 
+                        fontSize: '11px', 
+                        padding: '3px 8px', 
+                        borderRadius: '12px', 
+                        fontWeight: 800,
+                        background: isFull ? '#e6f4f1' : '#f0f4f2',
+                        color: isFull ? '#18ae90' : '#8a9a95'
+                      }}
+                    >
+                      {isFull ? '보유 시너지 💚' : '보충 추천 💡'}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '13px', color: '#3d5550', lineHeight: 1.5, margin: '0 0 10px 0' }}>
+                    {synergy.message}
+                  </p>
+                  <div style={{ fontSize: '12px', color: '#697771', background: '#f5f7f6', padding: '8px 12px', borderRadius: '8px', borderLeft: '3px solid #18ae90' }}>
+                    <span style={{ fontWeight: 800, color: '#18ae90' }}>핵심 효능:</span> {synergy.benefit}
+                  </div>
+                </article>
+              )
+            })}
+          </div>
         </div>
       )}
     </section>
