@@ -268,4 +268,42 @@ describe('generateSchedule', () => {
     const allItems = result.flatMap((s) => s.items)
     expect(allItems.length).toBeGreaterThanOrEqual(many.length)
   })
+
+  it('generates spacing guidance for calcium and iron in different slots', () => {
+    const result = generateSchedule(makeInput({
+      supplements: [
+        makeSupplement('s1', '칼슘 제품', [{ nutrientId: 'calcium', standardName: '칼슘', amount: 500, unit: 'mg' }]),
+        makeSupplement('s2', '철분 제품', [{ nutrientId: 'iron', standardName: '철분', amount: 18, unit: 'mg' }]),
+      ],
+    }))
+
+    const calciumSlot = result.find((s) => s.items.includes('칼슘 제품'))
+    const ironSlot = result.find((s) => s.items.includes('철분 제품'))
+
+    expect(calciumSlot).toBeDefined()
+    expect(ironSlot).toBeDefined()
+    
+    // 두 슬롯 모두 경고(시간차 복용 안내)를 포함해야 함
+    expect(calciumSlot!.warnings).toBeDefined()
+    expect(calciumSlot!.warnings!.some((w) => w.includes('시간차 복용 안내') && w.includes('칼슘') && w.includes('철분'))).toBe(true)
+
+    expect(ironSlot!.warnings).toBeDefined()
+    expect(ironSlot!.warnings!.some((w) => w.includes('시간차 복용 안내') && w.includes('칼슘') && w.includes('철분'))).toBe(true)
+  })
+
+  it('generates single product antagonism collision warning when calcium and iron are in one product', () => {
+    const result = generateSchedule(makeInput({
+      supplements: [
+        makeSupplement('s1', '복합 칼슘철분제', [
+          { nutrientId: 'calcium', standardName: '칼슘', amount: 500, unit: 'mg' },
+          { nutrientId: 'iron', standardName: '철분', amount: 18, unit: 'mg' },
+        ]),
+      ],
+    }))
+
+    const combinedSlot = result.find((s) => s.items.includes('복합 칼슘철분제'))
+    expect(combinedSlot).toBeDefined()
+    expect(combinedSlot!.warnings).toBeDefined()
+    expect(combinedSlot!.warnings!.some((w) => w.includes('성분 충돌') && w.includes('칼슘 ↔ 철분'))).toBe(true)
+  })
 })

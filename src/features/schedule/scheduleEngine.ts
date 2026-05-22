@@ -306,19 +306,70 @@ function analyzeAntagonism(
 
     for (const sa of suppA) {
       for (const sb of suppB) {
-        if (sa.id === sb.id) continue
         const catA = slotAssignments.get(sa.id)
         const catB = slotAssignments.get(sb.id)
-        if (catA === catB) {
-          const ingA = sa.ingredients.find((ing) => ing.nutrientId === rule.a)!
-          const ingB = sb.ingredients.find((ing) => ing.nutrientId === rule.b)!
+        if (!catA || !catB) continue
+
+        const ingA = sa.ingredients.find((ing) => ing.nutrientId === rule.a)!
+        const ingB = sb.ingredients.find((ing) => ing.nutrientId === rule.b)!
+
+        // 1. 단일 제품 내에 두 성분이 모두 함유된 경우 (sa.id === sb.id)
+        if (sa.id === sb.id) {
           conflicts.push({
             type: 'antagonism',
             supplementId: sa.id,
-            supplementName: `${cleanProductName(sa.productName)} ↔ ${cleanProductName(sb.productName)}`,
+            supplementName: cleanProductName(sa.productName),
             nutrientId: `${rule.a}/${rule.b}`,
             nutrientName: `${ingA.standardName} ↔ ${ingB.standardName}`,
-            message: rule.reason,
+            message: `[성분 충돌 (${ingA.standardName} ↔ ${ingB.standardName})] 이 제품에는 상호 흡수를 방해하는 ${ingA.standardName}와 ${ingB.standardName}이 동시에 함유되어 있어 흡수율이 떨어질 수 있습니다.`,
+            severity: 'warning',
+          })
+          continue
+        }
+
+        // 2. 서로 다른 제품인데 같은 슬롯에 배정된 경우 (동시 복용)
+        if (catA === catB) {
+          const msg = `[동시 복용 주의 (${ingA.standardName} ↔ ${ingB.standardName})] ${cleanProductName(sa.productName)}의 ${ingA.standardName}와 ${cleanProductName(sb.productName)}의 ${ingB.standardName}은 ${rule.reason}`
+          
+          conflicts.push({
+            type: 'antagonism',
+            supplementId: sa.id,
+            supplementName: cleanProductName(sa.productName),
+            nutrientId: `${rule.a}/${rule.b}`,
+            nutrientName: `${ingA.standardName} ↔ ${ingB.standardName}`,
+            message: msg,
+            severity: 'warning',
+          })
+          conflicts.push({
+            type: 'antagonism',
+            supplementId: sb.id,
+            supplementName: cleanProductName(sb.productName),
+            nutrientId: `${rule.a}/${rule.b}`,
+            nutrientName: `${ingA.standardName} ↔ ${ingB.standardName}`,
+            message: msg,
+            severity: 'warning',
+          })
+        } 
+        // 3. 서로 다른 제품이고 다른 슬롯에 배정된 경우 (시간차 복용 - 안내 제공)
+        else {
+          const msg = `[시간차 복용 안내 (${ingA.standardName} ↔ ${ingB.standardName})] ${cleanProductName(sa.productName)}의 ${ingA.standardName}와 ${cleanProductName(sb.productName)}의 ${ingB.standardName}은 상호 흡수를 방해하므로, 안전하게 2시간 이상 간격을 두고 배치되었습니다.`
+          
+          conflicts.push({
+            type: 'antagonism',
+            supplementId: sa.id,
+            supplementName: cleanProductName(sa.productName),
+            nutrientId: `${rule.a}/${rule.b}`,
+            nutrientName: `${ingA.standardName} ↔ ${ingB.standardName}`,
+            message: msg,
+            severity: 'warning',
+          })
+          conflicts.push({
+            type: 'antagonism',
+            supplementId: sb.id,
+            supplementName: cleanProductName(sb.productName),
+            nutrientId: `${rule.a}/${rule.b}`,
+            nutrientName: `${ingA.standardName} ↔ ${ingB.standardName}`,
+            message: msg,
             severity: 'warning',
           })
         }
@@ -463,11 +514,10 @@ export function generateSchedule(input: ScheduleInput): TimeSlot[] {
     assignments.set(supplement.id, slotKey)
   }
 
-  const dniConflicts = analyzeDNI(supplements, medications, conditions)
-  const antagonismConflicts = analyzeAntagonism(supplements, assignments)
-  const allConflicts = [...dniConflicts, ...antagonismConflicts]
-
   const resolved = resolveSlotConflicts(assignments, slots, supplements, hasGI)
+  const dniConflicts = analyzeDNI(supplements, medications, conditions)
+  const antagonismConflicts = analyzeAntagonism(supplements, resolved)
+  const allConflicts = [...dniConflicts, ...antagonismConflicts]
 
   const slotItems = new Map<string, ScheduleInput['supplements']>()
   for (const supplement of supplements) {
