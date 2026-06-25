@@ -354,10 +354,10 @@ export function ProfileAndMedication({
             <input type="number" value={profile.birthYear} onChange={(e) => onProfile({ ...profile, birthYear: Number(e.target.value) })} />
           </label>
           <label>키(cm)
-            <input type="number" value={profile.heightCm ?? ''} onChange={(e) => onProfile({ ...profile, heightCm: Number(e.target.value) })} />
+            <input type="number" value={profile.heightCm ?? ''} onChange={(e) => onProfile({ ...profile, heightCm: e.target.value === '' ? undefined : Number(e.target.value) })} />
           </label>
           <label>몸무게(kg)
-            <input type="number" value={profile.weightKg ?? ''} onChange={(e) => onProfile({ ...profile, weightKg: Number(e.target.value) })} />
+            <input type="number" value={profile.weightKg ?? ''} onChange={(e) => onProfile({ ...profile, weightKg: e.target.value === '' ? undefined : Number(e.target.value) })} />
           </label>
           <label>임신/계획
             <select value={profile.pregnancyStatus} onChange={(e) => onProfile({ ...profile, pregnancyStatus: e.target.value as Profile['pregnancyStatus'] })}>
