@@ -702,10 +702,25 @@ ${JSON.stringify(context)}
 // 채팅 세션 목록 조회
 app.get('/api/chat/sessions', asyncRoute(async (req, res) => {
   const [rows] = await pool.query<RowDataPacket[]>(
-    'select id, title from app_chat_sessions where user_id = ? order by updated_at desc',
+    `select
+       cs.id,
+       cs.title,
+       count(cm.id) as message_count,
+       max(cm.created_at) as last_message_at
+     from app_chat_sessions cs
+     left join app_chat_messages cm on cm.session_id = cs.id
+     where cs.user_id = ?
+     group by cs.id, cs.title, cs.created_at, cs.updated_at
+     order by coalesce(max(cm.created_at), cs.updated_at, cs.created_at) desc`,
     [req.user.uid],
   )
-  res.json(rows.map((row) => ({ id: String(row.id), title: String(row.title), active: false })))
+  res.json(rows.map((row) => ({
+    id: String(row.id),
+    title: String(row.title),
+    messageCount: Number(row.message_count ?? 0),
+    lastMessageAt: row.last_message_at ? new Date(String(row.last_message_at)).toISOString() : null,
+    active: false,
+  })))
 }))
 
 // 새 채팅 세션 생성
@@ -725,15 +740,23 @@ app.patch('/api/chat/sessions/:id', asyncRoute(async (req, res) => {
 
 // 세션별 채팅 메시지 내역 조회
 app.get('/api/chat/sessions/:id/messages', asyncRoute(async (req, res) => {
-  const [rows] = await pool.query<RowDataPacket[]>(
-    `select cm.role, cm.content
-     from app_chat_messages cm
-     join app_chat_sessions cs on cs.id = cm.session_id
-     where cm.session_id = ? and cs.user_id = ?
-     order by cm.created_at asc`,
+  const [sessionRows] = await pool.query<RowDataPacket[]>(
+    'select id from app_chat_sessions where id = ? and user_id = ? limit 1',
     [req.params.id, req.user.uid],
   )
-  res.json(rows.map((row) => ({ role: row.role, content: row.content })))
+  if (sessionRows.length === 0) {
+    res.status(404).json({ error: '채팅 세션을 찾을 수 없습니다.' })
+    return
+  }
+
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `select role, content
+     from app_chat_messages
+     where session_id = ? and role in ('user', 'assistant')
+     order by created_at asc, id asc`,
+    [req.params.id],
+  )
+  res.json(rows.map((row) => ({ role: String(row.role), content: String(row.content) })))
 }))
 
 /**
@@ -768,6 +791,7 @@ app.post('/api/chat/completion', asyncRoute(async (req, res) => {
 
   // 사용자 메시지 저장
   await pool.execute('insert into app_chat_messages (id, session_id, role, content) values (?, ?, ?, ?)', [id('message'), sessionIdToUse, 'user', message])
+  await pool.execute('update app_chat_sessions set updated_at = current_timestamp where id = ? and user_id = ?', [sessionIdToUse, req.user.uid])
   // 최근 40개 메시지를 컨텍스트로 로드
   const [historyRows] = await pool.query<RowDataPacket[]>('select role, content from app_chat_messages where session_id = ? order by created_at asc limit 40', [sessionIdToUse])
   const messages: ChatMessage[] = [
@@ -817,6 +841,7 @@ app.post('/api/chat/completion', asyncRoute(async (req, res) => {
     // 응답 완료 후 assistant 메시지 저장
     if (assistantContent) {
       await pool.execute('insert into app_chat_messages (id, session_id, role, content) values (?, ?, ?, ?)', [id('message'), sessionIdToUse, 'assistant', assistantContent])
+      await pool.execute('update app_chat_sessions set updated_at = current_timestamp where id = ? and user_id = ?', [sessionIdToUse, req.user.uid])
     }
     res.end()
   }

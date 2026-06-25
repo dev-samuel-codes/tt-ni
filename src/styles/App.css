@@ -2516,6 +2516,41 @@ textarea:focus {
   flex-direction: column;
 }
 
+.chat-state-message {
+  border: 1px solid #dce9e5;
+  border-radius: 8px;
+  background: #f8fbfa;
+  color: #52605b;
+  padding: 14px 16px;
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.5;
+}
+
+.chat-state-message.warning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-color: #f0d7a6;
+  background: #fff8e7;
+  color: #7d5200;
+}
+
+.chat-state-message button {
+  min-height: 34px;
+  border: 1px solid #e0bf7b;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #6d4700;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 850;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
 /* 영양제 등록 탭 스타일 */
 .registration-tabs {
   display: flex;
@@ -3172,4 +3207,3 @@ textarea:focus {
     grid-template-columns: 1fr !important;
   }
 }
-

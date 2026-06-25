@@ -12,6 +12,16 @@ interface ChatSession {
   id: string
   title: string
   active: boolean
+  messageCount: number
+}
+
+const WELCOME_MESSAGE: ChatMessage = {
+  role: 'assistant',
+  content: '안녕하세요! 등록하신 영양제와 건강 상태에 대해 궁금한 점을 물어보세요.',
+}
+
+function createWelcomeMessages(): ChatMessage[] {
+  return [WELCOME_MESSAGE]
 }
 
 /**
@@ -35,14 +45,15 @@ export function ChatPage({
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [activeSessionId, setActiveSessionId] = useState<string>('')
   const [sessionsLoading, setSessionsLoading] = useState(true)
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'assistant', content: '안녕하세요! 등록하신 영양제와 건강 상태에 대해 궁금한 점을 물어보세요.' }
-  ])
+  const [messagesLoading, setMessagesLoading] = useState(false)
+  const [messagesError, setMessagesError] = useState<string | null>(null)
+  const [messages, setMessages] = useState<ChatMessage[]>(createWelcomeMessages)
   const [isLoading, setIsLoading] = useState(false)
   const [rateLimited, setRateLimited] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fullTextRef = useRef('')
   const abortControllerRef = useRef<AbortController | null>(null)
+  const messageRequestIdRef = useRef(0)
 
   const contextBadges = useMemo(() => {
     const badges: string[] = []
@@ -51,6 +62,10 @@ export function ChatPage({
     if (report && report.totals.length > 0) badges.push('최근 분석 리포트')
     return badges
   }, [profile, supplements, report])
+  const activeSession = useMemo(
+    () => sessions.find((session) => session.id === activeSessionId),
+    [activeSessionId, sessions],
+  )
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -60,45 +75,69 @@ export function ChatPage({
     return () => { abortControllerRef.current?.abort() }
   }, [])
 
+  const loadMessages = useCallback(async (sessionId: string, expectedMessageCount = 0) => {
+    const requestId = messageRequestIdRef.current + 1
+    messageRequestIdRef.current = requestId
+    setMessagesLoading(true)
+    setMessagesError(null)
+
+    try {
+      const data = await apiRequest<ChatMessage[]>(`/api/chat/sessions/${encodeURIComponent(sessionId)}/messages`)
+      if (messageRequestIdRef.current !== requestId) return
+
+      if (data && data.length > 0) {
+        setMessages(data)
+      } else if (expectedMessageCount > 0) {
+        setMessages([])
+        setMessagesError('저장된 대화내용이 있지만 메시지를 불러오지 못했습니다. 다시 불러오기를 눌러주세요.')
+      } else {
+        setMessages(createWelcomeMessages())
+      }
+    } catch (error) {
+      if (messageRequestIdRef.current !== requestId) return
+
+      const errorMessage = error instanceof Error ? error.message : '이전 대화내용을 불러오지 못했습니다.'
+      setMessages([])
+      setMessagesError(errorMessage)
+    } finally {
+      if (messageRequestIdRef.current === requestId) {
+        setMessagesLoading(false)
+      }
+    }
+  }, [])
+
+  const resetMessagesToWelcome = useCallback(() => {
+    messageRequestIdRef.current += 1
+    setMessagesLoading(false)
+    setMessagesError(null)
+    setMessages(createWelcomeMessages())
+  }, [])
+
   const loadSessions = useCallback(async () => {
     try {
-      const data = await apiRequest<Array<{ id: string; title: string }>>('/api/chat/sessions')
+      const data = await apiRequest<Array<{ id: string; title: string; messageCount?: number }>>('/api/chat/sessions')
 
       const loaded: ChatSession[] = data.map((s) => ({
         id: s.id,
         title: s.title || '새 대화',
+        messageCount: Number(s.messageCount ?? 0),
         active: false,
       }))
 
       if (loaded.length > 0) {
         loaded[0].active = true
         setActiveSessionId(loaded[0].id)
-        loadMessages(loaded[0].id)
+        void loadMessages(loaded[0].id, loaded[0].messageCount)
       }
       setSessions(loaded)
     } catch {
-      setSessions([{ id: 'local', title: '새 대화', active: true }])
+      setSessions([{ id: 'local', title: '새 대화', active: true, messageCount: 0 }])
       setActiveSessionId('local')
+      resetMessagesToWelcome()
     } finally {
       setSessionsLoading(false)
     }
-  }, [])
-
-  async function loadMessages(sessionId: string) {
-    try {
-      const data = await apiRequest<ChatMessage[]>(`/api/chat/sessions/${sessionId}/messages`)
-
-      if (data && data.length > 0) {
-        setMessages(data)
-      } else {
-        setMessages([
-          { role: 'assistant', content: '안녕하세요! 등록하신 영양제와 건강 상태에 대해 궁금한 점을 물어보세요.' }
-        ])
-      }
-    } catch {
-      // fallback: use current messages
-    }
-  }
+  }, [loadMessages, resetMessagesToWelcome])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -153,6 +192,9 @@ export function ChatPage({
     const msgText = text || input
     if (!msgText.trim() || isLoading || rateLimited) return
 
+    messageRequestIdRef.current += 1
+    setMessagesLoading(false)
+    setMessagesError(null)
     const userMsg: ChatMessage = { role: 'user', content: msgText }
     setMessages((prev) => [...prev, userMsg])
     setInput('')
@@ -167,7 +209,7 @@ export function ChatPage({
         setActiveSessionId(newId)
         setSessions((prev) => {
           const updated = prev.map((s) => ({ ...s, active: false }))
-          return [{ id: newId, title: msgText.slice(0, 30), active: true }, ...updated]
+          return [{ id: newId, title: msgText.slice(0, 30), active: true, messageCount: 0 }, ...updated]
         })
       } else {
         sessionId = 'local'
@@ -298,9 +340,9 @@ export function ChatPage({
           setActiveSessionId(newId)
           setSessions((prev) => {
             const updated = prev.map((s) => ({ ...s, active: false }))
-            return [{ id: newId, title: '새 대화', active: true }, ...updated]
+            return [{ id: newId, title: '새 대화', active: true, messageCount: 0 }, ...updated]
           })
-          setMessages([{ role: 'assistant', content: '안녕하세요! 등록하신 영양제와 건강 상태에 대해 궁금한 점을 물어보세요.' }])
+          resetMessagesToWelcome()
           setRateLimited(false)
         }}>
           <Plus size={14} /> 새 대화
@@ -316,8 +358,8 @@ export function ChatPage({
               setSessions((prev) => prev.map((item) => ({ ...item, active: item.id === s.id })))
               setActiveSessionId(s.id)
               setRateLimited(false)
-              if (s.id !== 'local') loadMessages(s.id)
-              else setMessages([{ role: 'assistant', content: '안녕하세요! 등록하신 영양제와 건강 상태에 대해 궁금한 점을 물어보세요.' }])
+              if (s.id !== 'local') void loadMessages(s.id, s.messageCount)
+              else resetMessagesToWelcome()
             }} 
             style={{
               width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '8px', border: 'none',
@@ -336,7 +378,11 @@ export function ChatPage({
         <div className="section-heading">
           <div>
             <h2>맞춤형 AI 상담</h2>
-            <p>나의 데이터를 바탕으로 AI가 질문에 답변합니다.</p>
+            <p>
+              {activeSession?.title
+                ? `선택한 대화: ${activeSession.title}`
+                : '나의 데이터를 바탕으로 AI가 질문에 답변합니다.'}
+            </p>
           </div>
         </div>
 
@@ -370,7 +416,22 @@ export function ChatPage({
 
         {/* 채팅 영역 본체 */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 0', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {messages.map((msg, idx) => (
+          {messagesLoading && (
+            <div className="chat-state-message" role="status">
+              이전 대화내용을 불러오는 중입니다.
+            </div>
+          )}
+          {!messagesLoading && messagesError && (
+            <div className="chat-state-message warning" role="alert">
+              <span>{messagesError}</span>
+              {activeSessionId && activeSessionId !== 'local' && (
+                <button type="button" onClick={() => void loadMessages(activeSessionId, activeSession?.messageCount ?? 0)}>
+                  다시 불러오기
+                </button>
+              )}
+            </div>
+          )}
+          {!messagesLoading && !messagesError && messages.map((msg, idx) => (
             <div key={idx} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', flexDirection: msg.role === 'user' ? 'row-reverse' : 'row', margin: '6px 0' }}>
               <div 
                 className="timeline-badge-glow"
