@@ -124,7 +124,19 @@ function App() {
           </section>
         )}
 
-        {currentPath === routes.workspace && (
+        {!isAuthInitialized && (
+          <section className="panel" role="status">
+            <p>로그인 상태를 확인하는 중입니다...</p>
+          </section>
+        )}
+
+        {isAuthInitialized && !sessionEmail && (
+          <section className="panel" role="status">
+            <p>로그인 페이지로 이동하는 중입니다...</p>
+          </section>
+        )}
+
+        {isAuthInitialized && sessionEmail && currentPath === routes.workspace && (
           <Dashboard
             report={previewReport}
             supplements={supplements}
@@ -144,13 +156,13 @@ function App() {
             scheduleLoading={scheduleLoading}
           />
         )}
-        {currentPath === routes.profile && (
+        {isAuthInitialized && sessionEmail && currentPath === routes.profile && (
           <ProfileAndMedication profile={profile} medications={medications} onProfile={setProfile} onMedications={setMedications} />
         )}
-        {currentPath === routes.supplements && (
+        {isAuthInitialized && sessionEmail && currentPath === routes.supplements && (
           <SupplementWorkspace supplements={supplements} onSupplements={setSupplements} onAnalyze={handleRunAnalysis} sessionEmail={sessionEmail ?? ''} />
         )}
-        {currentPath === routes.analysis && (
+        {isAuthInitialized && sessionEmail && currentPath === routes.analysis && (
           <AnalysisResult
             report={report || previewReport}
             syncMessage={analysisSyncMessage}
@@ -160,10 +172,10 @@ function App() {
             onLogin={() => navigateTo(routes.login)}
           />
         )}
-        {currentPath === routes.schedule && (
+        {isAuthInitialized && sessionEmail && currentPath === routes.schedule && (
           <SchedulePage supplements={supplements} profile={profile} medications={medications} />
         )}
-        {currentPath === routes.chat && (
+        {isAuthInitialized && sessionEmail && currentPath === routes.chat && (
           <ChatPage profile={profile} medications={medications} supplements={supplements} report={report} />
         )}
       </SidebarLayout>
