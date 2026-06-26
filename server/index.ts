@@ -14,6 +14,7 @@ import { mapExaSearchResults, refineProductNamesWithComet } from './exaSearch.js
 import { nutrients } from '../src/features/nutrition/nutritionData.js'
 import { runAnalysis } from '../src/features/analysis/analysisEngine.js'
 import { generateSchedule } from '../src/features/schedule/scheduleEngine.js'
+import { INGREDIENT_UNITS } from '../src/types/index.js'
 import type { AnalysisReport, Medication, ParsedIngredient, Profile, SupplementProduct, Unit } from '../src/types/index.js'
 
 /** 인증 미들웨어를 통과한 요청. `req.user`에 Firebase 사용자 정보가 포함됩니다. */
@@ -590,7 +591,7 @@ app.post('/api/parse-label', upload.single('image'), asyncRoute(async (req, res)
           properties: {
             name: { type: 'string' },
             amount: { type: ['number', 'null'] },
-            unit: { type: 'string', enum: ['mg', 'mcg', 'IU', 'g', 'CFU', 'unknown'] },
+            unit: { type: 'string', enum: INGREDIENT_UNITS },
             confidence: { type: 'number' },
             raw_text: { type: 'string' },
           },

@@ -28,4 +28,15 @@ describe('mapSearchIngredientToParsed', () => {
       unit: 'mg',
     })
   })
+
+  it('keeps ug units available for ingredient review', () => {
+    expect(mapSearchIngredientToParsed(
+      { name: 'Folate', amount: 400, unit: 'ug' },
+      () => 'ing_folate',
+    )).toMatchObject({
+      id: 'ing_folate',
+      amount: 400,
+      unit: 'ug',
+    })
+  })
 })

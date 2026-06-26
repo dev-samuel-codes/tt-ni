@@ -111,29 +111,32 @@ export function getAge(profile: Pick<Profile, 'birthYear'>, now = new Date()): n
  * 변환 불가능한 경우 null을 반환합니다.
  */
 export function convertAmount(amount: number, fromUnit: Unit, toUnit: Unit, nutrientId: string): number | null {
-  if (fromUnit === toUnit) return amount
-  if (fromUnit === 'unknown' || toUnit === 'unknown') return null
+  const sourceUnit = fromUnit === 'ug' || fromUnit === 'µg' ? 'mcg' : fromUnit
+  const targetUnit = toUnit === 'ug' || toUnit === 'µg' ? 'mcg' : toUnit
 
-  if (fromUnit === 'g' && toUnit === 'mg') return amount * 1000
-  if (fromUnit === 'mg' && toUnit === 'g') return amount / 1000
-  if (fromUnit === 'mg' && toUnit === 'mcg') return amount * 1000
-  if (fromUnit === 'mcg' && toUnit === 'mg') return amount / 1000
-  if (fromUnit === 'g' && toUnit === 'mcg') return amount * 1_000_000
-  if (fromUnit === 'mcg' && toUnit === 'g') return amount / 1_000_000
+  if (sourceUnit === targetUnit) return amount
+  if (sourceUnit === 'unknown' || targetUnit === 'unknown') return null
+
+  if (sourceUnit === 'g' && targetUnit === 'mg') return amount * 1000
+  if (sourceUnit === 'mg' && targetUnit === 'g') return amount / 1000
+  if (sourceUnit === 'mg' && targetUnit === 'mcg') return amount * 1000
+  if (sourceUnit === 'mcg' && targetUnit === 'mg') return amount / 1000
+  if (sourceUnit === 'g' && targetUnit === 'mcg') return amount * 1_000_000
+  if (sourceUnit === 'mcg' && targetUnit === 'g') return amount / 1_000_000
 
   if (nutrientId === 'vitamin_d') {
-    if (fromUnit === 'IU' && toUnit === 'mcg') return amount / 40
-    if (fromUnit === 'mcg' && toUnit === 'IU') return amount * 40
+    if (sourceUnit === 'IU' && targetUnit === 'mcg') return amount / 40
+    if (sourceUnit === 'mcg' && targetUnit === 'IU') return amount * 40
   }
 
   if (nutrientId === 'vitamin_a') {
-    if (fromUnit === 'IU' && toUnit === 'mcg') return amount * 0.3
-    if (fromUnit === 'mcg' && toUnit === 'IU') return amount / 0.3
+    if (sourceUnit === 'IU' && targetUnit === 'mcg') return amount * 0.3
+    if (sourceUnit === 'mcg' && targetUnit === 'IU') return amount / 0.3
   }
 
   if (nutrientId === 'vitamin_e') {
-    if (fromUnit === 'IU' && toUnit === 'mg') return amount * 0.67
-    if (fromUnit === 'mg' && toUnit === 'IU') return amount / 0.67
+    if (sourceUnit === 'IU' && targetUnit === 'mg') return amount * 0.67
+    if (sourceUnit === 'mg' && targetUnit === 'IU') return amount / 0.67
   }
 
   return null

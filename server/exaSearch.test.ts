@@ -3,11 +3,12 @@ import { extractIngredients, mapExaSearchResults, refinedNameMap, refineProductN
 
 describe('extractIngredients', () => {
   it('normalizes units and removes duplicates from search snippets', () => {
-    const ingredients = extractIngredients('Vitamin C 500 MG. vitamin c 500 mg. Vitamin D 1000 iu. Folate 400 μg.')
+    const ingredients = extractIngredients('Vitamin C 500 MG. vitamin c 500 mg. Vitamin D 1000 iu. Vitamin B12 4.5 ug.')
 
     expect(ingredients).toEqual([
       { name: 'Vitamin C', amount: 500, unit: 'mg' },
       { name: 'Vitamin D', amount: 1000, unit: 'IU' },
+      { name: 'Vitamin B12', amount: 4.5, unit: 'ug' },
     ])
   })
 })

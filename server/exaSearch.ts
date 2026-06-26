@@ -26,9 +26,9 @@ type ChatCompletion = {
  */
 const nutrientPatterns = [
   { name: 'Vitamin A', patterns: [/vitamin\s*a/i, /retinol/i, /beta[-\s]?carotene/i] },
-  { name: 'Vitamin B1', patterns: [/vitamin\s*b1/i, /thiamine/i] },
-  { name: 'Vitamin B6', patterns: [/vitamin\s*b6/i, /pyridoxine/i] },
-  { name: 'Vitamin B12', patterns: [/vitamin\s*b12/i, /cobalamin/i] },
+  { name: 'Vitamin B1', patterns: [/vitamin\s*b1\b/i, /thiamine/i] },
+  { name: 'Vitamin B6', patterns: [/vitamin\s*b6\b/i, /pyridoxine/i] },
+  { name: 'Vitamin B12', patterns: [/vitamin\s*b12\b/i, /cobalamin/i] },
   { name: 'Vitamin C', patterns: [/vitamin\s*c/i, /ascorbic\s*acid/i] },
   { name: 'Vitamin D', patterns: [/vitamin\s*d/i, /d3/i, /cholecalciferol/i] },
   { name: 'Calcium', patterns: [/calcium/i, /\bca\b/i] },
@@ -38,10 +38,9 @@ const nutrientPatterns = [
   { name: 'Omega-3', patterns: [/omega[\s-]*3/i, /epa/i, /dha/i] },
 ]
 
-/** 단위 문자열을 표준 단위 코드로 정규화 (μg → mcg 등) */
 function normalizeUnit(unit: string) {
   const lower = unit.toLowerCase()
-  if (lower === 'μg') return 'mcg'
+  if (lower === 'ug' || lower === 'µg' || lower === 'μg') return 'ug'
   if (lower === 'iu') return 'IU'
   if (lower === 'cfu') return 'CFU'
   return lower
@@ -70,8 +69,8 @@ function resultText(text: ExaResult['text']) {
 export function extractIngredients(text: string) {
   const ingredients: Array<{ name: string; amount: number; unit: string }> = []
   const seen = new Set<string>()
-  for (const line of text.split(/[.\n]+/)) {
-    const unitMatch = line.match(/(\d+(?:,\d{3})*(?:\.\d+)?)\s*(mcg|mg|g|IU|CFU|μg)/i)
+  for (const line of text.split(/(?<!\d)[.\n]+(?!\d)/)) {
+    const unitMatch = line.match(/(\d+(?:,\d{3})*(?:\.\d+)?)\s*(mcg|mg|g|IU|CFU|ug|µg|μg)/i)
     if (!unitMatch) continue
     const amount = parseFloat(unitMatch[1].replace(/,/g, ''))
     const unit = normalizeUnit(unitMatch[2])

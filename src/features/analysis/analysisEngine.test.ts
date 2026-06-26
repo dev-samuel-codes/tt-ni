@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { convertAmount, runAnalysis, getAge, findReferenceValue, statusLabel } from './analysisEngine'
 import { createAnalysisReportFromServer } from './serverAnalysis'
 import { findNutrientByName } from '../nutrition/nutritionData'
-import type { Medication, Profile, SupplementProduct } from '../../types'
+import type { Medication, Profile, SupplementProduct, Unit } from '../../types'
 
 const defaultProfile: Profile = {
   gender: 'female',
@@ -21,7 +21,7 @@ function product(
   nutrientId: string,
   standardName: string,
   amount: number,
-  unit: 'mg' | 'mcg' | 'IU' | 'g' | 'CFU',
+  unit: Unit,
   dailyServings = 1,
 ): SupplementProduct {
   return {
@@ -74,6 +74,12 @@ describe('convertAmount', () => {
   it('converts mg to mcg', () => {
     expect(convertAmount(1, 'mg', 'mcg', 'vitamin_b12')).toBe(1000)
     expect(convertAmount(500, 'mcg', 'mg', 'vitamin_b12')).toBe(0.5)
+  })
+
+  it('treats ug and µg as micrograms', () => {
+    expect(convertAmount(400, 'ug', 'mcg', 'folate')).toBe(400)
+    expect(convertAmount(400, 'µg', 'mg', 'folate')).toBe(0.4)
+    expect(convertAmount(1, 'mg', 'ug', 'folate')).toBe(1000)
   })
 
   it('converts g to mcg', () => {

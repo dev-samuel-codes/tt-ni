@@ -126,7 +126,7 @@ export function createManualIngredient(): ParsedIngredient {
     rawName: '',
     standardName: '',
     nutrientId: '',
-    amount: 0,
+    amount: null,
     unit: 'mg',
     confidence: 1,
     rawText: 'manual',

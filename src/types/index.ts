@@ -5,7 +5,8 @@ type Gender = 'female' | 'male' | 'other'
 export type RiskStatus = 'normal' | 'deficient' | 'caution' | 'excess' | 'review'
 
 /** 영양소 함량 단위 */
-export type Unit = 'mg' | 'mcg' | 'IU' | 'g' | 'CFU' | 'unknown'
+export const INGREDIENT_UNITS = ['mg', 'mcg', 'ug', 'µg', 'IU', 'g', 'CFU', 'unknown'] as const
+export type Unit = (typeof INGREDIENT_UNITS)[number]
 
 /** 사용자 건강 프로필 */
 export interface Profile {
@@ -154,5 +155,4 @@ export interface AnalysisReport {
     severity: 'caution' | 'high'
   }>
 }
-
 

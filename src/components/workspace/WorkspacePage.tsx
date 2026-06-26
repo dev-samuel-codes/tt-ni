@@ -3,7 +3,7 @@ import {
   Activity, AlertTriangle, Calendar, Camera, Check, ChevronRight,
   FileImage, Lock, LogIn, Pill, Plus, ShieldCheck, Sparkles, Trash2
 } from 'lucide-react'
-import type { AnalysisReport, Medication, ParsedIngredient, Profile, SupplementProduct, Unit } from '../../types'
+import { INGREDIENT_UNITS, type AnalysisReport, type Medication, type ParsedIngredient, type Profile, type SupplementProduct, type Unit } from '../../types'
 import { findNutrientByName } from '../../features/nutrition/nutritionData'
 import { statusLabel } from '../../features/analysis/analysisEngine'
 import { createId, getStatusTone, splitList } from '../../lib/utils'
@@ -812,10 +812,10 @@ export function SupplementWorkspace({
                           {editIngredients.map((ing) => (
                             <tr key={ing.id}>
                               <td><input value={ing.standardName} onChange={(e) => updateEditIngredient(ing.id, { standardName: e.target.value })} /></td>
-                              <td><input type="number" value={ing.amount ?? ''} onChange={(e) => updateEditIngredient(ing.id, { amount: Number(e.target.value) })} /></td>
+                              <td><input type="number" value={ing.amount ?? ''} onChange={(e) => updateEditIngredient(ing.id, { amount: e.target.value === '' ? null : Number(e.target.value) })} /></td>
                               <td>
                                 <select value={ing.unit} onChange={(e) => updateEditIngredient(ing.id, { unit: e.target.value as Unit })}>
-                                  {['mg', 'mcg', 'IU', 'g', 'CFU', 'unknown'].map((u) => (<option key={u} value={u}>{u}</option>))}
+                                  {INGREDIENT_UNITS.map((u) => (<option key={u} value={u}>{u}</option>))}
                                 </select>
                               </td>
                               <td><button type="button" className="icon-button" aria-label="성분 삭제" onClick={() => setEditIngredients(editIngredients.filter((item) => item.id !== ing.id))}><Trash2 size={16} /></button></td>
@@ -977,10 +977,10 @@ export function SupplementWorkspace({
               {draftIngredients.map((ingredient) => (
                 <tr key={ingredient.id} data-label-name={ingredient.standardName || ingredient.rawName}>
                   <td data-label="성분명"><input value={ingredient.standardName} onChange={(e) => updateIngredient(ingredient.id, { standardName: e.target.value })} /></td>
-                  <td data-label="함량"><input type="number" value={ingredient.amount ?? ''} onChange={(e) => updateIngredient(ingredient.id, { amount: Number(e.target.value) })} /></td>
+                  <td data-label="함량"><input type="number" value={ingredient.amount ?? ''} onChange={(e) => updateIngredient(ingredient.id, { amount: e.target.value === '' ? null : Number(e.target.value) })} /></td>
                   <td data-label="단위">
                     <select value={ingredient.unit} onChange={(e) => updateIngredient(ingredient.id, { unit: e.target.value as Unit })}>
-                      {['mg', 'mcg', 'IU', 'g', 'CFU', 'unknown'].map((unit) => (<option key={unit} value={unit}>{unit}</option>))}
+                      {INGREDIENT_UNITS.map((unit) => (<option key={unit} value={unit}>{unit}</option>))}
                     </select>
                   </td>
                   <td data-label="신뢰도">{Math.round(ingredient.confidence * 100)}%</td>
