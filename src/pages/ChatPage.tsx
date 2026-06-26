@@ -13,15 +13,78 @@ interface ChatSession {
   title: string
   active: boolean
   messageCount: number
+  lastMessageAt: string | null
+}
+
+interface CachedChatMessages {
+  messages: ChatMessage[]
+  messageCount: number
+  lastMessageAt: string | null
+  cachedAt: number
 }
 
 const WELCOME_MESSAGE: ChatMessage = {
   role: 'assistant',
   content: '안녕하세요! 등록하신 영양제와 건강 상태에 대해 궁금한 점을 물어보세요.',
 }
+const MESSAGE_CACHE_PREFIX = 'tt-ni:chat-messages:v1:'
+const MESSAGE_CACHE_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30
 
 function createWelcomeMessages(): ChatMessage[] {
   return [WELCOME_MESSAGE]
+}
+
+function chatMessageCacheKey(sessionId: string): string {
+  return `${MESSAGE_CACHE_PREFIX}${sessionId}`
+}
+
+function isChatMessage(value: unknown): value is ChatMessage {
+  if (!value || typeof value !== 'object') return false
+  const message = value as Partial<ChatMessage>
+  return (message.role === 'user' || message.role === 'assistant') && typeof message.content === 'string'
+}
+
+function readCachedMessages(sessionId: string): CachedChatMessages | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(chatMessageCacheKey(sessionId))
+    if (!raw) return null
+    const cached = JSON.parse(raw) as Partial<CachedChatMessages>
+    if (!Array.isArray(cached.messages) || !cached.messages.every(isChatMessage)) return null
+    if (typeof cached.cachedAt !== 'number' || Date.now() - cached.cachedAt > MESSAGE_CACHE_MAX_AGE_MS) return null
+    if (cached.messages.length === 0) return null
+    return {
+      messages: cached.messages,
+      messageCount: Number(cached.messageCount ?? cached.messages.length),
+      lastMessageAt: typeof cached.lastMessageAt === 'string' ? cached.lastMessageAt : null,
+      cachedAt: cached.cachedAt,
+    }
+  } catch {
+    return null
+  }
+}
+
+function isCacheFreshForSession(session: Pick<ChatSession, 'messageCount' | 'lastMessageAt'>, cached: CachedChatMessages | null): boolean {
+  if (!cached) return false
+  if (session.messageCount > 0 && cached.messageCount < session.messageCount) return false
+  if (session.lastMessageAt && cached.lastMessageAt !== session.lastMessageAt) return false
+  return true
+}
+
+function writeCachedMessages(session: Pick<ChatSession, 'id' | 'messageCount' | 'lastMessageAt'>, messages: ChatMessage[]): void {
+  if (typeof window === 'undefined' || session.id === 'local' || messages.length === 0) return
+  if (messages.every((message) => message.role === 'assistant' && message.content === WELCOME_MESSAGE.content)) return
+  try {
+    const cached: CachedChatMessages = {
+      messages,
+      messageCount: Math.max(session.messageCount, messages.length),
+      lastMessageAt: session.lastMessageAt,
+      cachedAt: Date.now(),
+    }
+    window.localStorage.setItem(chatMessageCacheKey(session.id), JSON.stringify(cached))
+  } catch {
+    return
+  }
 }
 
 /**
@@ -54,6 +117,7 @@ export function ChatPage({
   const fullTextRef = useRef('')
   const abortControllerRef = useRef<AbortController | null>(null)
   const messageRequestIdRef = useRef(0)
+  const messagePrefetchingRef = useRef<Set<string>>(new Set())
 
   const contextBadges = useMemo(() => {
     const badges: string[] = []
@@ -75,10 +139,16 @@ export function ChatPage({
     return () => { abortControllerRef.current?.abort() }
   }, [])
 
-  const loadMessages = useCallback(async (sessionId: string, expectedMessageCount = 0) => {
+  const loadMessages = useCallback(async (sessionId: string, expectedMessageCount = 0, lastMessageAt: string | null = null) => {
     const requestId = messageRequestIdRef.current + 1
     messageRequestIdRef.current = requestId
-    setMessagesLoading(true)
+    const cached = readCachedMessages(sessionId)
+    if (cached) {
+      setMessages(cached.messages)
+      setMessagesLoading(false)
+    } else {
+      setMessagesLoading(true)
+    }
     setMessagesError(null)
 
     try {
@@ -87,15 +157,26 @@ export function ChatPage({
 
       if (data && data.length > 0) {
         setMessages(data)
+        setSessions((prev) =>
+          prev.map((session) => (session.id === sessionId ? { ...session, messageCount: data.length } : session))
+        )
+        writeCachedMessages({ id: sessionId, messageCount: data.length, lastMessageAt }, data)
       } else if (expectedMessageCount > 0) {
-        setMessages([])
-        setMessagesError('저장된 대화내용이 있지만 메시지를 불러오지 못했습니다. 다시 불러오기를 눌러주세요.')
+        if (!cached) {
+          setMessages([])
+          setMessagesError('저장된 대화내용이 있지만 메시지를 불러오지 못했습니다. 다시 불러오기를 눌러주세요.')
+        }
       } else {
         setMessages(createWelcomeMessages())
       }
     } catch (error) {
       if (messageRequestIdRef.current !== requestId) return
 
+      if (cached) {
+        setMessages(cached.messages)
+        setMessagesError(null)
+        return
+      }
       const errorMessage = error instanceof Error ? error.message : '이전 대화내용을 불러오지 못했습니다.'
       setMessages([])
       setMessagesError(errorMessage)
@@ -103,6 +184,27 @@ export function ChatPage({
       if (messageRequestIdRef.current === requestId) {
         setMessagesLoading(false)
       }
+    }
+  }, [])
+
+  const prefetchMessages = useCallback(async (session: ChatSession) => {
+    if (session.id === 'local' || session.messageCount === 0) return
+    if (isCacheFreshForSession(session, readCachedMessages(session.id))) return
+    if (messagePrefetchingRef.current.has(session.id)) return
+
+    messagePrefetchingRef.current.add(session.id)
+    try {
+      const data = await apiRequest<ChatMessage[]>(`/api/chat/sessions/${encodeURIComponent(session.id)}/messages`)
+      if (!data || data.length === 0) return
+
+      writeCachedMessages({ id: session.id, messageCount: data.length, lastMessageAt: session.lastMessageAt }, data)
+      setSessions((prev) =>
+        prev.map((item) => (item.id === session.id ? { ...item, messageCount: data.length } : item))
+      )
+    } catch {
+      return
+    } finally {
+      messagePrefetchingRef.current.delete(session.id)
     }
   }, [])
 
@@ -115,29 +217,33 @@ export function ChatPage({
 
   const loadSessions = useCallback(async () => {
     try {
-      const data = await apiRequest<Array<{ id: string; title: string; messageCount?: number }>>('/api/chat/sessions')
+      const data = await apiRequest<Array<{ id: string; title: string; messageCount?: number; lastMessageAt?: string | null }>>('/api/chat/sessions')
 
       const loaded: ChatSession[] = data.map((s) => ({
         id: s.id,
         title: s.title || '새 대화',
         messageCount: Number(s.messageCount ?? 0),
+        lastMessageAt: s.lastMessageAt ?? null,
         active: false,
       }))
 
       if (loaded.length > 0) {
         loaded[0].active = true
         setActiveSessionId(loaded[0].id)
-        void loadMessages(loaded[0].id, loaded[0].messageCount)
       }
       setSessions(loaded)
+      if (loaded.length > 0) {
+        void loadMessages(loaded[0].id, loaded[0].messageCount, loaded[0].lastMessageAt)
+        loaded.slice(1).forEach((session) => { void prefetchMessages(session) })
+      }
     } catch {
-      setSessions([{ id: 'local', title: '새 대화', active: true, messageCount: 0 }])
+      setSessions([{ id: 'local', title: '새 대화', active: true, messageCount: 0, lastMessageAt: null }])
       setActiveSessionId('local')
       resetMessagesToWelcome()
     } finally {
       setSessionsLoading(false)
     }
-  }, [loadMessages, resetMessagesToWelcome])
+  }, [loadMessages, prefetchMessages, resetMessagesToWelcome])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -145,6 +251,11 @@ export function ChatPage({
     }, 0)
     return () => window.clearTimeout(timer)
   }, [loadSessions])
+
+  useEffect(() => {
+    if (!activeSession || messagesLoading || messagesError || isLoading) return
+    writeCachedMessages(activeSession, messages)
+  }, [activeSession, isLoading, messages, messagesError, messagesLoading])
 
   async function createSession(title?: string): Promise<string | null> {
     try {
@@ -209,7 +320,7 @@ export function ChatPage({
         setActiveSessionId(newId)
         setSessions((prev) => {
           const updated = prev.map((s) => ({ ...s, active: false }))
-          return [{ id: newId, title: msgText.slice(0, 30), active: true, messageCount: 0 }, ...updated]
+          return [{ id: newId, title: msgText.slice(0, 30), active: true, messageCount: 0, lastMessageAt: null }, ...updated]
         })
       } else {
         sessionId = 'local'
@@ -340,7 +451,7 @@ export function ChatPage({
           setActiveSessionId(newId)
           setSessions((prev) => {
             const updated = prev.map((s) => ({ ...s, active: false }))
-            return [{ id: newId, title: '새 대화', active: true, messageCount: 0 }, ...updated]
+            return [{ id: newId, title: '새 대화', active: true, messageCount: 0, lastMessageAt: null }, ...updated]
           })
           resetMessagesToWelcome()
           setRateLimited(false)
@@ -358,7 +469,7 @@ export function ChatPage({
               setSessions((prev) => prev.map((item) => ({ ...item, active: item.id === s.id })))
               setActiveSessionId(s.id)
               setRateLimited(false)
-              if (s.id !== 'local') void loadMessages(s.id, s.messageCount)
+              if (s.id !== 'local') void loadMessages(s.id, s.messageCount, s.lastMessageAt)
               else resetMessagesToWelcome()
             }} 
             style={{
@@ -425,7 +536,7 @@ export function ChatPage({
             <div className="chat-state-message warning" role="alert">
               <span>{messagesError}</span>
               {activeSessionId && activeSessionId !== 'local' && (
-                <button type="button" onClick={() => void loadMessages(activeSessionId, activeSession?.messageCount ?? 0)}>
+                <button type="button" onClick={() => void loadMessages(activeSessionId, activeSession?.messageCount ?? 0, activeSession?.lastMessageAt ?? null)}>
                   다시 불러오기
                 </button>
               )}

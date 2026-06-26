@@ -265,8 +265,8 @@ function summarizeStatus(
 
   const guide = NUTRIENT_GUIDES[nutrientId]
 
-  let status: RiskStatus = 'normal'
-  let msg = ''
+  let status: RiskStatus
+  let msg: string
 
   if (reference.ul && total > reference.ul) {
     status = 'excess'
